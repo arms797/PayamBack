@@ -1,0 +1,64 @@
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace PayamBack.Models
+{
+    /// <summary>
+    /// واحد / مرکز
+    /// </summary>
+    public class Markaz
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int Id { get; set; }
+
+        /// <summary>کد استان</summary>
+        [Required]
+        [MaxLength(50)]
+        public string CodeOstan { get; set; } = "";
+
+        /// <summary>نام استان</summary>
+        [MaxLength(200)]
+        public string NaamOstan { get; set; } = "";
+
+        /// <summary>کد واحد یا مرکز</summary>
+        [MaxLength(50)]
+        public string CodeMarkaz { get; set; } = "";
+
+        /// <summary>نام واحد یا مرکز</summary>
+        [MaxLength(200)]
+        public string NaamMarkaz { get; set; } = "";
+
+        /// <summary>واحد / مرکز</summary>
+        [MaxLength(100)]
+        public string VahedMarkaz { get; set; } = "";
+
+        /// <summary>ناحیه</summary>
+        [MaxLength(50)]
+        public string Nahiyeh { get; set; } = "";
+
+        /// <summary>محل واحد یا مرکز</summary>
+        [MaxLength(200)]
+        public string MahalMarkaz { get; set; } = "";
+
+        /// <summary>آدرس</summary>
+        [MaxLength(500)]
+        public string Adres { get; set; } = "";
+
+        /// <summary>کد پستی</summary>
+        [MaxLength(20)]
+        public string CodePosti { get; set; } = "";
+
+        /// <summary>آدرس سایت</summary>
+        [MaxLength(200)]
+        public string WebSite { get; set; } = "";
+
+        /// <summary>تلفن</summary>
+        [MaxLength(20)]
+        public string Telefon { get; set; } = "";
+
+        /// <summary>وضعیت (فعال/غیرفعال)</summary>
+        public bool Vazeeyat { get; set; }
+    }
+}

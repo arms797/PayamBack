@@ -1,0 +1,6 @@
+@PayamBack_HostAddress = http://localhost:5023
+
+GET {{PayamBack_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
