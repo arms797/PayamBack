@@ -31,6 +31,7 @@ namespace PayamBack.Data
                 entity.Property(e => e.CodeOstan).HasMaxLength(50);
                 entity.Property(e => e.CodeMarkaz).HasMaxLength(50);
             });
+            builder.Entity<Daneshjoo>().HasIndex(d=>d.ShomareDaneshjooee).IsUnique();
         }
     }
 }
