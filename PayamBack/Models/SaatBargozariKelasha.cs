@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PayamBack.Models
 {
@@ -7,22 +8,28 @@ namespace PayamBack.Models
         [Key]
         public int Id { get; set; }
 
+        // عنوان ساعت (ساعت اول، ساعت دوم، ...)
         [Required, MaxLength(100)]
-        public string OnvanSaat { get; set; } = "";//ساعت اول , ساعت دوم
+        public string OnvanSaat { get; set; } = "";
 
+        // کد ساعت (A, B, C, D, E, F, G, H)
         [Required, MaxLength(1)]
-        public string CodeSaat { get; set; } = "";//A,B,C,D,E,F,G,H
+        public string CodeSaat { get; set; } = "";
 
-        [Required, MaxLength(10)]
-        public string SaatShoroo { get; set; } = "";   // مثلاً "08:00"
+        // ساعت شروع (مثلاً "08:00")
+        [Required, MaxLength(5)]
+        public string SaatShoroo { get; set; } = "";
 
-        [Required, MaxLength(10)]
-        public string SaatPayan { get; set; } = "";    // مثلاً "10:30"
+        // ساعت پایان (مثلاً "10:30")
+        [Required, MaxLength(5)]
+        public string SaatPayan { get; set; } = "";
 
+        // وضعیت حضور (فعال/غیرفعال)
         [Required]
-        public bool Hozoori  { get; set; } = true;     // مثلاً "فعال" یا "غیرفعال"
+        public bool Hozoori { get; set; } = true;
+
+        // وضعیت مجازی (فعال/غیرفعال)
         [Required]
-        public bool Majazi { get; set; } = true;     // مثلاً "فعال" یا "غیرفعال"
+        public bool Majazi { get; set; } = true;
     }
-
 }

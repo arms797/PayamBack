@@ -1,164 +1,129 @@
-﻿
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PayamBack.Models
 {
     /// <summary>
+    /// نوع همکاری استاد
+    /// </summary>
+    public enum NoeHamkariEnum
+    {
+        [Display(Name = "هیات علمی پیام نور")]
+        HeyatElmiPayamNoor = 1,
+
+        [Display(Name = "هیات علمی غیر پیام نور")]
+        HeyatElmiGheyrePayamNoor = 2,
+
+        [Display(Name = "مدرس مدعو")]
+        ModaresMadov = 3,
+
+        [Display(Name = "هیات علمی پیام نور (سایر استان ها)")]
+        HeyatElmiPayamNoorSayerOstanha = 4
+    }
+
+    /// <summary>
     /// اطلاعات استادان
     /// </summary>
     public class Ostad
     {
-        // ======== شناسه فنی (توصیه‌شده، در صورت نیاز می‌توانید حذف کنید) ========
         [Key]
         public int Id { get; set; }
 
-        // ======== کدهای شناسایی ========
-        /// <summary>کد دانشکده</summary>
+        // کد دانشکده
         [MaxLength(50)]
-        public string CodeDaneshkade { get; set; }
+        public string CodeDaneshkade { get; set; } = "";
 
-        /// <summary>کد گروه آموزشی</summary>
+        // کد گروه آموزشی
         [MaxLength(50)]
-        public string CodeGrooheAmoozeshi { get; set; }
+        public string CodeGrooheAmoozeshi { get; set; } = "";
 
-        /// <summary>کد رشته (دو رقمی)</summary>
-        [MaxLength(2)]
-        public string CodeReshteDoRaghami { get; set; }
-
-        /// <summary>کد استان استاد</summary>
-        [MaxLength(50)]
-        public string CodeOstan { get; set; }
-
-        /// <summary>کد واحد / مرکز</summary>
-        [MaxLength(50)]
-        public string CodeMarkaz { get; set; }
-
-        /// <summary>کد استادی (شماره پرسنلی)</summary>
-        [MaxLength(50)]
-        public string CodeOstadi { get; set; }
-
-        // ======== اطلاعات فردی ========
-        /// <summary>نام خانوادگی استاد</summary>
+        // عنوان رشته تحصیلی استاد
         [MaxLength(100)]
-        public string NaamKhanevadegiOstad { get; set; }
+        public string Reshteh { get; set; } = "";
 
-        /// <summary>نام استاد</summary>
+        // کلید خارجی به جدول مرکز خدمتی
+        [Required]
+        public int MarkazId { get; set; }
+
+        // کلید خارجی به جدول مرکز اصلی (اختیاری)
+        public int? MarkazAsliId { get; set; }
+
+        // کد استادی (شماره پرسنلی)
+        [MaxLength(50)]
+        public string CodeOstadi { get; set; } = "";
+
+        // نام خانوادگی استاد
         [MaxLength(100)]
-        public string NaamOstad { get; set; }
+        public string NaamKhanevadegi { get; set; } = "";
 
-        /// <summary>جنس (مرد/زن)</summary>
+        // نام استاد
+        [MaxLength(100)]
+        public string Naam { get; set; } = "";
+
+        // جنس (مرد/زن)
         [MaxLength(10)]
-        public string Jens { get; set; }
+        public string Jens { get; set; } = "";
 
-        /// <summary>نام پدر</summary>
+        // نام پدر
         [MaxLength(100)]
-        public string NaamPedar { get; set; }
+        public string? NaamPedar { get; set; }
 
-        /// <summary>تاریخ تولد</summary>
+        // تاریخ تولد
         public DateTime? TarikhTavalod { get; set; }
 
-        /// <summary>ملیت</summary>
-        [MaxLength(50)]
-        public string Melliyat { get; set; }
-
-        /// <summary>محل تولد</summary>
-        [MaxLength(200)]
-        public string MahalTavalod { get; set; }
-
-        /// <summary>شماره شناسنامه</summary>
+        // شماره شناسنامه
         [MaxLength(20)]
-        public string ShomareShenasname { get; set; }
+        public string? ShomareShenasname { get; set; }
 
-        /// <summary>محل صدور شناسنامه</summary>
-        [MaxLength(200)]
-        public string MahalSoddorShenasname { get; set; }
-
-        /// <summary>شماره ملی</summary>
+        // شماره ملی
         [MaxLength(10)]
-        public string ShomareMelli { get; set; }
+        public string ShomareMelli { get; set; } = "";
 
-        // ======== اطلاعات تماس ========
-        /// <summary>آدرس پست الکترونیکی</summary>
+        // ایمیل
         [MaxLength(200)]
-        public string AdresPostElektroniki { get; set; }
+        public string Email { get; set; } = "";
 
-        /// <summary>آدرس محل سکونت</summary>
-        [MaxLength(500)]
-        public string Adres { get; set; }
-
-        /// <summary>کد پستی استاد</summary>
-        [MaxLength(20)]
-        public string CodePostiOstad { get; set; }
-
-        /// <summary>تلفن همراه ۱</summary>
+        // تلفن همراه ۱
         [MaxLength(15)]
-        public string TelHamrah1 { get; set; }
+        public string? Mobile { get; set; }
 
-        /// <summary>تلفن همراه ۲</summary>
+        // تلفن همراه ۲
         [MaxLength(15)]
-        public string TelHamrah2 { get; set; }
+        public string? Mobile2 { get; set; }
 
-        // ======== اطلاعات شغلی ========
-        /// <summary>تاریخ پایان کار</summary>
-        public DateTime? TarikhPayanKar { get; set; }
-
-        /// <summary>پایه</summary>
+        // مرتبه علمی
         [MaxLength(50)]
-        public string Payeh { get; set; }
+        public string? MartabeElmi { get; set; }
 
-        /// <summary>مرتبه علمی</summary>
-        [MaxLength(50)]
-        public string MartabeElmi { get; set; }
-
-        /// <summary>حالت استاد</summary>
-        [MaxLength(50)]
-        public string HaalatOstad { get; set; }
-
-        /// <summary>تاریخ استخدام</summary>
-        public DateTime? TarikhEstekhdam { get; set; }
-
-        /// <summary>وضعیت استخدام</summary>
-        [MaxLength(50)]
-        public string VazeeyatEstekhdam { get; set; }
-
-        /// <summary>نوع و شماره بیمه</summary>
-        [MaxLength(50)]
-        public string NooVaShomareBimeh { get; set; }
-
-        // ======== وضعیت‌ها ========
-        /// <summary>آخرین وضعیت</summary>
+        // سازمان مربوطه
         [MaxLength(100)]
-        public string AaKharinVazeeyat { get; set; }
+        public string? SazmanMarboote { get; set; }
 
-        /// <summary>تاریخ آخرین وضعیت</summary>
-        public DateTime? TarikhAakharinVazeeyat { get; set; }
+        // محل اشتغال
+        [MaxLength(100)]
+        public string? MahalEshteghal { get; set; }
 
-        /// <summary>ارائه درس (بله/خیر)</summary>
-        [MaxLength(10)]
-        public string EraehDars { get; set; }
-
-        // ======== سازمان و محل اشتغال ========
-        /// <summary>سازمان مربوطه</summary>
-        [MaxLength(200)]
-        public string SazmanMarboote { get; set; }
-
-        /// <summary>محل اشتغال</summary>
-        [MaxLength(200)]
-        public string MahalEshteghal { get; set; }
-
-        /// <summary>امضا</summary>
+        // امضا
         [MaxLength(250)]
         public string Emza { get; set; } = "";
 
-        /// <summary>کد نوع همکاری</summary>هیلات علمی پیام نور=1،هیات علمی سایر دانشگاههای دولتی=2،مدرس مدعو=3
-        [Required]
-        public int CodeNoeHamkari { get; set; } = 3;
-        /// <summary>نوع همکاری</summary>هیلات علمی پیام نور=1،هیات علمی سایر دانشگاههای دولتی=2،مدرس مدعو=3
-        [Required]
-        [MaxLength(50)]
-        public string NoeHamkari { get; set; } = "مدرس مدعو";
+        // وضعیت استاد (فعال یا غیر فعال)
+        public bool Vazeeat { get; set; } = true;
 
+        // نوع همکاری (Enum)
+        [Required]
+        public NoeHamkariEnum NoeHamkari { get; set; } = NoeHamkariEnum.ModaresMadov;
+
+        // Navigation Properties
+        [ForeignKey(nameof(MarkazId))]
+        public Markaz? Markaz { get; set; }
+
+        [ForeignKey(nameof(MarkazAsliId))]
+        public Markaz? MarkazAsli { get; set; }
+
+        // Navigation Properties (ICollection)
+        public ICollection<BarnamehHaftegiOstad>? BarnamehHaftegiOstads { get; set; }
+        public ICollection<BarnamehTermiOstad>? BarnamehTermiOstads { get; set; }
     }
 }

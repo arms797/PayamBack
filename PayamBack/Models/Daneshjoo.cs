@@ -9,176 +9,134 @@ namespace PayamBack.Models
     /// </summary>
     public class Daneshjoo
     {
-        // ======== شناسه فنی (توصیه‌شده) ========
+        // ======== شناسه فنی ========
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
         // ======== کدهای شناسایی ========
-        /// <summary>کد مرکز</summary>
-        [MaxLength(50)]
-        public string CodeMarkaz { get; set; }
 
-        /// <summary>کد مرکز آزمون</summary>
-        [MaxLength(50)]
-        public string CodeMarkazeAzmoon { get; set; }
-
-        /// <summary>کد مرکز ترمی</summary>
-        [MaxLength(50)]
-        public string CodeMarkazeTermi { get; set; }
-
-        /// <summary>کد استان واحد</summary>
-        [MaxLength(50)]
-        public string CodeOstan { get; set; }
-
-        /// <summary>شماره دانشجویی</summary>
+        // کلید خارجی به جدول مرکز اصلی (Markaz)
         [Required]
-        [MaxLength(50)]
-        public string ShomareDaneshjooee { get; set; }
+        public int MarkazId { get; set; }
+
+        // کلید خارجی به جدول مرکز آزمون (Markaz)
+        [Required]
+        public int MarkazAzmoonId { get; set; }
+
+        // کلید خارجی به جدول مرکز ترمی (Markaz)
+        [Required]
+        public int MarkazTermiId { get; set; }
+
+        // کلید خارجی به جدول رشته (Reshteh)
+        [Required]
+        public int ReshtehId { get; set; }
+
+        // شماره دانشجویی
+        [Required, MaxLength(50)]
+        public string ShomareDaneshjooee { get; set; } = "";
 
         // ======== اطلاعات فردی ========
-        /// <summary>نام خانوادگی</summary>
-        [Required]
-        [MaxLength(100)]
-        public string NaamKhanevadegi { get; set; }
 
-        /// <summary>نام</summary>
-        [Required]
-        [MaxLength(100)]
-        public string Naam { get; set; }
+        // نام خانوادگی
+        [Required, MaxLength(100)]
+        public string NaamKhanevadegi { get; set; } = "";
 
-        /// <summary>جنس (مرد/زن)</summary>
+        // نام
+        [Required, MaxLength(100)]
+        public string Naam { get; set; } = "";
+
+        // جنس (مرد/زن)
         [MaxLength(10)]
-        public string Jens { get; set; }
+        public string Jens { get; set; } = "";
 
-        /// <summary>نام پدر</summary>
+        // نام پدر
         [MaxLength(100)]
-        public string Naampedar { get; set; }
+        public string Naampedar { get; set; } = "";
 
-        /// <summary>شماره ملی</summary>
-        [Required]
-        [MaxLength(10)]
-        public string ShomareMelli { get; set; }
+        // شماره ملی
+        [Required, MaxLength(10)]
+        public string ShomareMelli { get; set; } = "";
 
-        /// <summary>شماره شناسنامه</summary>
+        // شماره شناسنامه
         [MaxLength(20)]
-        public string ShomareShenasname { get; set; }
+        public string ShomareShenasname { get; set; } = "";
 
-        /// <summary>شماره گذرنامه / کارت هویت</summary>
+        // شماره گذرنامه / کارت هویت
         [MaxLength(50)]
-        public string ShomareGozarnameYaKartHoviyat { get; set; }
+        public string ShomareGozarnameYaKartHoviyat { get; set; } = "";
 
-        /// <summary>شناسه فراگیر اتباع خارجی</summary>
+        // شناسه فراگیر اتباع خارجی
         [MaxLength(50)]
-        public string ShenasayeFaragirAtbaaKhareji { get; set; }
+        public string ShenasayeFaragirAtbaaKhareji { get; set; } = "";
 
-        /// <summary>محل صدور</summary>
+        // محل صدور
         [MaxLength(200)]
-        public string MahalSodoor { get; set; }
+        public string MahalSodoor { get; set; } = "";
 
-        /// <summary>تاریخ تولد</summary>
-        [Required]
-        public DateTime? TarikhTavalod { get; set; }
+        // تاریخ تولد
+        public DateOnly? TarikhTavalod { get; set; }
 
         // ======== اطلاعات تحصیلی ========
-        /// <summary>ترم ورود (مثلاً 1401-1)</summary>
-        [Required]
-        [MaxLength(10)]
-        public string TermVorood { get; set; }   // در مستند اولیه date ذکر شده بود اما معمولاً رشته است
 
-        /// <summary>کد دانشکده</summary>
-        [Required]
-        [MaxLength(50)]
-        public string CodeDaneshkade { get; set; }
-
-        /// <summary>کد گروه آموزشی</summary>
-        [Required]
-        [MaxLength(50)]
-        public string CodeGrooheAmoozeshi { get; set; }
-
-        /// <summary>کد رشته دو رقمی</summary>
-        [Required]
-        [MaxLength(2)]
-        public string CodeReshteDoRaghami { get; set; }
-
-        /// <summary>کد مقطع</summary>
-        [MaxLength(50)]
-        public string CodeMaghta { get; set; }
-
-        /// <summary>دوره</summary>
-        [MaxLength(50)]
-        public string Dore { get; set; }
-
-        /// <summary>معدل کل</summary>
-        public float? MoadelKol { get; set; }
-
-        /// <summary>واحد گذرانده</summary>
-        public float? VahedGozarande { get; set; }
-
-        /// <summary>واحد اخذ شده</summary>
-        public float? VahedAkhzShode { get; set; }
+        // ترم ورود (مثلاً 1401-1)
+        [Required, MaxLength(50)]
+        public string TermVorood { get; set; } = "";
 
         // ======== وضعیت‌ها ========
-        /// <summary>آخرین وضعیت دانشجو</summary>
-        [MaxLength(100)]
-        public string AkharinVazeeyatDaneshjoo { get; set; }
 
-        /// <summary>وضعیت نظام وظیفه</summary>
-        [MaxLength(100)]
-        public string VazeeyatNezamVazife { get; set; }
-
-        /// <summary>شماره پرونده</summary>
+        // شماره پرونده
         [MaxLength(50)]
-        public string ShomareParvande { get; set; }
+        public string ShomareParvande { get; set; } = "";
 
-        /// <summary>وضعیت پرونده</summary>
+        // وضعیت پرونده
         [MaxLength(100)]
-        public string VazeeyatParvande { get; set; }
+        public string VazeeyatParvande { get; set; } = "";
 
         // ======== اطلاعات تماس ========
-        /// <summary>شماره تلفن</summary>
+
+        // شماره تلفن همراه
         [MaxLength(15)]
-        public string ShomareTelefon { get; set; }
+        public string Mobile { get; set; } = "";
 
-        /// <summary>تلفن همراه</summary>
-        [MaxLength(15)]
-        public string TelefonHamrah { get; set; }
-
-        /// <summary>کد پستی</summary>
-        [MaxLength(20)]
-        public string CodePosti { get; set; }
-
-        /// <summary>نام استان محل سکونت</summary>
-        [MaxLength(100)]
-        public string NaamOstanMahalSokoonat { get; set; }
-
-        /// <summary>شهر محل سکونت</summary>
-        [MaxLength(100)]
-        public string ShahrmahalSokoonat { get; set; }
-
-        /// <summary>آدرس</summary>
-        [MaxLength(500)]
-        public string Adres { get; set; }
-
-        /// <summary>پست الکترونیک</summary>
+        // پست الکترونیک
         [MaxLength(200)]
-        public string POstElektronik { get; set; }
+        public string Email { get; set; } = "";
 
         // ======== سایر اطلاعات ========
-        /// <summary>چپ دست (بله/خیر)</summary>
+
+        // چپ دست (بله/خیر)
         [MaxLength(10)]
-        public string ChapDast { get; set; }
+        public string ChapDast { get; set; } = "";
 
-        /// <summary>شماره داوطلبی</summary>
+        // شماره داوطلبی
         [MaxLength(50)]
-        public string ShomareDavtalabi { get; set; }
+        public string ShomareDavtalabi { get; set; } = "";
 
-        /// <summary>کد رشته محل قبولی سنجش</summary>
+        // کد رشته محل قبولی سنجش
         [MaxLength(50)]
-        public string CodeReshteMahalGhabooliSanjesh { get; set; }
+        public string CodeReshteMahalGhabooliSanjesh { get; set; } = "";
 
-        /// <summary>شماره سنجش</summary>
+        // شماره سنجش
         [MaxLength(50)]
-        public string ShomareSanjesh { get; set; }
+        public string ShomareSanjesh { get; set; } = "";
+
+        // ======== Navigation Properties ========
+
+        // مرکز اصلی
+        [ForeignKey(nameof(MarkazId))]
+        public Markaz? Markaz { get; set; }
+
+        // مرکز آزمون
+        [ForeignKey(nameof(MarkazAzmoonId))]
+        public Markaz? MarkazAzmoon { get; set; }
+
+        // مرکز ترمی
+        [ForeignKey(nameof(MarkazTermiId))]
+        public Markaz? MarkazTermi { get; set; }
+
+        // رشته تحصیلی
+        [ForeignKey(nameof(ReshtehId))]
+        public Reshteh? Reshteh { get; set; }
     }
 }

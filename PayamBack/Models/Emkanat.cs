@@ -17,7 +17,7 @@ namespace PayamBack.Models
         // ======== اطلاعات اصلی امکان ========
         /// <summary>کد امکان (یکتا)</summary>
         [Required]
-        public int Code { get; set; }
+        public int Code { get; set; }// با Unique Index
 
         /// <summary>نام امکان</summary>
         [Required]

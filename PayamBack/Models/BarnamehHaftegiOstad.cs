@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PayamBack.Models
 {
@@ -7,48 +8,66 @@ namespace PayamBack.Models
         [Key]
         public int Id { get; set; }
 
+        // اضافه کردن کلید خارجی جدول استاد  
+        [Required]
+        public int OstadId { get; set; }
+
+        // کد استاد
         [Required, MaxLength(50)]
         public string CodeOstad { get; set; } = "";
 
-        [Required, MaxLength(50)]
-        public string CodeOstan { get; set; } = "";
+        // کلید خارجی به جدول مرکز (Markaz)
+        [Required]
+        public int MarkazId { get; set; }
 
-        [Required, MaxLength(50)]
-        public string CodeMarkaz { get; set; } = "";
-
+        // کد ترم
         [Required, MaxLength(50)]
         public string CodeTerm { get; set; } = "";
 
+        // روز هفته (شنبه، یکشنبه، ...)
         [Required, MaxLength(50)]
-        public string RoozeHafteh { get; set; } = "";   // مثلاً "شنبه" یا "Saturday"
+        public string RoozeHafteh { get; set; } = "";
 
-        [MaxLength(200)]
-        public string? A { get; set; }
+        // ساعات با کد وضعیت (ارجاع به VaziateSaatRules.Code)
+        [Required]
+        public int A { get; set; } = 0;  // 0 یعنی خالی/بدون وضعیت
 
-        [MaxLength(200)]
-        public string? B { get; set; }
+        [Required]
+        public int B { get; set; } = 0;
 
-        [MaxLength(200)]
-        public string? C { get; set; }
+        [Required]
+        public int C { get; set; } = 0;
 
-        [MaxLength(200)]
-        public string? D { get; set; }
+        [Required]
+        public int D { get; set; } = 0;
 
-        [MaxLength(200)]
-        public string? E { get; set; }
+        [Required]
+        public int E { get; set; } = 0;
 
-        [MaxLength(200)]
-        public string? F { get; set; }
+        [Required]
+        public int F { get; set; } = 0;
 
-        [MaxLength(200)]
-        public string? G { get; set; }
+        [Required]
+        public int G { get; set; } = 0;
 
-        [MaxLength(200)]
-        public string? H { get; set; }
+        [Required]
+        public int H { get; set; } = 0;
 
+        // جزئیات بیشتر
         public bool Jozeiat { get; set; } = false;
 
+        // توضیحات
         [MaxLength(500)]
         public string? Tozihat { get; set; }
+
+        // Navigation properties
+        [ForeignKey(nameof(OstadId))]
+        public Ostad? Ostad { get; set; }
+
+        [ForeignKey(nameof(CodeTerm))]
+        public Term? Term { get; set; }
+
+        [ForeignKey(nameof(MarkazId))]
+        public Markaz? Markaz { get; set; }
     }
 }

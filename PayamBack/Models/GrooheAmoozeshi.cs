@@ -37,5 +37,7 @@ namespace PayamBack.Models
         [Required]
         [MaxLength(50)]
         public string CodeTarkibi { get; set; } = "";
+
+        public ICollection<Reshteh>? Reshtehs { get; set; }
     }
 }

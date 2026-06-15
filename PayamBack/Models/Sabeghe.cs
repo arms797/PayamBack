@@ -4,51 +4,54 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PayamBack.Models
 {
+    // تاریخچه فعالیت‌ها و لاگ‌های سیستم
     public class Sabeghe
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }                   // not null
+        public int Id { get; set; }
 
-        [Required]
-        [MaxLength(50)]
-        public string IpSystem { get; set; } = "";    // not null (string.Empty ذخیره می‌شود)
+        // IP دستگاه
+        [Required, MaxLength(50)]
+        public string IpSystem { get; set; } = "";
 
-        [Required]
-        [MaxLength(200)]
+        // نام دستگاه
+        [Required, MaxLength(200)]
         public string Dastgah { get; set; } = "";
 
-        [Required]
-        [MaxLength(200)]
+        // مرورگر
+        [Required, MaxLength(200)]
         public string Moroorgar { get; set; } = "";
 
+        // زمان لاگین
         [Required]
-        public DateTime? ZamanLogin { get; set; }      // not null (در صورت نبودن مقدار باید DateTime.MinValue یا یک تاریخ قراردادی بفرستید)
+        public DateTime? ZamanLogin { get; set; }
 
-        [Required]
-        [MaxLength(100)]
+        // نام جدول
+        [Required, MaxLength(100)]
         public string Table { get; set; } = "";
 
-        [Required]
-        [MaxLength(100)]
-        public string User { get; set; }              // not null (حتماً باید مقدار داشته باشد)
+        // نام کاربر
+        [Required, MaxLength(100)]
+        public string User { get; set; } = "";
 
-        [Required]
-        [MaxLength(100)]
+        // شناسه رکورد تغییر دهنده
+        [Required, MaxLength(100)]
         public string IdRecordTagirDahande { get; set; } = "";
 
-        [Required]
-        [MaxLength(20)]
+        // روز هفته
+        [Required, MaxLength(20)]
         public string RoozHafte { get; set; } = "";
 
+        // زمان تغییر
         [Required]
-        public DateTime? ZamanTagir { get; set; }
+        public DateTime ZamanTagir { get; set; }
 
-        [Required]
-        [MaxLength(1000)]
+        // توضیح تغییرات
+        [Required, MaxLength(1000)]
         public string TozihTagirat { get; set; } = "";
 
-        [Required]
-        public DateTime? ZamanLogOut { get; set; }     // not null (اگر هنوز لاگ‌اوت نشده، یک تاریخ پیش‌فرض بگذارید)
+        // زمان لاگ‌اوت (اگر null باشد یعنی هنوز خارج نشده)
+        public DateTime? ZamanLogOut { get; set; }
     }
 }

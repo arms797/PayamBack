@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PayamBack.Models
@@ -9,58 +8,78 @@ namespace PayamBack.Models
         [Key]
         public int Id { get; set; }
 
+        // اضافه کردن کلید خارجی جدول استاد  
+        [Required]
+        public int OstadId { get; set; }
+
+        // کد استاد
         [Required, MaxLength(50)]
         public string CodeOstad { get; set; } = "";
 
-        [Required, MaxLength(50)]
-        public string CodeOstan { get; set; } = "";
+        // کلید خارجی به جدول مرکز (Markaz)
+        [Required]
+        public int MarkazId { get; set; }
 
-        [Required, MaxLength(50)]
-        public string CodeMarkaz { get; set; } = "";
-
+        // کد ترم
         [Required, MaxLength(50)]
         public string CodeTerm { get; set; } = "";
 
+        // روز هفته (برای سرعت جستجو)
         [Required, MaxLength(50)]
-        public string RoozeHafteh { get; set; } = "";   // مثلاً "شنبه" یا "Saturday"
+        public string RoozeHafteh { get; set; } = "";
 
+        // تاریخ خاص در ترم
+        [Required, Column(TypeName = "date")]
+        public DateOnly Tarikh { get; set; }
+
+        // ساعات (کد وضعیت از VaziateSaatRules)
         [Required]
-        [Column(TypeName = "date")]
-        public DateOnly Tarikh { get; set; }             // تاریخ (بدون ساعت)
+        public int A { get; set; } = 0;
+        [Required]
+        public int B { get; set; } = 0;
+        [Required]
+        public int C { get; set; } = 0;
+        [Required]
+        public int D { get; set; } = 0;
+        [Required]
+        public int E { get; set; } = 0;
+        [Required]
+        public int F { get; set; } = 0;
+        [Required]
+        public int G { get; set; } = 0;
+        [Required]
+        public int H { get; set; } = 0;
 
-        [MaxLength(200)]
-        public string? A { get; set; }
+        // وضعیت پر شدن هر ساعت
+        [Required]
         public bool TA { get; set; } = false;
-
-        [MaxLength(200)]
-        public string? B { get; set; }
+        [Required]
         public bool TB { get; set; } = false;
-
-        [MaxLength(200)]
-        public string? C { get; set; }
+        [Required]
         public bool TC { get; set; } = false;
-
-        [MaxLength(200)]
-        public string? D { get; set; }
+        [Required]
         public bool TD { get; set; } = false;
-
-        [MaxLength(200)]
-        public string? E { get; set; }
+        [Required]
         public bool TE { get; set; } = false;
-
-        [MaxLength(200)]
-        public string? F { get; set; }
+        [Required]
         public bool TF { get; set; } = false;
-
-        [MaxLength(200)]
-        public string? G { get; set; }
+        [Required]
         public bool TG { get; set; } = false;
-
-        [MaxLength(200)]
-        public string? H { get; set; }
+        [Required]
         public bool TH { get; set; } = false;
 
+        // فعال/غیرفعال
         [Required]
         public bool Faal { get; set; } = true;
+
+        // Navigation properties
+        [ForeignKey(nameof(OstadId))]
+        public Ostad? Ostad { get; set; }
+
+        [ForeignKey(nameof(CodeTerm))]
+        public Term? Term { get; set; }
+
+        [ForeignKey(nameof(MarkazId))]
+        public Markaz? Markaz { get; set; }
     }
 }

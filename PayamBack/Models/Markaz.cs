@@ -13,8 +13,7 @@ namespace PayamBack.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        /// <summary>کد استان</summary>
-        [Required]
+        /// <summary>کد استان</summary>        
         [MaxLength(50)]
         public string CodeOstan { get; set; } = "";
 
@@ -60,5 +59,13 @@ namespace PayamBack.Models
 
         /// <summary>وضعیت (فعال/غیرفعال)</summary>
         public bool Vazeeyat { get; set; }
+
+        // Navigation Properties (ICollection)
+        public ICollection<AppUserRole>? AppUserRoles { get; set; }
+        public ICollection<Ostad>? Ostads { get; set; }
+        public ICollection<Daneshjoo>? Daneshjoos { get; set; }
+        public ICollection<Karmand>? Karmands { get; set; }
+        public ICollection<BarnamehHaftegiOstad>? BarnamehHaftegiOstads { get; set; }
+        public ICollection<BarnamehTermiOstad>? BarnamehTermiOstads { get; set; }
     }
 }

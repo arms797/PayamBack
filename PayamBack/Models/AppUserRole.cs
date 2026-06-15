@@ -1,17 +1,21 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PayamBack.Models
 {
-    public class AppUserRole:IdentityUserRole<int>
+    public class AppUserRole : IdentityUserRole<int>
     {
+        // کلید خارجی به جدول مرکز (Markaz)
         [Required]
-        [MaxLength(50)]
-        public string CodeOstan { get; set; } = "";
+        public int MarkazId { get; set; }
+
+        // نقش پیش‌فرض این کاربر در مرکز مربوطه
         [Required]
-        [MaxLength(50)]
-        public string CodeMarkaz { get; set; } = "";
-        [Required]
-        public bool RolePishFarz { get; set; }=false;
+        public bool RolePishFarz { get; set; } = false;
+
+        // دسترسی به اطلاعات مرکز
+        [ForeignKey(nameof(MarkazId))]
+        public Markaz? Markaz { get; set; }
     }
 }
