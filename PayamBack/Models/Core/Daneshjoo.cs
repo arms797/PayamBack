@@ -1,8 +1,9 @@
-﻿using System;
+﻿using PayamBack.Models.Edu;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace PayamBack.Models
+namespace PayamBack.Models.Core
 {
     /// <summary>
     /// اطلاعات دانشجویان

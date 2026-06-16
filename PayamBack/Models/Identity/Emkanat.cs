@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace PayamBack.Models
+namespace PayamBack.Models.Identity
 {
     /// <summary>
     /// امکانات و دسترسی‌های سیستم (منوها، صفحات، دکمه‌ها و ...)

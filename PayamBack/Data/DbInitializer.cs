@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.Models;
+using PayamBack.Models.Identity;
 
 namespace PayamBack
 {

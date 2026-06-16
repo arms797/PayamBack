@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using PayamBack.Models.Audit;
+using PayamBack.Models.Core;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace PayamBack.Models
+namespace PayamBack.Models.Identity
 {
     public class AppUser:IdentityUser<int>
     {
@@ -22,5 +24,8 @@ namespace PayamBack.Models
 
         [ForeignKey(nameof(DaneshjooId))]
         public Daneshjoo? Daneshjoo { get; set; }
+
+        // Navigation Properties (ICollection)
+        public ICollection<Sabeghe>? Sabeghes { get; set; }
     }
 }

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PayamBack;
 using PayamBack.Data;
-using PayamBack.Models;
+using PayamBack.Models.Identity;
 using System.Text;
 using System.Text.Json.Serialization;
 

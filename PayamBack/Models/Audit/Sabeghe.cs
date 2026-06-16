@@ -1,8 +1,9 @@
-﻿using System;
+﻿using PayamBack.Models.Identity;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace PayamBack.Models
+namespace PayamBack.Models.Audit
 {
     // تاریخچه فعالیت‌ها و لاگ‌های سیستم
     public class Sabeghe
@@ -24,34 +25,37 @@ namespace PayamBack.Models
         public string Moroorgar { get; set; } = "";
 
         // زمان لاگین
-        [Required]
+        
         public DateTime? ZamanLogin { get; set; }
 
         // نام جدول
-        [Required, MaxLength(100)]
-        public string Table { get; set; } = "";
+        [ MaxLength(100)]
+        public string? Table { get; set; } 
 
         // نام کاربر
-        [Required, MaxLength(100)]
-        public string User { get; set; } = "";
+        [Required]
+        public int UserId { get; set; } 
 
         // شناسه رکورد تغییر دهنده
-        [Required, MaxLength(100)]
-        public string IdRecordTagirDahande { get; set; } = "";
+        [ MaxLength(100)]
+        public string? IdRecordTagirDahande { get; set; }
 
         // روز هفته
-        [Required, MaxLength(20)]
-        public string RoozHafte { get; set; } = "";
+        [ MaxLength(20)]
+        public string? RoozHafte { get; set; } 
 
-        // زمان تغییر
-        [Required]
-        public DateTime ZamanTagir { get; set; }
+        // زمان تغییر        
+        public DateTime? ZamanTagir { get; set; }
 
         // توضیح تغییرات
-        [Required, MaxLength(1000)]
-        public string TozihTagirat { get; set; } = "";
+        [ MaxLength(1000)]
+        public string? TozihTagirat { get; set; } 
 
         // زمان لاگ‌اوت (اگر null باشد یعنی هنوز خارج نشده)
         public DateTime? ZamanLogOut { get; set; }
+
+        // Navigation Property به AppUser
+        [ForeignKey(nameof(UserId))]
+        public AppUser? User { get; set; }
     }
 }

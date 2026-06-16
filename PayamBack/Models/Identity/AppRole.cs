@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 
-namespace PayamBack.Models
+namespace PayamBack.Models.Identity
 {
     public class AppRole:IdentityRole<int>
     {

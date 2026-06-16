@@ -1,6 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using PayamBack.Models;
+using PayamBack.Models.Audit;
+using PayamBack.Models.Core;
+using PayamBack.Models.Edu;
+using PayamBack.Models.Identity;
+using PayamBack.Models.Schedule;
 
 namespace PayamBack.Data
 {
@@ -141,6 +145,13 @@ namespace PayamBack.Data
                 .HasOne(r => r.GrooheAmoozeshi)
                 .WithMany(g => g.Reshtehs)
                 .HasForeignKey(r => r.GrooheAmoozeshiId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Sabeghe - جلوگیری از Cascade Delete
+            builder.Entity<Sabeghe>()
+                .HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
         }
     }

@@ -1,9 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using PayamBack.Models.Core;
+using PayamBack.Models.Edu;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace PayamBack.Models
+namespace PayamBack.Models.Schedule
 {
-    public class BarnamehTermiOstad
+    public class BarnamehHaftegiOstad
     {
         [Key]
         public int Id { get; set; }
@@ -24,53 +26,41 @@ namespace PayamBack.Models
         [Required, MaxLength(50)]
         public string CodeTerm { get; set; } = "";
 
-        // روز هفته (برای سرعت جستجو)
+        // روز هفته (شنبه، یکشنبه، ...)
         [Required, MaxLength(50)]
         public string RoozeHafteh { get; set; } = "";
 
-        // تاریخ خاص در ترم
-        [Required, Column(TypeName = "date")]
-        public DateOnly Tarikh { get; set; }
-
-        // ساعات (کد وضعیت از VaziateSaatRules)
+        // ساعات با کد وضعیت (ارجاع به VaziateSaatRules.Code)
         [Required]
-        public int A { get; set; } = 0;
+        public int A { get; set; } = 0;  // 0 یعنی خالی/بدون وضعیت
+
         [Required]
         public int B { get; set; } = 0;
+
         [Required]
         public int C { get; set; } = 0;
+
         [Required]
         public int D { get; set; } = 0;
+
         [Required]
         public int E { get; set; } = 0;
+
         [Required]
         public int F { get; set; } = 0;
+
         [Required]
         public int G { get; set; } = 0;
+
         [Required]
         public int H { get; set; } = 0;
 
-        // وضعیت پر شدن هر ساعت
-        [Required]
-        public bool TA { get; set; } = false;
-        [Required]
-        public bool TB { get; set; } = false;
-        [Required]
-        public bool TC { get; set; } = false;
-        [Required]
-        public bool TD { get; set; } = false;
-        [Required]
-        public bool TE { get; set; } = false;
-        [Required]
-        public bool TF { get; set; } = false;
-        [Required]
-        public bool TG { get; set; } = false;
-        [Required]
-        public bool TH { get; set; } = false;
+        // جزئیات بیشتر
+        public bool Jozeiat { get; set; } = false;
 
-        // فعال/غیرفعال
-        [Required]
-        public bool Faal { get; set; } = true;
+        // توضیحات
+        [MaxLength(500)]
+        public string? Tozihat { get; set; }
 
         // Navigation properties
         [ForeignKey(nameof(OstadId))]
