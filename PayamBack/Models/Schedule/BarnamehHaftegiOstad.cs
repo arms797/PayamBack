@@ -10,66 +10,67 @@ namespace PayamBack.Models.Schedule
         [Key]
         public int Id { get; set; }
 
-        // اضافه کردن کلید خارجی جدول استاد  
-        [Required]
-        public int OstadId { get; set; }
+        /// <summary>کلید خارجی به جدول استاد</summary>
+        public int? OstadId { get; set; }
 
-        // کد استاد
-        [Required, MaxLength(50)]
-        public string CodeOstad { get; set; } = "";
+        /// <summary>کد استاد</summary>
+        [MaxLength(50)]
+        public string? CodeOstad { get; set; }
 
-        // کلید خارجی به جدول مرکز (Markaz)
-        [Required]
-        public int MarkazId { get; set; }
+        /// <summary>کلید خارجی به جدول مرکز (Markaz)</summary>
+        public int? MarkazId { get; set; }
 
-        // کد ترم
-        [Required, MaxLength(50)]
-        public string CodeTerm { get; set; } = "";
+        /// <summary>کد ترم</summary>
+        [MaxLength(50)]
+        public string? CodeTerm { get; set; }
 
-        // روز هفته (شنبه، یکشنبه، ...)
-        [Required, MaxLength(50)]
-        public string RoozeHafteh { get; set; } = "";
+        /// <summary>روز هفته (شنبه، یکشنبه، ...)</summary>
+        [MaxLength(50)]
+        public string? RoozeHafteh { get; set; }
 
-        // ساعات با کد وضعیت (ارجاع به VaziateSaatRules.Code)
-        [Required]
-        public int A { get; set; } = 0;  // 0 یعنی خالی/بدون وضعیت
+        /// <summary>ساعت A (کد وضعیت - 0 یعنی خالی/بدون وضعیت)</summary>
+        public int? A { get; set; }
 
-        [Required]
-        public int B { get; set; } = 0;
+        /// <summary>ساعت B</summary>
+        public int? B { get; set; }
 
-        [Required]
-        public int C { get; set; } = 0;
+        /// <summary>ساعت C</summary>
+        public int? C { get; set; }
 
-        [Required]
-        public int D { get; set; } = 0;
+        /// <summary>ساعت D</summary>
+        public int? D { get; set; }
 
-        [Required]
-        public int E { get; set; } = 0;
+        /// <summary>ساعت E</summary>
+        public int? E { get; set; }
 
-        [Required]
-        public int F { get; set; } = 0;
+        /// <summary>ساعت F</summary>
+        public int? F { get; set; }
 
-        [Required]
-        public int G { get; set; } = 0;
+        /// <summary>ساعت G</summary>
+        public int? G { get; set; }
 
-        [Required]
-        public int H { get; set; } = 0;
+        /// <summary>ساعت H</summary>
+        public int? H { get; set; }
 
-        // جزئیات بیشتر
-        public bool Jozeiat { get; set; } = false;
+        /// <summary>جزئیات بیشتر</summary>
+        public bool? Jozeiat { get; set; }
 
-        // توضیحات
+        /// <summary>توضیحات</summary>
         [MaxLength(500)]
         public string? Tozihat { get; set; }
 
-        // Navigation properties
+        // ======== Navigation Properties ========
+
+        /// <summary>استاد مرتبط</summary>
         [ForeignKey(nameof(OstadId))]
-        public Ostad? Ostad { get; set; }
+        public virtual Ostad? Ostad { get; set; }
 
+        /// <summary>ترم مرتبط</summary>
         [ForeignKey(nameof(CodeTerm))]
-        public Term? Term { get; set; }
+        public virtual Term? Term { get; set; }
 
+        /// <summary>مرکز مرتبط</summary>
         [ForeignKey(nameof(MarkazId))]
-        public Markaz? Markaz { get; set; }
+        public virtual Markaz? Markaz { get; set; }
     }
 }

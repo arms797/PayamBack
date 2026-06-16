@@ -10,78 +10,91 @@ namespace PayamBack.Models.Schedule
         [Key]
         public int Id { get; set; }
 
-        // اضافه کردن کلید خارجی جدول استاد  
-        [Required]
-        public int OstadId { get; set; }
+        /// <summary>کلید خارجی به جدول استاد</summary>
+        public int? OstadId { get; set; }
 
-        // کد استاد
-        [Required, MaxLength(50)]
-        public string CodeOstad { get; set; } = "";
+        /// <summary>کد استاد</summary>
+        [MaxLength(50)]
+        public string? CodeOstad { get; set; }
 
-        // کلید خارجی به جدول مرکز (Markaz)
-        [Required]
-        public int MarkazId { get; set; }
+        /// <summary>کلید خارجی به جدول مرکز (Markaz)</summary>
+        public int? MarkazId { get; set; }
 
-        // کد ترم
-        [Required, MaxLength(50)]
-        public string CodeTerm { get; set; } = "";
+        /// <summary>کد ترم</summary>
+        [MaxLength(50)]
+        public string? CodeTerm { get; set; }
 
-        // روز هفته (برای سرعت جستجو)
-        [Required, MaxLength(50)]
-        public string RoozeHafteh { get; set; } = "";
+        /// <summary>روز هفته (برای سرعت جستجو)</summary>
+        [MaxLength(50)]
+        public string? RoozeHafteh { get; set; }
 
-        // تاریخ خاص در ترم
-        [Required, Column(TypeName = "date")]
-        public DateOnly Tarikh { get; set; }
+        /// <summary>تاریخ خاص در ترم</summary>
+        [Column(TypeName = "date")]
+        public DateOnly? Tarikh { get; set; }
 
-        // ساعات (کد وضعیت از VaziateSaatRules)
-        [Required]
-        public int A { get; set; } = 0;
-        [Required]
-        public int B { get; set; } = 0;
-        [Required]
-        public int C { get; set; } = 0;
-        [Required]
-        public int D { get; set; } = 0;
-        [Required]
-        public int E { get; set; } = 0;
-        [Required]
-        public int F { get; set; } = 0;
-        [Required]
-        public int G { get; set; } = 0;
-        [Required]
-        public int H { get; set; } = 0;
+        /// <summary>ساعت A (کد وضعیت از VaziateSaatRules)</summary>
+        public int? A { get; set; }
 
-        // وضعیت پر شدن هر ساعت
-        [Required]
-        public bool TA { get; set; } = false;
-        [Required]
-        public bool TB { get; set; } = false;
-        [Required]
-        public bool TC { get; set; } = false;
-        [Required]
-        public bool TD { get; set; } = false;
-        [Required]
-        public bool TE { get; set; } = false;
-        [Required]
-        public bool TF { get; set; } = false;
-        [Required]
-        public bool TG { get; set; } = false;
-        [Required]
-        public bool TH { get; set; } = false;
+        /// <summary>ساعت B</summary>
+        public int? B { get; set; }
 
-        // فعال/غیرفعال
-        [Required]
-        public bool Faal { get; set; } = true;
+        /// <summary>ساعت C</summary>
+        public int? C { get; set; }
 
-        // Navigation properties
+        /// <summary>ساعت D</summary>
+        public int? D { get; set; }
+
+        /// <summary>ساعت E</summary>
+        public int? E { get; set; }
+
+        /// <summary>ساعت F</summary>
+        public int? F { get; set; }
+
+        /// <summary>ساعت G</summary>
+        public int? G { get; set; }
+
+        /// <summary>ساعت H</summary>
+        public int? H { get; set; }
+
+        /// <summary>وضعیت پر شدن ساعت A</summary>
+        public bool? TA { get; set; }
+
+        /// <summary>وضعیت پر شدن ساعت B</summary>
+        public bool? TB { get; set; }
+
+        /// <summary>وضعیت پر شدن ساعت C</summary>
+        public bool? TC { get; set; }
+
+        /// <summary>وضعیت پر شدن ساعت D</summary>
+        public bool? TD { get; set; }
+
+        /// <summary>وضعیت پر شدن ساعت E</summary>
+        public bool? TE { get; set; }
+
+        /// <summary>وضعیت پر شدن ساعت F</summary>
+        public bool? TF { get; set; }
+
+        /// <summary>وضعیت پر شدن ساعت G</summary>
+        public bool? TG { get; set; }
+
+        /// <summary>وضعیت پر شدن ساعت H</summary>
+        public bool? TH { get; set; }
+
+        /// <summary>فعال/غیرفعال</summary>
+        public bool? Faal { get; set; }
+
+        // ======== Navigation Properties ========
+
+        /// <summary>استاد مرتبط</summary>
         [ForeignKey(nameof(OstadId))]
-        public Ostad? Ostad { get; set; }
+        public virtual Ostad? Ostad { get; set; }
 
+        /// <summary>ترم مرتبط</summary>
         [ForeignKey(nameof(CodeTerm))]
-        public Term? Term { get; set; }
+        public virtual Term? Term { get; set; }
 
+        /// <summary>مرکز مرتبط</summary>
         [ForeignKey(nameof(MarkazId))]
-        public Markaz? Markaz { get; set; }
+        public virtual Markaz? Markaz { get; set; }
     }
 }

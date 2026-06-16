@@ -7,16 +7,14 @@ namespace PayamBack.Models.Identity
 {
     public class AppUserRole : IdentityUserRole<int>
     {
-        // کلید خارجی به جدول مرکز (Markaz)
-        [Required]
-        public int MarkazId { get; set; }
+        /// <summary>کلید خارجی به جدول مرکز (Markaz)</summary>
+        public int? MarkazId { get; set; }
 
-        // نقش پیش‌فرض این کاربر در مرکز مربوطه
-        [Required]
-        public bool RolePishFarz { get; set; } = false;
+        /// <summary>نقش پیش‌فرض این کاربر در مرکز مربوطه</summary>
+        public bool? RolePishFarz { get; set; }
 
-        // دسترسی به اطلاعات مرکز
+        /// <summary>دسترسی به اطلاعات مرکز</summary>
         [ForeignKey(nameof(MarkazId))]
-        public Markaz? Markaz { get; set; }
+        public virtual Markaz? Markaz { get; set; }
     }
 }

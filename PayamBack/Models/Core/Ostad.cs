@@ -31,100 +31,103 @@ namespace PayamBack.Models.Core
         [Key]
         public int Id { get; set; }
 
-        // کد دانشکده
+        /// <summary>کد دانشکده</summary>
         [MaxLength(50)]
-        public string CodeDaneshkade { get; set; } = "";
+        public string? CodeDaneshkade { get; set; }
 
-        // کد گروه آموزشی
+        /// <summary>کد گروه آموزشی</summary>
         [MaxLength(50)]
-        public string CodeGrooheAmoozeshi { get; set; } = "";
+        public string? CodeGrooheAmoozeshi { get; set; }
 
-        // عنوان رشته تحصیلی استاد
+        /// <summary>عنوان رشته تحصیلی استاد</summary>
         [MaxLength(100)]
-        public string Reshteh { get; set; } = "";
+        public string? Reshteh { get; set; }
 
-        // کلید خارجی به جدول مرکز خدمتی
-        [Required]
-        public int MarkazId { get; set; }
+        /// <summary>کلید خارجی به جدول مرکز خدمتی</summary>
+        public int? MarkazId { get; set; }
 
-        // کلید خارجی به جدول مرکز اصلی (اختیاری)
+        /// <summary>کلید خارجی به جدول مرکز اصلی (اختیاری)</summary>
         public int? MarkazAsliId { get; set; }
 
-        // کد استادی (شماره پرسنلی)
+        /// <summary>کد استادی (شماره پرسنلی)</summary>
         [MaxLength(50)]
-        public string CodeOstadi { get; set; } = "";
+        public string? CodeOstadi { get; set; }
 
-        // نام خانوادگی استاد
+        /// <summary>نام خانوادگی استاد</summary>
         [MaxLength(100)]
-        public string NaamKhanevadegi { get; set; } = "";
+        public string? NaamKhanevadegi { get; set; }
 
-        // نام استاد
+        /// <summary>نام استاد</summary>
         [MaxLength(100)]
-        public string Naam { get; set; } = "";
+        public string? Naam { get; set; }
 
-        // جنس (مرد/زن)
+        /// <summary>جنس (مرد/زن)</summary>
         [MaxLength(10)]
-        public string Jens { get; set; } = "";
+        public string? Jens { get; set; }
 
-        // نام پدر
+        /// <summary>نام پدر</summary>
         [MaxLength(100)]
         public string? NaamPedar { get; set; }
 
-        // تاریخ تولد
+        /// <summary>تاریخ تولد</summary>
         public DateTime? TarikhTavalod { get; set; }
 
-        // شماره شناسنامه
+        /// <summary>شماره شناسنامه</summary>
         [MaxLength(20)]
         public string? ShomareShenasname { get; set; }
 
-        // شماره ملی
+        /// <summary>شماره ملی</summary>
         [MaxLength(10)]
-        public string ShomareMelli { get; set; } = "";
+        public string? ShomareMelli { get; set; }
 
-        // ایمیل
+        /// <summary>ایمیل</summary>
         [MaxLength(200)]
-        public string Email { get; set; } = "";
+        public string? Email { get; set; }
 
-        // تلفن همراه ۱
+        /// <summary>تلفن همراه ۱</summary>
         [MaxLength(15)]
         public string? Mobile { get; set; }
 
-        // تلفن همراه ۲
+        /// <summary>تلفن همراه ۲</summary>
         [MaxLength(15)]
         public string? Mobile2 { get; set; }
 
-        // مرتبه علمی
+        /// <summary>مرتبه علمی</summary>
         [MaxLength(50)]
         public string? MartabeElmi { get; set; }
 
-        // سازمان مربوطه
+        /// <summary>سازمان مربوطه</summary>
         [MaxLength(100)]
         public string? SazmanMarboote { get; set; }
 
-        // محل اشتغال
+        /// <summary>محل اشتغال</summary>
         [MaxLength(100)]
         public string? MahalEshteghal { get; set; }
 
-        // امضا
+        /// <summary>امضا</summary>
         [MaxLength(250)]
-        public string Emza { get; set; } = "";
+        public string? Emza { get; set; }
 
-        // وضعیت استاد (فعال یا غیر فعال)
-        public bool Vazeeat { get; set; } = true;
+        /// <summary>وضعیت استاد (فعال یا غیر فعال)</summary>
+        public bool? Vazeeat { get; set; }
 
-        // نوع همکاری (Enum)
-        [Required]
-        public NoeHamkariEnum NoeHamkari { get; set; } = NoeHamkariEnum.ModaresMadov;
+        /// <summary>نوع همکاری (Enum)</summary>
+        public NoeHamkariEnum? NoeHamkari { get; set; }
 
-        // Navigation Properties
+        // ======== Navigation Properties ========
+
+        /// <summary>مرکز خدمتی</summary>
         [ForeignKey(nameof(MarkazId))]
-        public Markaz? Markaz { get; set; }
+        public virtual Markaz? Markaz { get; set; }
 
+        /// <summary>مرکز اصلی</summary>
         [ForeignKey(nameof(MarkazAsliId))]
-        public Markaz? MarkazAsli { get; set; }
+        public virtual Markaz? MarkazAsli { get; set; }
 
-        // Navigation Properties (ICollection)
-        public ICollection<BarnamehHaftegiOstad>? BarnamehHaftegiOstads { get; set; }
-        public ICollection<BarnamehTermiOstad>? BarnamehTermiOstads { get; set; }
+        /// <summary>برنامه هفتگی اساتید</summary>
+        public virtual ICollection<BarnamehHaftegiOstad>? BarnamehHaftegiOstads { get; set; }
+
+        /// <summary>برنامه ترمی اساتید</summary>
+        public virtual ICollection<BarnamehTermiOstad>? BarnamehTermiOstads { get; set; }
     }
 }

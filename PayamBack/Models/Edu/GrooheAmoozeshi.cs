@@ -14,30 +14,26 @@ namespace PayamBack.Models.Edu
         public int Id { get; set; }
 
         /// <summary>کد دانشکده</summary>
-        [Required]
         [MaxLength(50)]
-        public string CodeDaneshkade { get; set; } = "";
+        public string? CodeDaneshkade { get; set; }
 
         /// <summary>نام دانشکده</summary>
-        [Required]
         [MaxLength(200)]
-        public string NaamDaneshkadeh { get; set; } = "";
+        public string? NaamDaneshkadeh { get; set; }
 
         /// <summary>کد گروه آموزشی</summary>
-        [Required]
         [MaxLength(50)]
-        public string CodeGrooheAmoozeshi { get; set; } = "";
+        public string? CodeGrooheAmoozeshi { get; set; }
 
         /// <summary>عنوان گروه آموزشی</summary>
-        [Required]
         [MaxLength(200)]
-        public string OnvanGrooheAmoozeshi { get; set; } = "";
+        public string? OnvanGrooheAmoozeshi { get; set; }
 
         /// <summary>کد ترکیبی دانشکده/گروه آموزشی</summary>
-        [Required]
         [MaxLength(50)]
-        public string CodeTarkibi { get; set; } = "";
+        public string? CodeTarkibi { get; set; }
 
-        public ICollection<Reshteh>? Reshtehs { get; set; }
+        /// <summary>رشته‌های تحصیلی مرتبط با این گروه آموزشی</summary>
+        public virtual ICollection<Reshteh>? Reshtehs { get; set; }
     }
 }

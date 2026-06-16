@@ -38,7 +38,8 @@ namespace PayamBack.Data
             // ======== AppUserRole ========
             builder.Entity<AppUserRole>()
                 .HasIndex(ur => new { ur.UserId, ur.RoleId, ur.MarkazId })
-                .IsUnique();
+                .IsUnique()
+                .HasDatabaseName("IX_AppUserRole_UserId_RoleId_MarkazId");
 
             builder.Entity<AppUserRole>()
                 .HasOne(ur => ur.Markaz)
@@ -49,12 +50,14 @@ namespace PayamBack.Data
             // ======== Markaz ========
             builder.Entity<Markaz>()
                 .HasIndex(m => m.CodeMarkaz)
-                .IsUnique();
+                .IsUnique()
+                .HasDatabaseName("IX_Markaz_CodeMarkaz");
 
             // ======== Ostad ========
             builder.Entity<Ostad>()
                 .HasIndex(o => o.CodeOstadi)
-                .IsUnique();
+                .IsUnique()
+                .HasDatabaseName("IX_Ostad_CodeOstadi");
 
             builder.Entity<Ostad>()
                 .HasOne(o => o.Markaz)
@@ -71,7 +74,8 @@ namespace PayamBack.Data
             // ======== BarnamehHaftegiOstad ========
             builder.Entity<BarnamehHaftegiOstad>()
                 .HasIndex(b => new { b.CodeOstad, b.CodeTerm, b.MarkazId, b.RoozeHafteh })
-                .IsUnique();
+                .IsUnique()
+                .HasDatabaseName("IX_BarnamehHaftegiOstad_CodeOstad_CodeTerm_MarkazId_RoozeHafteh");
 
             builder.Entity<BarnamehHaftegiOstad>()
                 .HasOne(b => b.Ostad)
@@ -88,7 +92,8 @@ namespace PayamBack.Data
             // ======== BarnamehTermiOstad ========
             builder.Entity<BarnamehTermiOstad>()
                 .HasIndex(b => new { b.CodeOstad, b.CodeTerm, b.MarkazId, b.Tarikh })
-                .IsUnique();
+                .IsUnique()
+                .HasDatabaseName("IX_BarnamehTermiOstad_CodeOstad_CodeTerm_MarkazId_Tarikh");
 
             builder.Entity<BarnamehTermiOstad>()
                 .HasOne(b => b.Ostad)
@@ -147,11 +152,35 @@ namespace PayamBack.Data
                 .HasForeignKey(r => r.GrooheAmoozeshiId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // Sabeghe - جلوگیری از Cascade Delete
+            // ======== Sabeghe ========
             builder.Entity<Sabeghe>()
                 .HasOne(s => s.User)
-                .WithMany()
+                .WithMany(u => u.Sabeghes)
                 .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // ======== Emkanat ========
+            builder.Entity<Emkanat>()
+                .HasIndex(e => e.Code)
+                .IsUnique()
+                .HasDatabaseName("IX_Emkanat_Code");
+
+            // ======== RoleEmkanat ========
+            builder.Entity<RoleEmkanat>()
+                .HasIndex(re => new { re.RoleId, re.EmkanatId })
+                .IsUnique()
+                .HasDatabaseName("IX_RoleEmkanat_RoleId_EmkanatId");
+
+            builder.Entity<RoleEmkanat>()
+                .HasOne(re => re.Role)
+                .WithMany()
+                .HasForeignKey(re => re.RoleId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<RoleEmkanat>()
+                .HasOne(re => re.Emkanat)
+                .WithMany()
+                .HasForeignKey(re => re.EmkanatId)
                 .OnDelete(DeleteBehavior.NoAction);
         }
     }

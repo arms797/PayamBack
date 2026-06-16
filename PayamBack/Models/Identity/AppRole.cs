@@ -3,12 +3,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace PayamBack.Models.Identity
 {
-    public class AppRole:IdentityRole<int>
+    public class AppRole : IdentityRole<int>
     {
-        [Required]
-        public int CodeGrooheKarbari { get; set; }// کد سیستمی یکتا برای نقش
-        [Required]
-        public bool Vazeeyat { get; set; }// فعال/غیرفعال بودن نقش
-        public bool Emza { get; set; } = false;// آیا این نقش نیاز به امضا دارد؟
+        /// <summary>کد سیستمی یکتا برای نقش</summary>
+        public int? CodeGrooheKarbari { get; set; }
+
+        /// <summary>فعال/غیرفعال بودن نقش</summary>
+        public bool? Vazeeyat { get; set; }
+
+        /// <summary>آیا این نقش نیاز به امضا دارد؟</summary>
+        public bool? Emza { get; set; }
     }
 }

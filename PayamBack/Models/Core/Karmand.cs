@@ -13,62 +13,60 @@ namespace PayamBack.Models.Core
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        // کد ملی
-        [Required, MaxLength(10)]
-        public string CodeMelli { get; set; } = "";
+        /// <summary>کد ملی</summary>
+        [MaxLength(10)]
+        public string? CodeMelli { get; set; }
 
-        // نام
-        [Required, MaxLength(100)]
-        public string Naam { get; set; } = "";
+        /// <summary>نام</summary>
+        [MaxLength(100)]
+        public string? Naam { get; set; }
 
-        // نام خانوادگی
-        [Required, MaxLength(100)]
-        public string NaameKhanevadeghi { get; set; } = "";
+        /// <summary>نام خانوادگی</summary>
+        [MaxLength(100)]
+        public string? NaameKhanevadeghi { get; set; }
 
-        // کلید خارجی به جدول مرکز خدمتی (Markaz)
-        [Required]
-        public int MarkazId { get; set; }
+        /// <summary>کلید خارجی به جدول مرکز خدمتی (Markaz)</summary>
+        public int? MarkazId { get; set; }
 
-        // کلید خارجی به جدول مرکز اصلی (Markaz)
-        [Required]
-        public int MarkazAsliId { get; set; }
+        /// <summary>کلید خارجی به جدول مرکز اصلی (Markaz)</summary>
+        public int? MarkazAsliId { get; set; }
 
-        // تلفن همراه ۱
-        [Required, MaxLength(20)]
-        public string Mobile { get; set; } = "";
+        /// <summary>تلفن همراه ۱</summary>
+        [MaxLength(20)]
+        public string? Mobile { get; set; }
 
-        // تلفن همراه ۲
-        [Required, MaxLength(20)]
-        public string Mobile2 { get; set; } = "";
+        /// <summary>تلفن همراه ۲</summary>
+        [MaxLength(20)]
+        public string? Mobile2 { get; set; }
 
-        // تلفن مستقیم محل کار
-        [Required, MaxLength(20)]
-        public string TelefonMostaghim { get; set; } = "";
+        /// <summary>تلفن مستقیم محل کار</summary>
+        [MaxLength(20)]
+        public string? TelefonMostaghim { get; set; }
 
-        // تلفن غیر مستقیم محل کار
-        [Required, MaxLength(20)]
-        public string TelefonGhayreMostaghim { get; set; } = "";
+        /// <summary>تلفن غیر مستقیم محل کار</summary>
+        [MaxLength(20)]
+        public string? TelefonGhayreMostaghim { get; set; }
 
-        // شماره داخلی
-        [Required, MaxLength(10)]
-        public string TelefonDakheli { get; set; } = "";
+        /// <summary>شماره داخلی</summary>
+        [MaxLength(10)]
+        public string? TelefonDakheli { get; set; }
 
-        // ایمیل
-        [Required, MaxLength(200)]
-        public string Email { get; set; } = "";
+        /// <summary>ایمیل</summary>
+        [MaxLength(200)]
+        public string? Email { get; set; }
 
-        // امضا
+        /// <summary>امضا</summary>
         [MaxLength(250)]
-        public string Emza { get; set; } = "";
+        public string? Emza { get; set; }
 
         // ======== Navigation Properties ========
 
-        // مرکز خدمتی
+        /// <summary>مرکز خدمتی</summary>
         [ForeignKey(nameof(MarkazId))]
-        public Markaz? Markaz { get; set; }
+        public virtual Markaz? Markaz { get; set; }
 
-        // مرکز اصلی
+        /// <summary>مرکز اصلی</summary>
         [ForeignKey(nameof(MarkazAsliId))]
-        public Markaz? MarkazAsli { get; set; }
+        public virtual Markaz? MarkazAsli { get; set; }
     }
 }

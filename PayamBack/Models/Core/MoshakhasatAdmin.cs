@@ -13,47 +13,47 @@ namespace PayamBack.Models.Core
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        // کد ملی
-        [Required, MaxLength(10)]
-        public string CodeMelli { get; set; } = "";
+        /// <summary>کد ملی</summary>
+        [MaxLength(10)]
+        public string? CodeMelli { get; set; }
 
-        // نام
-        [Required, MaxLength(100)]
-        public string Naam { get; set; } = "";
+        /// <summary>نام</summary>
+        [MaxLength(100)]
+        public string? Naam { get; set; }
 
-        // نام خانوادگی
-        [Required, MaxLength(100)]
-        public string NaameKhanevadeghi { get; set; } = "";
+        /// <summary>نام خانوادگی</summary>
+        [MaxLength(100)]
+        public string? NaameKhanevadeghi { get; set; }
 
-        // تلفن مستقیم
+        /// <summary>تلفن مستقیم</summary>
         [MaxLength(20)]
         public string? TelefonMostaghim { get; set; }
 
-        // تلفن غیر مستقیم
+        /// <summary>تلفن غیر مستقیم</summary>
         [MaxLength(20)]
         public string? TelefonGhayreMostaghim { get; set; }
 
-        // تلفن داخلی
+        /// <summary>تلفن داخلی</summary>
         [MaxLength(10)]
         public string? TelefonDakheli { get; set; }
 
-        // تلفن همراه ۱
+        /// <summary>تلفن همراه ۱</summary>
         [MaxLength(20)]
         public string? Mobile { get; set; }
 
-        // تلفن همراه ۲
+        /// <summary>تلفن همراه ۲</summary>
         [MaxLength(20)]
         public string? Mobile2 { get; set; }
 
-        // ایمیل
+        /// <summary>ایمیل</summary>
         [MaxLength(200)]
         public string? Email { get; set; }
 
-        // آدرس
+        /// <summary>آدرس</summary>
         [MaxLength(500)]
         public string? Adres { get; set; }
 
-        // کد پستی
+        /// <summary>کد پستی</summary>
         [MaxLength(20)]
         public string? CodePosti { get; set; }
     }

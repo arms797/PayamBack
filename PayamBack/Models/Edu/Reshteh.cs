@@ -17,49 +17,48 @@ namespace PayamBack.Models.Edu
 
         // ======== کدهای شناسایی ========
 
-        // کد مقطع
-        [Required, MaxLength(50)]
-        public string CodeMaghta { get; set; } = "";
+        /// <summary>کد مقطع</summary>
+        [MaxLength(50)]
+        public string? CodeMaghta { get; set; }
 
-        // مقطع تحصیلی (کارشناسی، ارشد، دکتری)
-        [Required, MaxLength(100)]
-        public string Maghta { get; set; } = "";
+        /// <summary>مقطع تحصیلی (کارشناسی، ارشد، دکتری)</summary>
+        [MaxLength(100)]
+        public string? Maghta { get; set; }
 
-        // کلید خارجی به جدول گروه آموزشی
-        [Required]
-        public int GrooheAmoozeshiId { get; set; }
+        /// <summary>کلید خارجی به جدول گروه آموزشی</summary>
+        public int? GrooheAmoozeshiId { get; set; }
 
-        // کد دو رقمی رشته
-        [Required, MaxLength(2)]
-        public string CodeReshteDoRaghami { get; set; } = "";
+        /// <summary>کد دو رقمی رشته</summary>
+        [MaxLength(2)]
+        public string? CodeReshteDoRaghami { get; set; }
 
-        // کد رشته
-        [Required, MaxLength(50)]
-        public string CodeReshte { get; set; } = "";
+        /// <summary>کد رشته</summary>
+        [MaxLength(50)]
+        public string? CodeReshte { get; set; }
 
         // ======== عنوان رشته ========
 
-        // عنوان رشته
-        [Required, MaxLength(200)]
-        public string OnvanReshte { get; set; } = "";
+        /// <summary>عنوان رشته</summary>
+        [MaxLength(200)]
+        public string? OnvanReshte { get; set; }
 
         // ======== اطلاعات ترم ========
 
-        // ترم ورود
-        [Required, MaxLength(10)]
-        public string TermVorood { get; set; } = "";
+        /// <summary>ترم ورود</summary>
+        [MaxLength(10)]
+        public string? TermVorood { get; set; }
 
-        // ترم اعمال
-        [Required, MaxLength(10)]
-        public string TermEamal { get; set; } = "";
+        /// <summary>ترم اعمال</summary>
+        [MaxLength(10)]
+        public string? TermEamal { get; set; }
 
         // ======== Navigation Properties ========
 
-        // گروه آموزشی
+        /// <summary>گروه آموزشی</summary>
         [ForeignKey(nameof(GrooheAmoozeshiId))]
-        public GrooheAmoozeshi? GrooheAmoozeshi { get; set; }
+        public virtual GrooheAmoozeshi? GrooheAmoozeshi { get; set; }
 
-        // Navigation Properties
-        public ICollection<Daneshjoo>? Daneshjoos { get; set; }
+        /// <summary>دانشجویان مرتبط با این رشته</summary>
+        public virtual ICollection<Daneshjoo>? Daneshjoos { get; set; }
     }
 }

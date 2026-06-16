@@ -6,48 +6,48 @@ namespace PayamBack.Models.Edu
 {
     public class Term
     {
-        // کلید اصلی (کد ترم)
+        /// <summary>کلید اصلی (کد ترم)</summary>
         [Key]
-        [Required, MaxLength(50)]
-        public string CodeTerm { get; set; } = "";
+        [MaxLength(50)]
+        public string? CodeTerm { get; set; }
 
-        // عنوان ترم (مثلاً "نیمسال اول ۱۴۰۴")
-        [Required, MaxLength(100)]
-        public string OnvanTerm { get; set; } = "";
+        /// <summary>عنوان ترم (مثلاً "نیمسال اول ۱۴۰۴")</summary>
+        [MaxLength(100)]
+        public string? OnvanTerm { get; set; }
 
-        // تاریخ شروع ترم جاری
+        /// <summary>تاریخ شروع ترم جاری</summary>
         [Column(TypeName = "date")]
-        public DateOnly TermJari { get; set; }
+        public DateOnly? TermJari { get; set; }
 
-        // تاریخ دسترسی به ترم جاری
+        /// <summary>تاریخ دسترسی به ترم جاری</summary>
         [Column(TypeName = "date")]
-        public DateOnly TarikheDastrasi { get; set; }
+        public DateOnly? TarikheDastrasi { get; set; }
 
-        // تاریخ شروع ارائه (انتخاب واحد)
+        /// <summary>تاریخ شروع ارائه (انتخاب واحد)</summary>
         [Column(TypeName = "date")]
-        public DateOnly TarikheEraeeDars { get; set; }
+        public DateOnly? TarikheEraeeDars { get; set; }
 
-        // تاریخ پایان ارائه (انتخاب واحد)
+        /// <summary>تاریخ پایان ارائه (انتخاب واحد)</summary>
         [Column(TypeName = "date")]
-        public DateOnly TarikhePayanDars { get; set; }
+        public DateOnly? TarikhePayanDars { get; set; }
 
-        // تاریخ شروع کلاس‌ها
+        /// <summary>تاریخ شروع کلاس‌ها</summary>
         [Column(TypeName = "date")]
-        public DateOnly TarikheShorooClass { get; set; }
+        public DateOnly? TarikheShorooClass { get; set; }
 
-        // تاریخ پایان کلاس‌ها
+        /// <summary>تاریخ پایان کلاس‌ها</summary>
         [Column(TypeName = "date")]
-        public DateOnly TarikhePayanClass { get; set; }
+        public DateOnly? TarikhePayanClass { get; set; }
 
-        // شروع مجوز تدریس در سایر مراکز
+        /// <summary>شروع مجوز تدریس در سایر مراکز</summary>
         [Column(TypeName = "date")]
-        public DateOnly TarikheShorooMojavezMarakez { get; set; }
+        public DateOnly? TarikheShorooMojavezMarakez { get; set; }
 
-        // پایان مجوز تدریس در سایر مراکز
+        /// <summary>پایان مجوز تدریس در سایر مراکز</summary>
         [Column(TypeName = "date")]
-        public DateOnly TarikhePayanMojavezMarakez { get; set; }
+        public DateOnly? TarikhePayanMojavezMarakez { get; set; }
 
-        // وضعیت ترم (فعال/غیرفعال)
-        public bool Vazeeyat { get; set; } = false;
+        /// <summary>وضعیت ترم (فعال/غیرفعال)</summary>
+        public bool? Vazeeyat { get; set; }
     }
 }

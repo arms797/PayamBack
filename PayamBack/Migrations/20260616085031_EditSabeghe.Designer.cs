@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PayamBack.Data;
 
@@ -11,9 +12,11 @@ using PayamBack.Data;
 namespace PayamBack.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260616085031_EditSabeghe")]
+    partial class EditSabeghe
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -142,7 +145,11 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("AppUserId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Dastgah")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
@@ -151,10 +158,12 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("IpSystem")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Moroorgar")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
@@ -170,7 +179,7 @@ namespace PayamBack.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<int?>("UserId")
+                    b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("ZamanLogOut")
@@ -183,6 +192,8 @@ namespace PayamBack.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AppUserId");
 
                     b.HasIndex("UserId");
 
@@ -198,82 +209,99 @@ namespace PayamBack.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("ChapDast")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("CodeReshteMahalGhabooliSanjesh")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Jens")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("MahalSodoor")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<int?>("MarkazAzmoonId")
+                    b.Property<int>("MarkazAzmoonId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("MarkazId")
+                    b.Property<int>("MarkazId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("MarkazTermiId")
+                    b.Property<int>("MarkazTermiId")
                         .HasColumnType("int");
 
                     b.Property<string>("Mobile")
+                        .IsRequired()
                         .HasMaxLength(15)
                         .HasColumnType("nvarchar(15)");
 
                     b.Property<string>("Naam")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("NaamKhanevadegi")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Naampedar")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("ReshtehId")
+                    b.Property<int>("ReshtehId")
                         .HasColumnType("int");
 
                     b.Property<string>("ShenasayeFaragirAtbaaKhareji")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ShomareDaneshjooee")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ShomareDavtalabi")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ShomareGozarnameYaKartHoviyat")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ShomareMelli")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("ShomareParvande")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ShomareSanjesh")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ShomareShenasname")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -281,10 +309,12 @@ namespace PayamBack.Migrations
                         .HasColumnType("date");
 
                     b.Property<string>("TermVorood")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("VazeeyatParvande")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -310,48 +340,58 @@ namespace PayamBack.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CodeMelli")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Emza")
+                        .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
-                    b.Property<int?>("MarkazAsliId")
+                    b.Property<int>("MarkazAsliId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("MarkazId")
+                    b.Property<int>("MarkazId")
                         .HasColumnType("int");
 
                     b.Property<string>("Mobile")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Mobile2")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Naam")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("NaameKhanevadeghi")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("TelefonDakheli")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("TelefonGhayreMostaghim")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("TelefonMostaghim")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -373,58 +413,67 @@ namespace PayamBack.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Adres")
+                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("CodeMarkaz")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodeOstan")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodePosti")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("MahalMarkaz")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("NaamMarkaz")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("NaamOstan")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Nahiyeh")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Telefon")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("VahedMarkaz")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool?>("Vazeeyat")
+                    b.Property<bool>("Vazeeyat")
                         .HasColumnType("bit");
 
                     b.Property<string>("WebSite")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CodeMarkaz")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Markaz_CodeMarkaz")
-                        .HasFilter("[CodeMarkaz] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("Markazes");
                 });
@@ -442,6 +491,7 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("CodeMelli")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
@@ -462,10 +512,12 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Naam")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("NaameKhanevadeghi")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -495,26 +547,32 @@ namespace PayamBack.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CodeDaneshkade")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodeGrooheAmoozeshi")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodeOstadi")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Emza")
+                        .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
                     b.Property<string>("Jens")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
@@ -525,7 +583,7 @@ namespace PayamBack.Migrations
                     b.Property<int?>("MarkazAsliId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("MarkazId")
+                    b.Property<int>("MarkazId")
                         .HasColumnType("int");
 
                     b.Property<string>("MartabeElmi")
@@ -541,10 +599,12 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(15)");
 
                     b.Property<string>("Naam")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("NaamKhanevadegi")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -552,10 +612,11 @@ namespace PayamBack.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("NoeHamkari")
+                    b.Property<int>("NoeHamkari")
                         .HasColumnType("int");
 
                     b.Property<string>("Reshteh")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -564,6 +625,7 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("ShomareMelli")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
@@ -574,15 +636,13 @@ namespace PayamBack.Migrations
                     b.Property<DateTime?>("TarikhTavalod")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool?>("Vazeeat")
+                    b.Property<bool>("Vazeeat")
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CodeOstadi")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Ostad_CodeOstadi")
-                        .HasFilter("[CodeOstadi] IS NOT NULL");
+                        .IsUnique();
 
                     b.HasIndex("MarkazAsliId");
 
@@ -600,22 +660,27 @@ namespace PayamBack.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CodeDaneshkade")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodeGrooheAmoozeshi")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodeTarkibi")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("NaamDaneshkadeh")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("OnvanGrooheAmoozeshi")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
@@ -633,33 +698,40 @@ namespace PayamBack.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CodeMaghta")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodeReshte")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodeReshteDoRaghami")
+                        .IsRequired()
                         .HasMaxLength(2)
                         .HasColumnType("nvarchar(2)");
 
-                    b.Property<int?>("GrooheAmoozeshiId")
+                    b.Property<int>("GrooheAmoozeshiId")
                         .HasColumnType("int");
 
                     b.Property<string>("Maghta")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("OnvanReshte")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("TermEamal")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("TermVorood")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
 
@@ -679,24 +751,28 @@ namespace PayamBack.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("CodeSaat")
+                        .IsRequired()
                         .HasMaxLength(1)
                         .HasColumnType("nvarchar(1)");
 
-                    b.Property<bool?>("Hozoori")
+                    b.Property<bool>("Hozoori")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("Majazi")
+                    b.Property<bool>("Majazi")
                         .HasColumnType("bit");
 
                     b.Property<string>("OnvanSaat")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("SaatPayan")
+                        .IsRequired()
                         .HasMaxLength(5)
                         .HasColumnType("nvarchar(5)");
 
                     b.Property<string>("SaatShoroo")
+                        .IsRequired()
                         .HasMaxLength(5)
                         .HasColumnType("nvarchar(5)");
 
@@ -713,10 +789,10 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CodeHafteh")
+                    b.Property<int>("CodeHafteh")
                         .HasColumnType("int");
 
-                    b.Property<int?>("CodeRooz")
+                    b.Property<int>("CodeRooz")
                         .HasColumnType("int");
 
                     b.Property<string>("CodeSaateTatili")
@@ -724,10 +800,12 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(10)");
 
                     b.Property<string>("CodeTerm")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Hafteh")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -736,17 +814,18 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("RoozHafteh")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<DateOnly?>("Tarikh")
+                    b.Property<DateOnly>("Tarikh")
                         .HasColumnType("date");
 
                     b.Property<string>("Tozihat")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<bool?>("Vazeeyat")
+                    b.Property<bool>("Vazeeyat")
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
@@ -761,34 +840,35 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("OnvanTerm")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateOnly?>("TarikheDastrasi")
+                    b.Property<DateOnly>("TarikheDastrasi")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly?>("TarikheEraeeDars")
+                    b.Property<DateOnly>("TarikheEraeeDars")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly?>("TarikhePayanClass")
+                    b.Property<DateOnly>("TarikhePayanClass")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly?>("TarikhePayanDars")
+                    b.Property<DateOnly>("TarikhePayanDars")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly?>("TarikhePayanMojavezMarakez")
+                    b.Property<DateOnly>("TarikhePayanMojavezMarakez")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly?>("TarikheShorooClass")
+                    b.Property<DateOnly>("TarikheShorooClass")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly?>("TarikheShorooMojavezMarakez")
+                    b.Property<DateOnly>("TarikheShorooMojavezMarakez")
                         .HasColumnType("date");
 
-                    b.Property<DateOnly?>("TermJari")
+                    b.Property<DateOnly>("TermJari")
                         .HasColumnType("date");
 
-                    b.Property<bool?>("Vazeeyat")
+                    b.Property<bool>("Vazeeyat")
                         .HasColumnType("bit");
 
                     b.HasKey("CodeTerm");
@@ -804,14 +884,14 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CodeGrooheKarbari")
+                    b.Property<int>("CodeGrooheKarbari")
                         .HasColumnType("int");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool?>("Emza")
+                    b.Property<bool>("Emza")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
@@ -822,7 +902,7 @@ namespace PayamBack.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<bool?>("Vazeeyat")
+                    b.Property<bool>("Vazeeyat")
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
@@ -899,10 +979,10 @@ namespace PayamBack.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
-                    b.Property<bool?>("Vazeeyat")
+                    b.Property<bool>("Vazeeyat")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("VazeeyatMovaghat")
+                    b.Property<bool>("VazeeyatMovaghat")
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
@@ -932,36 +1012,34 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("Code")
+                    b.Property<int>("Code")
                         .HasColumnType("int");
 
                     b.Property<string>("Component")
+                        .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("NaamEmkanat")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("SarTitrEmkanat")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<int?>("TartibNamayeshEmkan")
+                    b.Property<int>("TartibNamayeshEmkan")
                         .HasColumnType("int");
 
-                    b.Property<int?>("TartibNamayeshSarTitr")
+                    b.Property<int>("TartibNamayeshSarTitr")
                         .HasColumnType("int");
 
-                    b.Property<bool?>("Vazeeyat")
+                    b.Property<bool>("Vazeeyat")
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Emkanat_Code")
-                        .HasFilter("[Code] IS NOT NULL");
 
                     b.ToTable("Emkanats");
                 });
@@ -974,23 +1052,20 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("EmkanatId")
+                    b.Property<int>("EmkanatId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("RoleId")
+                    b.Property<int>("RoleId")
                         .HasColumnType("int");
 
-                    b.Property<bool?>("Vazeeyat")
+                    b.Property<bool>("Vazeeyat")
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EmkanatId");
 
-                    b.HasIndex("RoleId", "EmkanatId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_RoleEmkanat_RoleId_EmkanatId")
-                        .HasFilter("[RoleId] IS NOT NULL AND [EmkanatId] IS NOT NULL");
+                    b.HasIndex("RoleId");
 
                     b.ToTable("RoleEmkanats");
                 });
@@ -1003,48 +1078,51 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("A")
+                    b.Property<int>("A")
                         .HasColumnType("int");
 
-                    b.Property<int?>("B")
+                    b.Property<int>("B")
                         .HasColumnType("int");
 
-                    b.Property<int?>("C")
+                    b.Property<int>("C")
                         .HasColumnType("int");
 
                     b.Property<string>("CodeOstad")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodeTerm")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<int?>("D")
+                    b.Property<int>("D")
                         .HasColumnType("int");
 
-                    b.Property<int?>("E")
+                    b.Property<int>("E")
                         .HasColumnType("int");
 
-                    b.Property<int?>("F")
+                    b.Property<int>("F")
                         .HasColumnType("int");
 
-                    b.Property<int?>("G")
+                    b.Property<int>("G")
                         .HasColumnType("int");
 
-                    b.Property<int?>("H")
+                    b.Property<int>("H")
                         .HasColumnType("int");
 
-                    b.Property<bool?>("Jozeiat")
+                    b.Property<bool>("Jozeiat")
                         .HasColumnType("bit");
 
-                    b.Property<int?>("MarkazId")
+                    b.Property<int>("MarkazId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("OstadId")
+                    b.Property<int>("OstadId")
                         .HasColumnType("int");
 
                     b.Property<string>("RoozeHafteh")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -1061,9 +1139,7 @@ namespace PayamBack.Migrations
                     b.HasIndex("OstadId");
 
                     b.HasIndex("CodeOstad", "CodeTerm", "MarkazId", "RoozeHafteh")
-                        .IsUnique()
-                        .HasDatabaseName("IX_BarnamehHaftegiOstad_CodeOstad_CodeTerm_MarkazId_RoozeHafteh")
-                        .HasFilter("[CodeOstad] IS NOT NULL AND [CodeTerm] IS NOT NULL AND [MarkazId] IS NOT NULL AND [RoozeHafteh] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("BarnamehHaftegiOstads");
                 });
@@ -1076,76 +1152,79 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("A")
+                    b.Property<int>("A")
                         .HasColumnType("int");
 
-                    b.Property<int?>("B")
+                    b.Property<int>("B")
                         .HasColumnType("int");
 
-                    b.Property<int?>("C")
+                    b.Property<int>("C")
                         .HasColumnType("int");
 
                     b.Property<string>("CodeOstad")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodeTerm")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<int?>("D")
+                    b.Property<int>("D")
                         .HasColumnType("int");
 
-                    b.Property<int?>("E")
+                    b.Property<int>("E")
                         .HasColumnType("int");
 
-                    b.Property<int?>("F")
+                    b.Property<int>("F")
                         .HasColumnType("int");
 
-                    b.Property<bool?>("Faal")
+                    b.Property<bool>("Faal")
                         .HasColumnType("bit");
 
-                    b.Property<int?>("G")
+                    b.Property<int>("G")
                         .HasColumnType("int");
 
-                    b.Property<int?>("H")
+                    b.Property<int>("H")
                         .HasColumnType("int");
 
-                    b.Property<int?>("MarkazId")
+                    b.Property<int>("MarkazId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("OstadId")
+                    b.Property<int>("OstadId")
                         .HasColumnType("int");
 
                     b.Property<string>("RoozeHafteh")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<bool?>("TA")
+                    b.Property<bool>("TA")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("TB")
+                    b.Property<bool>("TB")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("TC")
+                    b.Property<bool>("TC")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("TD")
+                    b.Property<bool>("TD")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("TE")
+                    b.Property<bool>("TE")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("TF")
+                    b.Property<bool>("TF")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("TG")
+                    b.Property<bool>("TG")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("TH")
+                    b.Property<bool>("TH")
                         .HasColumnType("bit");
 
-                    b.Property<DateOnly?>("Tarikh")
+                    b.Property<DateOnly>("Tarikh")
                         .HasColumnType("date");
 
                     b.HasKey("Id");
@@ -1157,9 +1236,7 @@ namespace PayamBack.Migrations
                     b.HasIndex("OstadId");
 
                     b.HasIndex("CodeOstad", "CodeTerm", "MarkazId", "Tarikh")
-                        .IsUnique()
-                        .HasDatabaseName("IX_BarnamehTermiOstad_CodeOstad_CodeTerm_MarkazId_Tarikh")
-                        .HasFilter("[CodeOstad] IS NOT NULL AND [CodeTerm] IS NOT NULL AND [MarkazId] IS NOT NULL AND [Tarikh] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("BarnamehTermiOstads");
                 });
@@ -1168,17 +1245,16 @@ namespace PayamBack.Migrations
                 {
                     b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityUserRole<int>");
 
-                    b.Property<int?>("MarkazId")
+                    b.Property<int>("MarkazId")
                         .HasColumnType("int");
 
-                    b.Property<bool?>("RolePishFarz")
+                    b.Property<bool>("RolePishFarz")
                         .HasColumnType("bit");
 
                     b.HasIndex("MarkazId");
 
                     b.HasIndex("UserId", "RoleId", "MarkazId")
                         .IsUnique()
-                        .HasDatabaseName("IX_AppUserRole_UserId_RoleId_MarkazId")
                         .HasFilter("[MarkazId] IS NOT NULL");
 
                     b.HasDiscriminator().HasValue("AppUserRole");
@@ -1237,10 +1313,15 @@ namespace PayamBack.Migrations
 
             modelBuilder.Entity("PayamBack.Models.Audit.Sabeghe", b =>
                 {
-                    b.HasOne("PayamBack.Models.Identity.AppUser", "User")
+                    b.HasOne("PayamBack.Models.Identity.AppUser", null)
                         .WithMany("Sabeghes")
+                        .HasForeignKey("AppUserId");
+
+                    b.HasOne("PayamBack.Models.Identity.AppUser", "User")
+                        .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -1250,22 +1331,26 @@ namespace PayamBack.Migrations
                     b.HasOne("PayamBack.Models.Core.Markaz", "MarkazAzmoon")
                         .WithMany()
                         .HasForeignKey("MarkazAzmoonId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
                         .WithMany("Daneshjoos")
                         .HasForeignKey("MarkazId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("PayamBack.Models.Core.Markaz", "MarkazTermi")
                         .WithMany()
                         .HasForeignKey("MarkazTermiId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("PayamBack.Models.Edu.Reshteh", "Reshteh")
                         .WithMany("Daneshjoos")
                         .HasForeignKey("ReshtehId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Markaz");
 
@@ -1281,12 +1366,14 @@ namespace PayamBack.Migrations
                     b.HasOne("PayamBack.Models.Core.Markaz", "MarkazAsli")
                         .WithMany()
                         .HasForeignKey("MarkazAsliId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
                         .WithMany("Karmands")
                         .HasForeignKey("MarkazId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Markaz");
 
@@ -1303,7 +1390,8 @@ namespace PayamBack.Migrations
                     b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
                         .WithMany("Ostads")
                         .HasForeignKey("MarkazId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Markaz");
 
@@ -1315,7 +1403,8 @@ namespace PayamBack.Migrations
                     b.HasOne("PayamBack.Models.Edu.GrooheAmoozeshi", "GrooheAmoozeshi")
                         .WithMany("Reshtehs")
                         .HasForeignKey("GrooheAmoozeshiId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("GrooheAmoozeshi");
                 });
@@ -1346,12 +1435,14 @@ namespace PayamBack.Migrations
                     b.HasOne("PayamBack.Models.Identity.Emkanat", "Emkanat")
                         .WithMany()
                         .HasForeignKey("EmkanatId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("PayamBack.Models.Identity.AppRole", "Role")
                         .WithMany()
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Emkanat");
 
@@ -1362,17 +1453,21 @@ namespace PayamBack.Migrations
                 {
                     b.HasOne("PayamBack.Models.Edu.Term", "Term")
                         .WithMany()
-                        .HasForeignKey("CodeTerm");
+                        .HasForeignKey("CodeTerm")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
                         .WithMany("BarnamehHaftegiOstads")
                         .HasForeignKey("MarkazId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("PayamBack.Models.Core.Ostad", "Ostad")
                         .WithMany("BarnamehHaftegiOstads")
                         .HasForeignKey("OstadId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Markaz");
 
@@ -1385,17 +1480,21 @@ namespace PayamBack.Migrations
                 {
                     b.HasOne("PayamBack.Models.Edu.Term", "Term")
                         .WithMany()
-                        .HasForeignKey("CodeTerm");
+                        .HasForeignKey("CodeTerm")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
                         .WithMany("BarnamehTermiOstads")
                         .HasForeignKey("MarkazId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.HasOne("PayamBack.Models.Core.Ostad", "Ostad")
                         .WithMany("BarnamehTermiOstads")
                         .HasForeignKey("OstadId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Markaz");
 
@@ -1409,7 +1508,8 @@ namespace PayamBack.Migrations
                     b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
                         .WithMany("AppUserRoles")
                         .HasForeignKey("MarkazId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Markaz");
                 });

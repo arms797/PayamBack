@@ -13,26 +13,23 @@ namespace PayamBack.Models.Identity
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        // کلید خارجی به جدول نقش (AppRole)
-        [Required]
-        public int RoleId { get; set; }
+        /// <summary>کلید خارجی به جدول نقش (AppRole)</summary>
+        public int? RoleId { get; set; }
 
-        // کلید خارجی به جدول امکانات (Emkanat)
-        [Required]
-        public int EmkanatId { get; set; }
+        /// <summary>کلید خارجی به جدول امکانات (Emkanat)</summary>
+        public int? EmkanatId { get; set; }
 
-        // وضعیت (فعال/غیرفعال)
-        [Required]
-        public bool Vazeeyat { get; set; } = true;
+        /// <summary>وضعیت (فعال/غیرفعال)</summary>
+        public bool? Vazeeyat { get; set; }
 
         // ======== Navigation Properties ========
 
-        // نقش
+        /// <summary>نقش مرتبط</summary>
         [ForeignKey(nameof(RoleId))]
-        public AppRole? Role { get; set; }
+        public virtual AppRole? Role { get; set; }
 
-        // امکان
+        /// <summary>امکان مرتبط</summary>
         [ForeignKey(nameof(EmkanatId))]
-        public Emkanat? Emkanat { get; set; }
+        public virtual Emkanat? Emkanat { get; set; }
     }
 }
