@@ -13,10 +13,6 @@ namespace PayamBack.Models.Schedule
         /// <summary>کلید خارجی به جدول استاد</summary>
         public int? OstadId { get; set; }
 
-        /// <summary>کد استاد</summary>
-        [MaxLength(50)]
-        public string? CodeOstad { get; set; }
-
         /// <summary>کلید خارجی به جدول مرکز (Markaz)</summary>
         public int? MarkazId { get; set; }
 
@@ -53,11 +49,7 @@ namespace PayamBack.Models.Schedule
         public int? H { get; set; }
 
         /// <summary>جزئیات بیشتر</summary>
-        public bool? Jozeiat { get; set; }
-
-        /// <summary>توضیحات</summary>
-        [MaxLength(500)]
-        public string? Tozihat { get; set; }
+        public bool? Jozeiat { get; set; }        
 
         // ======== Navigation Properties ========
 

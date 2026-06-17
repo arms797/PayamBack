@@ -388,6 +388,9 @@ namespace PayamBack.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<bool?>("Dakheli")
+                        .HasColumnType("bit");
+
                     b.Property<string>("MahalMarkaz")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -494,14 +497,6 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("CodeDaneshkade")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("CodeGrooheAmoozeshi")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("CodeOstadi")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -552,12 +547,12 @@ namespace PayamBack.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("NoeBimeh")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
                     b.Property<int?>("NoeHamkari")
                         .HasColumnType("int");
-
-                    b.Property<string>("Reshteh")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("SazmanMarboote")
                         .HasMaxLength(100)
@@ -571,8 +566,14 @@ namespace PayamBack.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<DateTime?>("TarikhTavalod")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("ShomarehBimeh")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("TarikhTavalod")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<bool?>("Vazeeat")
                         .HasColumnType("bit");
@@ -591,6 +592,51 @@ namespace PayamBack.Migrations
                     b.ToTable("Ostads");
                 });
 
+            modelBuilder.Entity("PayamBack.Models.Core.OstadMadrak", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Grayesh")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("GrooheAmoozeshiId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Maghta")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MahalAkhz")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("OstadId")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("PishFarz")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Reshteh")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TasvirMadrak")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GrooheAmoozeshiId");
+
+                    b.HasIndex("OstadId");
+
+                    b.ToTable("OstadMadrak");
+                });
+
             modelBuilder.Entity("PayamBack.Models.Edu.GrooheAmoozeshi", b =>
                 {
                     b.Property<int>("Id")
@@ -604,10 +650,6 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("CodeGrooheAmoozeshi")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("CodeTarkibi")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -804,7 +846,7 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CodeGrooheKarbari")
+                    b.Property<int?>("CodeRole")
                         .HasColumnType("int");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -1012,10 +1054,6 @@ namespace PayamBack.Migrations
                     b.Property<int?>("C")
                         .HasColumnType("int");
 
-                    b.Property<string>("CodeOstad")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("CodeTerm")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -1048,22 +1086,16 @@ namespace PayamBack.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("Tozihat")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("CodeTerm");
 
                     b.HasIndex("MarkazId");
 
-                    b.HasIndex("OstadId");
-
-                    b.HasIndex("CodeOstad", "CodeTerm", "MarkazId", "RoozeHafteh")
+                    b.HasIndex("OstadId", "CodeTerm", "MarkazId", "RoozeHafteh")
                         .IsUnique()
                         .HasDatabaseName("IX_BarnamehHaftegiOstad_CodeOstad_CodeTerm_MarkazId_RoozeHafteh")
-                        .HasFilter("[CodeOstad] IS NOT NULL AND [CodeTerm] IS NOT NULL AND [MarkazId] IS NOT NULL AND [RoozeHafteh] IS NOT NULL");
+                        .HasFilter("[OstadId] IS NOT NULL AND [CodeTerm] IS NOT NULL AND [MarkazId] IS NOT NULL AND [RoozeHafteh] IS NOT NULL");
 
                     b.ToTable("BarnamehHaftegiOstads");
                 });
@@ -1085,10 +1117,6 @@ namespace PayamBack.Migrations
                     b.Property<int?>("C")
                         .HasColumnType("int");
 
-                    b.Property<string>("CodeOstad")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("CodeTerm")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -1101,9 +1129,6 @@ namespace PayamBack.Migrations
 
                     b.Property<int?>("F")
                         .HasColumnType("int");
-
-                    b.Property<bool?>("Faal")
-                        .HasColumnType("bit");
 
                     b.Property<int?>("G")
                         .HasColumnType("int");
@@ -1148,18 +1173,19 @@ namespace PayamBack.Migrations
                     b.Property<DateOnly?>("Tarikh")
                         .HasColumnType("date");
 
+                    b.Property<bool?>("Vazeeat")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CodeTerm");
 
                     b.HasIndex("MarkazId");
 
-                    b.HasIndex("OstadId");
-
-                    b.HasIndex("CodeOstad", "CodeTerm", "MarkazId", "Tarikh")
+                    b.HasIndex("OstadId", "CodeTerm", "MarkazId", "Tarikh")
                         .IsUnique()
                         .HasDatabaseName("IX_BarnamehTermiOstad_CodeOstad_CodeTerm_MarkazId_Tarikh")
-                        .HasFilter("[CodeOstad] IS NOT NULL AND [CodeTerm] IS NOT NULL AND [MarkazId] IS NOT NULL AND [Tarikh] IS NOT NULL");
+                        .HasFilter("[OstadId] IS NOT NULL AND [CodeTerm] IS NOT NULL AND [MarkazId] IS NOT NULL AND [Tarikh] IS NOT NULL");
 
                     b.ToTable("BarnamehTermiOstads");
                 });
@@ -1310,6 +1336,21 @@ namespace PayamBack.Migrations
                     b.Navigation("MarkazAsli");
                 });
 
+            modelBuilder.Entity("PayamBack.Models.Core.OstadMadrak", b =>
+                {
+                    b.HasOne("PayamBack.Models.Edu.GrooheAmoozeshi", "GrooheAmoozeshi")
+                        .WithMany()
+                        .HasForeignKey("GrooheAmoozeshiId");
+
+                    b.HasOne("PayamBack.Models.Core.Ostad", "Ostad")
+                        .WithMany("OstadMadraks")
+                        .HasForeignKey("OstadId");
+
+                    b.Navigation("GrooheAmoozeshi");
+
+                    b.Navigation("Ostad");
+                });
+
             modelBuilder.Entity("PayamBack.Models.Edu.Reshteh", b =>
                 {
                     b.HasOne("PayamBack.Models.Edu.GrooheAmoozeshi", "GrooheAmoozeshi")
@@ -1434,6 +1475,8 @@ namespace PayamBack.Migrations
                     b.Navigation("BarnamehHaftegiOstads");
 
                     b.Navigation("BarnamehTermiOstads");
+
+                    b.Navigation("OstadMadraks");
                 });
 
             modelBuilder.Entity("PayamBack.Models.Edu.GrooheAmoozeshi", b =>

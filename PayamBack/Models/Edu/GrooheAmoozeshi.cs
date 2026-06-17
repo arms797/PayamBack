@@ -29,10 +29,6 @@ namespace PayamBack.Models.Edu
         [MaxLength(200)]
         public string? OnvanGrooheAmoozeshi { get; set; }
 
-        /// <summary>کد ترکیبی دانشکده/گروه آموزشی</summary>
-        [MaxLength(50)]
-        public string? CodeTarkibi { get; set; }
-
         /// <summary>رشته‌های تحصیلی مرتبط با این گروه آموزشی</summary>
         public virtual ICollection<Reshteh>? Reshtehs { get; set; }
     }

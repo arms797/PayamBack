@@ -1,4 +1,5 @@
-﻿using PayamBack.Models.Schedule;
+﻿using PayamBack.Models.Edu;
+using PayamBack.Models.Schedule;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -29,25 +30,13 @@ namespace PayamBack.Models.Core
     public class Ostad
     {
         [Key]
-        public int Id { get; set; }
-
-        /// <summary>کد دانشکده</summary>
-        [MaxLength(50)]
-        public string? CodeDaneshkade { get; set; }
-
-        /// <summary>کد گروه آموزشی</summary>
-        [MaxLength(50)]
-        public string? CodeGrooheAmoozeshi { get; set; }
-
-        /// <summary>عنوان رشته تحصیلی استاد</summary>
-        [MaxLength(100)]
-        public string? Reshteh { get; set; }
+        public int Id { get; set; }   
 
         /// <summary>کلید خارجی به جدول مرکز خدمتی</summary>
         public int? MarkazId { get; set; }
 
         /// <summary>کلید خارجی به جدول مرکز اصلی (اختیاری)</summary>
-        public int? MarkazAsliId { get; set; }
+        public int? MarkazAsliId { get; set; }      
 
         /// <summary>کد استادی (شماره پرسنلی)</summary>
         [MaxLength(50)]
@@ -70,7 +59,8 @@ namespace PayamBack.Models.Core
         public string? NaamPedar { get; set; }
 
         /// <summary>تاریخ تولد</summary>
-        public DateTime? TarikhTavalod { get; set; }
+        [MaxLength(10)]
+        public string TarikhTavalod { get; set; }
 
         /// <summary>شماره شناسنامه</summary>
         [MaxLength(20)]
@@ -114,6 +104,14 @@ namespace PayamBack.Models.Core
         /// <summary>نوع همکاری (Enum)</summary>
         public NoeHamkariEnum? NoeHamkari { get; set; }
 
+        /// <summary>نوع بیمه</summary>
+        [MaxLength(250)]
+        public string? NoeBimeh { get; set; }
+
+        /// <summary>شماره بیمه</summary>
+        [MaxLength(50)]
+        public string? ShomarehBimeh { get; set; }        
+
         // ======== Navigation Properties ========
 
         /// <summary>مرکز خدمتی</summary>
@@ -129,5 +127,8 @@ namespace PayamBack.Models.Core
 
         /// <summary>برنامه ترمی اساتید</summary>
         public virtual ICollection<BarnamehTermiOstad>? BarnamehTermiOstads { get; set; }
+
+        /// <summary>مدارک تحصیلی اساتید</summary>
+        public virtual ICollection<OstadMadrak>? OstadMadraks { get; set; }
     }
 }

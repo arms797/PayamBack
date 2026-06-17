@@ -73,7 +73,7 @@ namespace PayamBack.Data
 
             // ======== BarnamehHaftegiOstad ========
             builder.Entity<BarnamehHaftegiOstad>()
-                .HasIndex(b => new { b.CodeOstad, b.CodeTerm, b.MarkazId, b.RoozeHafteh })
+                .HasIndex(b => new { b.OstadId, b.CodeTerm, b.MarkazId, b.RoozeHafteh })
                 .IsUnique()
                 .HasDatabaseName("IX_BarnamehHaftegiOstad_CodeOstad_CodeTerm_MarkazId_RoozeHafteh");
 
@@ -91,7 +91,7 @@ namespace PayamBack.Data
 
             // ======== BarnamehTermiOstad ========
             builder.Entity<BarnamehTermiOstad>()
-                .HasIndex(b => new { b.CodeOstad, b.CodeTerm, b.MarkazId, b.Tarikh })
+                .HasIndex(b => new { b.OstadId, b.CodeTerm, b.MarkazId, b.Tarikh })
                 .IsUnique()
                 .HasDatabaseName("IX_BarnamehTermiOstad_CodeOstad_CodeTerm_MarkazId_Tarikh");
 

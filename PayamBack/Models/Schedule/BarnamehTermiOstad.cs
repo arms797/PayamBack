@@ -11,11 +11,7 @@ namespace PayamBack.Models.Schedule
         public int Id { get; set; }
 
         /// <summary>کلید خارجی به جدول استاد</summary>
-        public int? OstadId { get; set; }
-
-        /// <summary>کد استاد</summary>
-        [MaxLength(50)]
-        public string? CodeOstad { get; set; }
+        public int? OstadId { get; set; }        
 
         /// <summary>کلید خارجی به جدول مرکز (Markaz)</summary>
         public int? MarkazId { get; set; }
@@ -81,7 +77,7 @@ namespace PayamBack.Models.Schedule
         public bool? TH { get; set; }
 
         /// <summary>فعال/غیرفعال</summary>
-        public bool? Faal { get; set; }
+        public bool? Vazeeat { get; set; }
 
         // ======== Navigation Properties ========
 

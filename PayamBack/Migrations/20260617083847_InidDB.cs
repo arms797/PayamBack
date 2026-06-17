@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace PayamBack.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialDb : Migration
+    public partial class InidDB : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -17,9 +17,9 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    CodeGrooheKarbari = table.Column<int>(type: "int", nullable: false),
-                    Vazeeyat = table.Column<bool>(type: "bit", nullable: false),
-                    Emza = table.Column<bool>(type: "bit", nullable: false),
+                    CodeRole = table.Column<int>(type: "int", nullable: true),
+                    Vazeeyat = table.Column<bool>(type: "bit", nullable: true),
+                    Emza = table.Column<bool>(type: "bit", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true)
@@ -35,13 +35,13 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Code = table.Column<int>(type: "int", nullable: false),
-                    NaamEmkanat = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    SarTitrEmkanat = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Component = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
-                    TartibNamayeshSarTitr = table.Column<int>(type: "int", nullable: false),
-                    TartibNamayeshEmkan = table.Column<int>(type: "int", nullable: false),
-                    Vazeeyat = table.Column<bool>(type: "bit", nullable: false)
+                    Code = table.Column<int>(type: "int", nullable: true),
+                    NaamEmkanat = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    SarTitrEmkanat = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Component = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    TartibNamayeshSarTitr = table.Column<int>(type: "int", nullable: true),
+                    TartibNamayeshEmkan = table.Column<int>(type: "int", nullable: true),
+                    Vazeeyat = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -54,11 +54,10 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    CodeDaneshkade = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    NaamDaneshkadeh = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    CodeGrooheAmoozeshi = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    OnvanGrooheAmoozeshi = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    CodeTarkibi = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                    CodeDaneshkade = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    NaamDaneshkadeh = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    CodeGrooheAmoozeshi = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    OnvanGrooheAmoozeshi = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -71,18 +70,19 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    CodeOstan = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    NaamOstan = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    CodeMarkaz = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    NaamMarkaz = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    VahedMarkaz = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Nahiyeh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    MahalMarkaz = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Adres = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    CodePosti = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    WebSite = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Telefon = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Vazeeyat = table.Column<bool>(type: "bit", nullable: false)
+                    CodeOstan = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    NaamOstan = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    CodeMarkaz = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    NaamMarkaz = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    VahedMarkaz = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Nahiyeh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    MahalMarkaz = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Adres = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CodePosti = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    WebSite = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Telefon = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Vazeeyat = table.Column<bool>(type: "bit", nullable: true),
+                    Dakheli = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -95,9 +95,9 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    CodeMelli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    Naam = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    NaameKhanevadeghi = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    CodeMelli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    Naam = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    NaameKhanevadeghi = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     TelefonMostaghim = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     TelefonGhayreMostaghim = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     TelefonDakheli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
@@ -118,39 +118,16 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    OnvanSaat = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    CodeSaat = table.Column<string>(type: "nvarchar(1)", maxLength: 1, nullable: false),
-                    SaatShoroo = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: false),
-                    SaatPayan = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: false),
-                    Hozoori = table.Column<bool>(type: "bit", nullable: false),
-                    Majazi = table.Column<bool>(type: "bit", nullable: false)
+                    OnvanSaat = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    CodeSaat = table.Column<string>(type: "nvarchar(1)", maxLength: 1, nullable: true),
+                    SaatShoroo = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: true),
+                    SaatPayan = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: true),
+                    Hozoori = table.Column<bool>(type: "bit", nullable: true),
+                    Majazi = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_SaatBargozariKelashas", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Sabeghes",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    IpSystem = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Dastgah = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Moroorgar = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    ZamanLogin = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Table = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    User = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    IdRecordTagirDahande = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    RoozHafte = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    ZamanTagir = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    TozihTagirat = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
-                    ZamanLogOut = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Sabeghes", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -159,16 +136,16 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    CodeTerm = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Tarikh = table.Column<DateOnly>(type: "date", nullable: false),
-                    CodeRooz = table.Column<int>(type: "int", nullable: false),
-                    RoozHafteh = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    CodeHafteh = table.Column<int>(type: "int", nullable: false),
-                    Hafteh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    CodeTerm = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Tarikh = table.Column<DateOnly>(type: "date", nullable: true),
+                    CodeRooz = table.Column<int>(type: "int", nullable: true),
+                    RoozHafteh = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    CodeHafteh = table.Column<int>(type: "int", nullable: true),
+                    Hafteh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     CodeSaateTatili = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
                     OnvanMonasebat = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Tozihat = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    Vazeeyat = table.Column<bool>(type: "bit", nullable: false)
+                    Vazeeyat = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -180,16 +157,16 @@ namespace PayamBack.Migrations
                 columns: table => new
                 {
                     CodeTerm = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    OnvanTerm = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    TermJari = table.Column<DateOnly>(type: "date", nullable: false),
-                    TarikheDastrasi = table.Column<DateOnly>(type: "date", nullable: false),
-                    TarikheEraeeDars = table.Column<DateOnly>(type: "date", nullable: false),
-                    TarikhePayanDars = table.Column<DateOnly>(type: "date", nullable: false),
-                    TarikheShorooClass = table.Column<DateOnly>(type: "date", nullable: false),
-                    TarikhePayanClass = table.Column<DateOnly>(type: "date", nullable: false),
-                    TarikheShorooMojavezMarakez = table.Column<DateOnly>(type: "date", nullable: false),
-                    TarikhePayanMojavezMarakez = table.Column<DateOnly>(type: "date", nullable: false),
-                    Vazeeyat = table.Column<bool>(type: "bit", nullable: false)
+                    OnvanTerm = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    TermJari = table.Column<DateOnly>(type: "date", nullable: true),
+                    TarikheDastrasi = table.Column<DateOnly>(type: "date", nullable: true),
+                    TarikheEraeeDars = table.Column<DateOnly>(type: "date", nullable: true),
+                    TarikhePayanDars = table.Column<DateOnly>(type: "date", nullable: true),
+                    TarikheShorooClass = table.Column<DateOnly>(type: "date", nullable: true),
+                    TarikhePayanClass = table.Column<DateOnly>(type: "date", nullable: true),
+                    TarikheShorooMojavezMarakez = table.Column<DateOnly>(type: "date", nullable: true),
+                    TarikhePayanMojavezMarakez = table.Column<DateOnly>(type: "date", nullable: true),
+                    Vazeeyat = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -223,9 +200,9 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    RoleId = table.Column<int>(type: "int", nullable: false),
-                    EmkanatId = table.Column<int>(type: "int", nullable: false),
-                    Vazeeyat = table.Column<bool>(type: "bit", nullable: false)
+                    RoleId = table.Column<int>(type: "int", nullable: true),
+                    EmkanatId = table.Column<int>(type: "int", nullable: true),
+                    Vazeeyat = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -234,14 +211,12 @@ namespace PayamBack.Migrations
                         name: "FK_RoleEmkanats_AspNetRoles_RoleId",
                         column: x => x.RoleId,
                         principalTable: "AspNetRoles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_RoleEmkanats_Emkanats_EmkanatId",
                         column: x => x.EmkanatId,
                         principalTable: "Emkanats",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -250,14 +225,14 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    CodeMaghta = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Maghta = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    GrooheAmoozeshiId = table.Column<int>(type: "int", nullable: false),
-                    CodeReshteDoRaghami = table.Column<string>(type: "nvarchar(2)", maxLength: 2, nullable: false),
-                    CodeReshte = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    OnvanReshte = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    TermVorood = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    TermEamal = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false)
+                    CodeMaghta = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Maghta = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    GrooheAmoozeshiId = table.Column<int>(type: "int", nullable: true),
+                    CodeReshteDoRaghami = table.Column<string>(type: "nvarchar(2)", maxLength: 2, nullable: true),
+                    CodeReshte = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    OnvanReshte = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    TermVorood = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    TermEamal = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -275,18 +250,18 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    CodeMelli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    Naam = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    NaameKhanevadeghi = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    MarkazId = table.Column<int>(type: "int", nullable: false),
-                    MarkazAsliId = table.Column<int>(type: "int", nullable: false),
-                    Mobile = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Mobile2 = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    TelefonMostaghim = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    TelefonGhayreMostaghim = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    TelefonDakheli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Emza = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false)
+                    CodeMelli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    Naam = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    NaameKhanevadeghi = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    MarkazId = table.Column<int>(type: "int", nullable: true),
+                    MarkazAsliId = table.Column<int>(type: "int", nullable: true),
+                    Mobile = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Mobile2 = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    TelefonMostaghim = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    TelefonGhayreMostaghim = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    TelefonDakheli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Emza = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -309,28 +284,27 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    CodeDaneshkade = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    CodeGrooheAmoozeshi = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Reshteh = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    MarkazId = table.Column<int>(type: "int", nullable: false),
+                    MarkazId = table.Column<int>(type: "int", nullable: true),
                     MarkazAsliId = table.Column<int>(type: "int", nullable: true),
-                    CodeOstadi = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    NaamKhanevadegi = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Naam = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Jens = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    CodeOstadi = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    NaamKhanevadegi = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Naam = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Jens = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
                     NaamPedar = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    TarikhTavalod = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TarikhTavalod = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
                     ShomareShenasname = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    ShomareMelli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    ShomareMelli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Mobile = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: true),
                     Mobile2 = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: true),
                     MartabeElmi = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     SazmanMarboote = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     MahalEshteghal = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    Emza = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
-                    Vazeeat = table.Column<bool>(type: "bit", nullable: false),
-                    NoeHamkari = table.Column<int>(type: "int", nullable: false)
+                    Emza = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
+                    Vazeeat = table.Column<bool>(type: "bit", nullable: true),
+                    NoeHamkari = table.Column<int>(type: "int", nullable: true),
+                    NoeBimeh = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
+                    ShomarehBimeh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -353,30 +327,30 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    MarkazId = table.Column<int>(type: "int", nullable: false),
-                    MarkazAzmoonId = table.Column<int>(type: "int", nullable: false),
-                    MarkazTermiId = table.Column<int>(type: "int", nullable: false),
-                    ReshtehId = table.Column<int>(type: "int", nullable: false),
-                    ShomareDaneshjooee = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    NaamKhanevadegi = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Naam = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Jens = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    Naampedar = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    ShomareMelli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    ShomareShenasname = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    ShomareGozarnameYaKartHoviyat = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    ShenasayeFaragirAtbaaKhareji = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    MahalSodoor = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    MarkazId = table.Column<int>(type: "int", nullable: true),
+                    MarkazAzmoonId = table.Column<int>(type: "int", nullable: true),
+                    MarkazTermiId = table.Column<int>(type: "int", nullable: true),
+                    ReshtehId = table.Column<int>(type: "int", nullable: true),
+                    ShomareDaneshjooee = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    NaamKhanevadegi = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Naam = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Jens = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    Naampedar = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ShomareMelli = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    ShomareShenasname = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    ShomareGozarnameYaKartHoviyat = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    ShenasayeFaragirAtbaaKhareji = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    MahalSodoor = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     TarikhTavalod = table.Column<DateOnly>(type: "date", nullable: true),
-                    TermVorood = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    ShomareParvande = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    VazeeyatParvande = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Mobile = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    ChapDast = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
-                    ShomareDavtalabi = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    CodeReshteMahalGhabooliSanjesh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    ShomareSanjesh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                    TermVorood = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    ShomareParvande = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    VazeeyatParvande = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Mobile = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    ChapDast = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    ShomareDavtalabi = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    CodeReshteMahalGhabooliSanjesh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    ShomareSanjesh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -409,21 +383,19 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    OstadId = table.Column<int>(type: "int", nullable: false),
-                    CodeOstad = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    MarkazId = table.Column<int>(type: "int", nullable: false),
-                    CodeTerm = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    RoozeHafteh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    A = table.Column<int>(type: "int", nullable: false),
-                    B = table.Column<int>(type: "int", nullable: false),
-                    C = table.Column<int>(type: "int", nullable: false),
-                    D = table.Column<int>(type: "int", nullable: false),
-                    E = table.Column<int>(type: "int", nullable: false),
-                    F = table.Column<int>(type: "int", nullable: false),
-                    G = table.Column<int>(type: "int", nullable: false),
-                    H = table.Column<int>(type: "int", nullable: false),
-                    Jozeiat = table.Column<bool>(type: "bit", nullable: false),
-                    Tozihat = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                    OstadId = table.Column<int>(type: "int", nullable: true),
+                    MarkazId = table.Column<int>(type: "int", nullable: true),
+                    CodeTerm = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    RoozeHafteh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    A = table.Column<int>(type: "int", nullable: true),
+                    B = table.Column<int>(type: "int", nullable: true),
+                    C = table.Column<int>(type: "int", nullable: true),
+                    D = table.Column<int>(type: "int", nullable: true),
+                    E = table.Column<int>(type: "int", nullable: true),
+                    F = table.Column<int>(type: "int", nullable: true),
+                    G = table.Column<int>(type: "int", nullable: true),
+                    H = table.Column<int>(type: "int", nullable: true),
+                    Jozeiat = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -442,8 +414,7 @@ namespace PayamBack.Migrations
                         name: "FK_BarnamehHaftegiOstads_Terms_CodeTerm",
                         column: x => x.CodeTerm,
                         principalTable: "Terms",
-                        principalColumn: "CodeTerm",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "CodeTerm");
                 });
 
             migrationBuilder.CreateTable(
@@ -452,29 +423,28 @@ namespace PayamBack.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    OstadId = table.Column<int>(type: "int", nullable: false),
-                    CodeOstad = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    MarkazId = table.Column<int>(type: "int", nullable: false),
-                    CodeTerm = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    RoozeHafteh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Tarikh = table.Column<DateOnly>(type: "date", nullable: false),
-                    A = table.Column<int>(type: "int", nullable: false),
-                    B = table.Column<int>(type: "int", nullable: false),
-                    C = table.Column<int>(type: "int", nullable: false),
-                    D = table.Column<int>(type: "int", nullable: false),
-                    E = table.Column<int>(type: "int", nullable: false),
-                    F = table.Column<int>(type: "int", nullable: false),
-                    G = table.Column<int>(type: "int", nullable: false),
-                    H = table.Column<int>(type: "int", nullable: false),
-                    TA = table.Column<bool>(type: "bit", nullable: false),
-                    TB = table.Column<bool>(type: "bit", nullable: false),
-                    TC = table.Column<bool>(type: "bit", nullable: false),
-                    TD = table.Column<bool>(type: "bit", nullable: false),
-                    TE = table.Column<bool>(type: "bit", nullable: false),
-                    TF = table.Column<bool>(type: "bit", nullable: false),
-                    TG = table.Column<bool>(type: "bit", nullable: false),
-                    TH = table.Column<bool>(type: "bit", nullable: false),
-                    Faal = table.Column<bool>(type: "bit", nullable: false)
+                    OstadId = table.Column<int>(type: "int", nullable: true),
+                    MarkazId = table.Column<int>(type: "int", nullable: true),
+                    CodeTerm = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    RoozeHafteh = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Tarikh = table.Column<DateOnly>(type: "date", nullable: true),
+                    A = table.Column<int>(type: "int", nullable: true),
+                    B = table.Column<int>(type: "int", nullable: true),
+                    C = table.Column<int>(type: "int", nullable: true),
+                    D = table.Column<int>(type: "int", nullable: true),
+                    E = table.Column<int>(type: "int", nullable: true),
+                    F = table.Column<int>(type: "int", nullable: true),
+                    G = table.Column<int>(type: "int", nullable: true),
+                    H = table.Column<int>(type: "int", nullable: true),
+                    TA = table.Column<bool>(type: "bit", nullable: true),
+                    TB = table.Column<bool>(type: "bit", nullable: true),
+                    TC = table.Column<bool>(type: "bit", nullable: true),
+                    TD = table.Column<bool>(type: "bit", nullable: true),
+                    TE = table.Column<bool>(type: "bit", nullable: true),
+                    TF = table.Column<bool>(type: "bit", nullable: true),
+                    TG = table.Column<bool>(type: "bit", nullable: true),
+                    TH = table.Column<bool>(type: "bit", nullable: true),
+                    Vazeeat = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -493,8 +463,37 @@ namespace PayamBack.Migrations
                         name: "FK_BarnamehTermiOstads_Terms_CodeTerm",
                         column: x => x.CodeTerm,
                         principalTable: "Terms",
-                        principalColumn: "CodeTerm",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "CodeTerm");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "OstadMadrak",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    OstadId = table.Column<int>(type: "int", nullable: true),
+                    GrooheAmoozeshiId = table.Column<int>(type: "int", nullable: true),
+                    Reshteh = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Grayesh = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Maghta = table.Column<int>(type: "int", nullable: true),
+                    PishFarz = table.Column<bool>(type: "bit", nullable: true),
+                    MahalAkhz = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    TasvirMadrak = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OstadMadrak", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OstadMadrak_GrooheAmoozeshis_GrooheAmoozeshiId",
+                        column: x => x.GrooheAmoozeshiId,
+                        principalTable: "GrooheAmoozeshis",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_OstadMadrak_Ostads_OstadId",
+                        column: x => x.OstadId,
+                        principalTable: "Ostads",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -506,8 +505,8 @@ namespace PayamBack.Migrations
                     OstadId = table.Column<int>(type: "int", nullable: true),
                     KarmandId = table.Column<int>(type: "int", nullable: true),
                     DaneshjooId = table.Column<int>(type: "int", nullable: true),
-                    Vazeeyat = table.Column<bool>(type: "bit", nullable: false),
-                    VazeeyatMovaghat = table.Column<bool>(type: "bit", nullable: false),
+                    Vazeeyat = table.Column<bool>(type: "bit", nullable: true),
+                    VazeeyatMovaghat = table.Column<bool>(type: "bit", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -636,6 +635,34 @@ namespace PayamBack.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "Sabeghes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IpSystem = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Dastgah = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Moroorgar = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    ZamanLogin = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Table = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    UserId = table.Column<int>(type: "int", nullable: true),
+                    IdRecordTagirDahande = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    RoozHafte = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    ZamanTagir = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TozihTagirat = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    ZamanLogOut = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Sabeghes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Sabeghes_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -659,6 +686,13 @@ namespace PayamBack.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AppUserRole_UserId_RoleId_MarkazId",
+                table: "AspNetUserRoles",
+                columns: new[] { "UserId", "RoleId", "MarkazId" },
+                unique: true,
+                filter: "[MarkazId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserRoles_MarkazId",
                 table: "AspNetUserRoles",
                 column: "MarkazId");
@@ -667,13 +701,6 @@ namespace PayamBack.Migrations
                 name: "IX_AspNetUserRoles_RoleId",
                 table: "AspNetUserRoles",
                 column: "RoleId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUserRoles_UserId_RoleId_MarkazId",
-                table: "AspNetUserRoles",
-                columns: new[] { "UserId", "RoleId", "MarkazId" },
-                unique: true,
-                filter: "[MarkazId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "EmailIndex",
@@ -703,10 +730,11 @@ namespace PayamBack.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_BarnamehHaftegiOstads_CodeOstad_CodeTerm_MarkazId_RoozeHafteh",
+                name: "IX_BarnamehHaftegiOstad_CodeOstad_CodeTerm_MarkazId_RoozeHafteh",
                 table: "BarnamehHaftegiOstads",
-                columns: new[] { "CodeOstad", "CodeTerm", "MarkazId", "RoozeHafteh" },
-                unique: true);
+                columns: new[] { "OstadId", "CodeTerm", "MarkazId", "RoozeHafteh" },
+                unique: true,
+                filter: "[OstadId] IS NOT NULL AND [CodeTerm] IS NOT NULL AND [MarkazId] IS NOT NULL AND [RoozeHafteh] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_BarnamehHaftegiOstads_CodeTerm",
@@ -719,15 +747,11 @@ namespace PayamBack.Migrations
                 column: "MarkazId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_BarnamehHaftegiOstads_OstadId",
-                table: "BarnamehHaftegiOstads",
-                column: "OstadId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_BarnamehTermiOstads_CodeOstad_CodeTerm_MarkazId_Tarikh",
+                name: "IX_BarnamehTermiOstad_CodeOstad_CodeTerm_MarkazId_Tarikh",
                 table: "BarnamehTermiOstads",
-                columns: new[] { "CodeOstad", "CodeTerm", "MarkazId", "Tarikh" },
-                unique: true);
+                columns: new[] { "OstadId", "CodeTerm", "MarkazId", "Tarikh" },
+                unique: true,
+                filter: "[OstadId] IS NOT NULL AND [CodeTerm] IS NOT NULL AND [MarkazId] IS NOT NULL AND [Tarikh] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_BarnamehTermiOstads_CodeTerm",
@@ -738,11 +762,6 @@ namespace PayamBack.Migrations
                 name: "IX_BarnamehTermiOstads_MarkazId",
                 table: "BarnamehTermiOstads",
                 column: "MarkazId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_BarnamehTermiOstads_OstadId",
-                table: "BarnamehTermiOstads",
-                column: "OstadId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Daneshjoos_MarkazAzmoonId",
@@ -765,6 +784,13 @@ namespace PayamBack.Migrations
                 column: "ReshtehId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Emkanat_Code",
+                table: "Emkanats",
+                column: "Code",
+                unique: true,
+                filter: "[Code] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Karmands_MarkazAsliId",
                 table: "Karmands",
                 column: "MarkazAsliId");
@@ -775,16 +801,28 @@ namespace PayamBack.Migrations
                 column: "MarkazId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Markazes_CodeMarkaz",
+                name: "IX_Markaz_CodeMarkaz",
                 table: "Markazes",
                 column: "CodeMarkaz",
-                unique: true);
+                unique: true,
+                filter: "[CodeMarkaz] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Ostads_CodeOstadi",
+                name: "IX_OstadMadrak_GrooheAmoozeshiId",
+                table: "OstadMadrak",
+                column: "GrooheAmoozeshiId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OstadMadrak_OstadId",
+                table: "OstadMadrak",
+                column: "OstadId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ostad_CodeOstadi",
                 table: "Ostads",
                 column: "CodeOstadi",
-                unique: true);
+                unique: true,
+                filter: "[CodeOstadi] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Ostads_MarkazAsliId",
@@ -802,14 +840,21 @@ namespace PayamBack.Migrations
                 column: "GrooheAmoozeshiId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RoleEmkanat_RoleId_EmkanatId",
+                table: "RoleEmkanats",
+                columns: new[] { "RoleId", "EmkanatId" },
+                unique: true,
+                filter: "[RoleId] IS NOT NULL AND [EmkanatId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RoleEmkanats_EmkanatId",
                 table: "RoleEmkanats",
                 column: "EmkanatId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RoleEmkanats_RoleId",
-                table: "RoleEmkanats",
-                column: "RoleId");
+                name: "IX_Sabeghes_UserId",
+                table: "Sabeghes",
+                column: "UserId");
         }
 
         /// <inheritdoc />
@@ -840,6 +885,9 @@ namespace PayamBack.Migrations
                 name: "MoshakhasatAdmins");
 
             migrationBuilder.DropTable(
+                name: "OstadMadrak");
+
+            migrationBuilder.DropTable(
                 name: "RoleEmkanats");
 
             migrationBuilder.DropTable(
@@ -852,9 +900,6 @@ namespace PayamBack.Migrations
                 name: "TaghvimTermis");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
-
-            migrationBuilder.DropTable(
                 name: "Terms");
 
             migrationBuilder.DropTable(
@@ -862,6 +907,9 @@ namespace PayamBack.Migrations
 
             migrationBuilder.DropTable(
                 name: "Emkanats");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUsers");
 
             migrationBuilder.DropTable(
                 name: "Daneshjoos");

@@ -62,6 +62,9 @@ namespace PayamBack.Models.Core
         /// <summary>وضعیت (فعال/غیرفعال)</summary>
         public bool? Vazeeyat { get; set; }
 
+        /// <summary>داخل ایران=1 ک خارج از ایران=0</summary>
+        public bool? Dakheli { get; set; } = true;
+
         // ======== Navigation Properties (ICollection) ========
 
         /// <summary>نقش‌های کاربری مرتبط با این مرکز</summary>

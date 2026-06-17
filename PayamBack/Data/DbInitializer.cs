@@ -27,7 +27,7 @@ namespace PayamBack
                     var roleResult = await roleManager.CreateAsync(new AppRole
                     {
                         Name = sysAdminRole,
-                        CodeGrooheKarbari = 1,
+                        CodeRole = 1,
                         Vazeeyat = true,
                         Emza = false
                     });

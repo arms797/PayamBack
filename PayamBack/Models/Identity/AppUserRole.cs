@@ -16,5 +16,14 @@ namespace PayamBack.Models.Identity
         /// <summary>دسترسی به اطلاعات مرکز</summary>
         [ForeignKey(nameof(MarkazId))]
         public virtual Markaz? Markaz { get; set; }
+
+
+        //فیلدهای ساخته شده توسط Identity
+
+        //public int UserId { get; set; }
+
+        //public int RoleId { get; set; }
+
+        //public string Discriminator { get; set; }
     }
 }
