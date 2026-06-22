@@ -12,8 +12,8 @@ using PayamBack.Data;
 namespace PayamBack.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260617083847_InidDB")]
-    partial class InidDB
+    [Migration("20260621055557_InitDb")]
+    partial class InitDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -969,7 +969,7 @@ namespace PayamBack.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("PayamBack.Models.Identity.Emkanat", b =>
+            modelBuilder.Entity("PayamBack.Models.Identity.Menu", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -977,41 +977,45 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("Code")
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Icon")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("Order")
                         .HasColumnType("int");
 
-                    b.Property<string>("Component")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
 
-                    b.Property<string>("NaamEmkanat")
+                    b.Property<string>("Path")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("SarTitrEmkanat")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                    b.Property<string>("PermissionName")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
-                    b.Property<int?>("TartibNamayeshEmkan")
-                        .HasColumnType("int");
+                    b.Property<string>("Title")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("TartibNamayeshSarTitr")
-                        .HasColumnType("int");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
-                    b.Property<bool?>("Vazeeyat")
+                    b.Property<bool?>("Vazeeat")
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Code")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Emkanat_Code")
-                        .HasFilter("[Code] IS NOT NULL");
+                    b.HasIndex("ParentId");
 
-                    b.ToTable("Emkanats");
+                    b.ToTable("Menus");
                 });
 
-            modelBuilder.Entity("PayamBack.Models.Identity.RoleEmkanat", b =>
+            modelBuilder.Entity("PayamBack.Models.Identity.Permission", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1019,25 +1023,65 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("EmkanatId")
+                    b.Property<string>("Action")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Resource")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool?>("Vazeeat")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Permission_Name")
+                        .HasFilter("[Name] IS NOT NULL");
+
+                    b.ToTable("Permissions");
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Identity.RolePermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("PermissionId")
                         .HasColumnType("int");
 
                     b.Property<int?>("RoleId")
                         .HasColumnType("int");
 
-                    b.Property<bool?>("Vazeeyat")
+                    b.Property<bool?>("Vazeeat")
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EmkanatId");
+                    b.HasIndex("PermissionId");
 
-                    b.HasIndex("RoleId", "EmkanatId")
+                    b.HasIndex("RoleId", "PermissionId")
                         .IsUnique()
-                        .HasDatabaseName("IX_RoleEmkanat_RoleId_EmkanatId")
-                        .HasFilter("[RoleId] IS NOT NULL AND [EmkanatId] IS NOT NULL");
+                        .HasDatabaseName("IX_RolePermission_RoleId_PermissionId")
+                        .HasFilter("[RoleId] IS NOT NULL AND [PermissionId] IS NOT NULL");
 
-                    b.ToTable("RoleEmkanats");
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("PayamBack.Models.Schedule.BarnamehHaftegiOstad", b =>
@@ -1385,11 +1429,21 @@ namespace PayamBack.Migrations
                     b.Navigation("Ostad");
                 });
 
-            modelBuilder.Entity("PayamBack.Models.Identity.RoleEmkanat", b =>
+            modelBuilder.Entity("PayamBack.Models.Identity.Menu", b =>
                 {
-                    b.HasOne("PayamBack.Models.Identity.Emkanat", "Emkanat")
-                        .WithMany()
-                        .HasForeignKey("EmkanatId")
+                    b.HasOne("PayamBack.Models.Identity.Menu", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Identity.RolePermission", b =>
+                {
+                    b.HasOne("PayamBack.Models.Identity.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("PayamBack.Models.Identity.AppRole", "Role")
@@ -1397,7 +1451,7 @@ namespace PayamBack.Migrations
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.NoAction);
 
-                    b.Navigation("Emkanat");
+                    b.Navigation("Permission");
 
                     b.Navigation("Role");
                 });
@@ -1495,6 +1549,16 @@ namespace PayamBack.Migrations
             modelBuilder.Entity("PayamBack.Models.Identity.AppUser", b =>
                 {
                     b.Navigation("Sabeghes");
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Identity.Menu", b =>
+                {
+                    b.Navigation("Children");
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Identity.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
                 });
 #pragma warning restore 612, 618
         }

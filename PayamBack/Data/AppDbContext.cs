@@ -22,14 +22,17 @@ namespace PayamBack.Data
         public DbSet<MoshakhasatAdmin> MoshakhasatAdmins { get; set; }
         public DbSet<GrooheAmoozeshi> GrooheAmoozeshis { get; set; }
         public DbSet<Reshteh> Reshtehs { get; set; }
-        public DbSet<Emkanat> Emkanats { get; set; }
-        public DbSet<RoleEmkanat> RoleEmkanats { get; set; }
+        //public DbSet<Emkanat> Emkanats { get; set; }
+        //public DbSet<RoleEmkanat> RoleEmkanats { get; set; }
         public DbSet<BarnamehHaftegiOstad> BarnamehHaftegiOstads { get; set; }
         public DbSet<BarnamehTermiOstad> BarnamehTermiOstads { get; set; }
         public DbSet<SaatBargozariKelasha> SaatBargozariKelashas { get; set; }
         public DbSet<TaghvimTermi> TaghvimTermis { get; set; }
         public DbSet<Term> Terms { get; set; }
         public DbSet<Sabeghe> Sabeghes { get; set; }
+        public DbSet<Permission> Permissions { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<Menu> Menus { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -159,6 +162,39 @@ namespace PayamBack.Data
                 .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // ======== Permission ========
+            builder.Entity<Permission>()
+                .HasIndex(p => p.Name)
+                .IsUnique()
+                .HasDatabaseName("IX_Permission_Name");
+
+            // ======== RolePermission ========
+            builder.Entity<RolePermission>()
+                .HasIndex(rp => new { rp.RoleId, rp.PermissionId })
+                .IsUnique()
+                .HasDatabaseName("IX_RolePermission_RoleId_PermissionId");
+
+            builder.Entity<RolePermission>()
+                .HasOne(rp => rp.Role)
+                .WithMany()
+                .HasForeignKey(rp => rp.RoleId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.Entity<RolePermission>()
+                .HasOne(rp => rp.Permission)
+                .WithMany(p => p.RolePermissions)
+                .HasForeignKey(rp => rp.PermissionId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // ======== Menu ========
+            builder.Entity<Menu>()
+                .HasOne(m => m.Parent)
+                .WithMany(m => m.Children)
+                .HasForeignKey(m => m.ParentId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+
+            /*
             // ======== Emkanat ========
             builder.Entity<Emkanat>()
                 .HasIndex(e => e.Code)
@@ -182,6 +218,7 @@ namespace PayamBack.Data
                 .WithMany()
                 .HasForeignKey(re => re.EmkanatId)
                 .OnDelete(DeleteBehavior.NoAction);
+            */
         }
     }
 }

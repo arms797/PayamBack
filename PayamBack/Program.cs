@@ -4,19 +4,24 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PayamBack;
 using PayamBack.Data;
+using PayamBack.Middlewares;
 using PayamBack.Models.Identity;
+using PayamBack.Services.Implementations;
+using PayamBack.Services.Interfaces;
 using System.Text;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
-// DbContext
+// ============================================================
+// 1️⃣ DbContext
+// ============================================================
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// Identity
+// ============================================================
+// 2️⃣ Identity
+// ============================================================
 builder.Services.AddIdentity<AppUser, AppRole>(opt =>
 {
     opt.Password.RequireNonAlphanumeric = false;
@@ -25,7 +30,14 @@ builder.Services.AddIdentity<AppUser, AppRole>(opt =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-// JWT
+// ============================================================
+// 3️⃣ In-Memory Cache (برای RefreshToken و دسترسی‌ها)
+// ============================================================
+builder.Services.AddMemoryCache();
+
+// ============================================================
+// 4️⃣ JWT Authentication
+// ============================================================
 var jwt = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(opt =>
 {
@@ -62,7 +74,9 @@ builder.Services.AddAuthentication(opt =>
 
 builder.Services.AddAuthorization();
 
-// تنظیم Json برای جلوگیری از حلقه (Loop)
+// ============================================================
+// 5️⃣ تنظیم Json برای جلوگیری از حلقه (Loop)
+// ============================================================
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -72,7 +86,16 @@ builder.Services.AddControllers()
 
 builder.Services.AddOpenApi();
 
-// CORS برای React
+// ============================================================
+// 6️⃣ سرویس‌های پروژه
+// ============================================================
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// ============================================================
+// 7️⃣ CORS برای React
+// ============================================================
 builder.Services.AddCors(opt => opt.AddPolicy("React", p =>
     p.WithOrigins("http://localhost:5173", "http://localhost:3000")
      .AllowAnyHeader()
@@ -88,13 +111,20 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("React");
-app.UseAuthentication();
+
+// ============================================================
+// 8️⃣ میدلور مدیریت خطا (باید قبل از Authentication باشد)
+// ============================================================
 app.UseGlobalExceptionHandler();
 
+app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
-// ایجاد نقش SysAdmin در صورت نبودن
+// ============================================================
+// 9️⃣ ایجاد داده‌های اولیه
+// ============================================================
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;

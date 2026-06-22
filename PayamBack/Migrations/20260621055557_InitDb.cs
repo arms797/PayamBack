@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace PayamBack.Migrations
 {
     /// <inheritdoc />
-    public partial class InidDB : Migration
+    public partial class InitDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -27,25 +27,6 @@ namespace PayamBack.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetRoles", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Emkanats",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Code = table.Column<int>(type: "int", nullable: true),
-                    NaamEmkanat = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    SarTitrEmkanat = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    Component = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
-                    TartibNamayeshSarTitr = table.Column<int>(type: "int", nullable: true),
-                    TartibNamayeshEmkan = table.Column<int>(type: "int", nullable: true),
-                    Vazeeyat = table.Column<bool>(type: "bit", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Emkanats", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -90,6 +71,32 @@ namespace PayamBack.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Menus",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ParentId = table.Column<int>(type: "int", nullable: true),
+                    Title = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Icon = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Path = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    PermissionName = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    Order = table.Column<int>(type: "int", nullable: true),
+                    Vazeeat = table.Column<bool>(type: "bit", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Menus", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Menus_Menus_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "Menus",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "MoshakhasatAdmins",
                 columns: table => new
                 {
@@ -110,6 +117,24 @@ namespace PayamBack.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_MoshakhasatAdmins", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Permissions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Resource = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Action = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Vazeeat = table.Column<bool>(type: "bit", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Permissions", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -192,31 +217,6 @@ namespace PayamBack.Migrations
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RoleEmkanats",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    RoleId = table.Column<int>(type: "int", nullable: true),
-                    EmkanatId = table.Column<int>(type: "int", nullable: true),
-                    Vazeeyat = table.Column<bool>(type: "bit", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RoleEmkanats", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_RoleEmkanats_AspNetRoles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "AspNetRoles",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_RoleEmkanats_Emkanats_EmkanatId",
-                        column: x => x.EmkanatId,
-                        principalTable: "Emkanats",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -318,6 +318,31 @@ namespace PayamBack.Migrations
                         name: "FK_Ostads_Markazes_MarkazId",
                         column: x => x.MarkazId,
                         principalTable: "Markazes",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RolePermissions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    RoleId = table.Column<int>(type: "int", nullable: true),
+                    PermissionId = table.Column<int>(type: "int", nullable: true),
+                    Vazeeat = table.Column<bool>(type: "bit", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RolePermissions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RolePermissions_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_RolePermissions_Permissions_PermissionId",
+                        column: x => x.PermissionId,
+                        principalTable: "Permissions",
                         principalColumn: "Id");
                 });
 
@@ -784,13 +809,6 @@ namespace PayamBack.Migrations
                 column: "ReshtehId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Emkanat_Code",
-                table: "Emkanats",
-                column: "Code",
-                unique: true,
-                filter: "[Code] IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Karmands_MarkazAsliId",
                 table: "Karmands",
                 column: "MarkazAsliId");
@@ -806,6 +824,11 @@ namespace PayamBack.Migrations
                 column: "CodeMarkaz",
                 unique: true,
                 filter: "[CodeMarkaz] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Menus_ParentId",
+                table: "Menus",
+                column: "ParentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OstadMadrak_GrooheAmoozeshiId",
@@ -835,21 +858,28 @@ namespace PayamBack.Migrations
                 column: "MarkazId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Permission_Name",
+                table: "Permissions",
+                column: "Name",
+                unique: true,
+                filter: "[Name] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Reshtehs_GrooheAmoozeshiId",
                 table: "Reshtehs",
                 column: "GrooheAmoozeshiId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RoleEmkanat_RoleId_EmkanatId",
-                table: "RoleEmkanats",
-                columns: new[] { "RoleId", "EmkanatId" },
+                name: "IX_RolePermission_RoleId_PermissionId",
+                table: "RolePermissions",
+                columns: new[] { "RoleId", "PermissionId" },
                 unique: true,
-                filter: "[RoleId] IS NOT NULL AND [EmkanatId] IS NOT NULL");
+                filter: "[RoleId] IS NOT NULL AND [PermissionId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RoleEmkanats_EmkanatId",
-                table: "RoleEmkanats",
-                column: "EmkanatId");
+                name: "IX_RolePermissions_PermissionId",
+                table: "RolePermissions",
+                column: "PermissionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Sabeghes_UserId",
@@ -882,13 +912,16 @@ namespace PayamBack.Migrations
                 name: "BarnamehTermiOstads");
 
             migrationBuilder.DropTable(
+                name: "Menus");
+
+            migrationBuilder.DropTable(
                 name: "MoshakhasatAdmins");
 
             migrationBuilder.DropTable(
                 name: "OstadMadrak");
 
             migrationBuilder.DropTable(
-                name: "RoleEmkanats");
+                name: "RolePermissions");
 
             migrationBuilder.DropTable(
                 name: "SaatBargozariKelashas");
@@ -906,7 +939,7 @@ namespace PayamBack.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "Emkanats");
+                name: "Permissions");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
