@@ -5,17 +5,15 @@ using System.Security.Claims;
 
 namespace PayamBack.Controllers
 {
-    /// <summary>
-    /// کنترلر پایه با مدیریت خودکار دسترسی‌ها
-    /// پیاده‌سازی IAsyncActionFilter برای بررسی دسترسی قبل از هر اکشن
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public abstract class BaseController : ControllerBase, IAsyncActionFilter
     {
-        /// <summary>
-        /// متد بررسی دسترسی قبل از هر اکشن
-        /// </summary>
+        // ============================================================
+        // متد بررسی دسترسی قبل از هر اکشن
+        // با [NonAction] از شناسایی به عنوان اکشن جلوگیری می‌شود
+        // ============================================================
+        [NonAction]
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
             try

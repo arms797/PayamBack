@@ -31,7 +31,7 @@ builder.Services.AddIdentity<AppUser, AppRole>(opt =>
 .AddDefaultTokenProviders();
 
 // ============================================================
-// 3️⃣ In-Memory Cache (برای RefreshToken و دسترسی‌ها)
+// 3️⃣ In-Memory Cache
 // ============================================================
 builder.Services.AddMemoryCache();
 
@@ -75,7 +75,7 @@ builder.Services.AddAuthentication(opt =>
 builder.Services.AddAuthorization();
 
 // ============================================================
-// 5️⃣ تنظیم Json برای جلوگیری از حلقه (Loop)
+// 5️⃣ تنظیم Json
 // ============================================================
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -92,14 +92,15 @@ builder.Services.AddOpenApi();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICaptchaService, CaptchaService>();
 
 // ============================================================
 // 7️⃣ CORS برای React
 // ============================================================
 builder.Services.AddCors(opt => opt.AddPolicy("React", p =>
     p.WithOrigins("http://localhost:5173", "http://localhost:3000")
-     .AllowAnyHeader()
      .AllowAnyMethod()
+     .AllowAnyHeader()
      .AllowCredentials()));
 
 var app = builder.Build();
@@ -109,13 +110,20 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// ============================================================
+// 8️⃣ HTTPS Redirection (فقط در محیط تولید)
+// ============================================================
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseCors("React");
 
 // ============================================================
-// 8️⃣ میدلور مدیریت خطا (باید قبل از Authentication باشد)
+// 9️⃣ 🔥 میدلور مدیریت خطا (قبل از Authentication)
 // ============================================================
-app.UseGlobalExceptionHandler();
+app.UseMiddleware<GlobalExceptionMiddleware>();  // ← استفاده مستقیم
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -123,7 +131,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 // ============================================================
-// 9️⃣ ایجاد داده‌های اولیه
+// 10️⃣ ایجاد داده‌های اولیه
 // ============================================================
 using (var scope = app.Services.CreateScope())
 {

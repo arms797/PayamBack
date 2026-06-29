@@ -2,9 +2,6 @@
 
 namespace PayamBack.DTOs.Identity
 {
-    /// <summary>
-    /// DTO برای دریافت اطلاعات ورود از کاربر
-    /// </summary>
     public class LoginRequestDto
     {
         [Required(ErrorMessage = "نام کاربری الزامی است")]
@@ -14,5 +11,8 @@ namespace PayamBack.DTOs.Identity
         [Required(ErrorMessage = "رمز عبور الزامی است")]
         [MaxLength(100)]
         public string Password { get; set; } = string.Empty;
+
+        public string? CaptchaKey { get; set; }
+        public string? CaptchaAnswer { get; set; }
     }
 }

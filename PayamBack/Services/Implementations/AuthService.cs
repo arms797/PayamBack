@@ -8,9 +8,6 @@ using System.Security.Claims;
 
 namespace PayamBack.Services.Implementations
 {
-    /// <summary>
-    /// پیاده‌سازی سرویس احراز هویت
-    /// </summary>
     public class AuthService : IAuthService
     {
         private readonly UserManager<AppUser> _userManager;
@@ -19,6 +16,7 @@ namespace PayamBack.Services.Implementations
         private readonly IPermissionService _permissionService;
         private readonly IConfiguration _configuration;
         private readonly AppDbContext _context;
+        private readonly ICaptchaService _captchaService;
 
         public AuthService(
             UserManager<AppUser> userManager,
@@ -26,7 +24,8 @@ namespace PayamBack.Services.Implementations
             ITokenService tokenService,
             IPermissionService permissionService,
             IConfiguration configuration,
-            AppDbContext context)
+            AppDbContext context,
+            ICaptchaService captchaService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -34,36 +33,45 @@ namespace PayamBack.Services.Implementations
             _permissionService = permissionService;
             _configuration = configuration;
             _context = context;
+            _captchaService = captchaService;
         }
 
-        // ============================================================
-        // 1️⃣ ورود کاربر
-        // ============================================================
         public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request)
         {
-            // پیدا کردن کاربر با نام کاربری
+            // اعتبارسنجی CAPTCHA
+            if (string.IsNullOrEmpty(request.CaptchaKey) || string.IsNullOrEmpty(request.CaptchaAnswer))
+            {
+                throw new UnauthorizedAccessException("captcha_required");
+            }
+
+            var isValidCaptcha = _captchaService.ValidateCaptcha(request.CaptchaKey, request.CaptchaAnswer);
+            if (!isValidCaptcha)
+            {
+                throw new UnauthorizedAccessException("captcha_invalid");
+            }
+            _captchaService.RemoveCaptcha(request.CaptchaKey);
+
+            // بررسی کاربر
             var user = await _userManager.FindByNameAsync(request.Username);
             if (user == null)
-                throw new UnauthorizedAccessException("نام کاربری یا رمز عبور اشتباه است");
+            {
+                throw new UnauthorizedAccessException("login_invalid");
+            }
 
             // بررسی رمز عبور
             var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
             if (!result.Succeeded)
-                throw new UnauthorizedAccessException("نام کاربری یا رمز عبور اشتباه است");
+            {
+                throw new UnauthorizedAccessException("login_invalid");
+            }
 
-            // 1️⃣ تولید AccessToken
+            // تولید توکن‌ها
             var accessToken = await _tokenService.GenerateAccessToken(user);
-
-            // 2️⃣ تولید RefreshToken و ذخیره در Identity + Cache
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
-            // 3️⃣ گرفتن همه نقش‌های کاربر
+            // دریافت اطلاعات کاربر
             var roles = await _permissionService.GetUserRolesAsync(user.Id);
-
-            // 4️⃣ گرفتن نقش پیش‌فرض
             var defaultRole = roles.FirstOrDefault(r => r.IsDefault);
-
-            // 5️⃣ گرفتن منوهای قابل نمایش بر اساس نقش پیش‌فرض
             var menus = defaultRole != null
                 ? await _permissionService.GetUserMenusAsync(user.Id, defaultRole.Id)
                 : new List<MenuDto>();
@@ -82,34 +90,24 @@ namespace PayamBack.Services.Implementations
             };
         }
 
-        // ============================================================
-        // 2️⃣ تمدید AccessToken با RefreshToken
-        // ============================================================
         public async Task<LoginResponseDto> RefreshTokenAsync(RefreshTokenRequestDto request)
         {
-            // 1️⃣ خواندن اطلاعات از AccessToken منقضی شده
             var principal = _tokenService.GetPrincipalFromExpiredToken(request.AccessToken);
-
-            // 2️⃣ گرفتن شناسه کاربر از توکن
             var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 throw new UnauthorizedAccessException("توکن نامعتبر");
 
-            // 3️⃣ پیدا کردن کاربر
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
                 throw new UnauthorizedAccessException("کاربر یافت نشد");
 
-            // 4️⃣ اعتبارسنجی RefreshToken (از Cache یا Identity)
             var isValid = await _tokenService.ValidateRefreshToken(user, request.RefreshToken);
             if (!isValid)
                 throw new UnauthorizedAccessException("RefreshToken نامعتبر است");
 
-            // 5️⃣ تولید توکن‌های جدید
             var newAccessToken = await _tokenService.GenerateAccessToken(user);
             var newRefreshToken = await _tokenService.GenerateRefreshToken(user);
 
-            // 6️⃣ گرفتن نقش‌ها و منوها
             var roles = await _permissionService.GetUserRolesAsync(user.Id);
             var defaultRole = roles.FirstOrDefault(r => r.IsDefault);
             var menus = defaultRole != null
@@ -130,44 +128,31 @@ namespace PayamBack.Services.Implementations
             };
         }
 
-        // ============================================================
-        // 3️⃣ خروج کاربر (باطل کردن RefreshToken)
-        // ============================================================
         public async Task<bool> LogoutAsync(int userId)
         {
-            // پیدا کردن کاربر
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
                 return false;
 
-            // باطل کردن RefreshToken
             await _tokenService.RevokeRefreshToken(user);
-
             return true;
         }
 
-        // ============================================================
-        // 4️⃣ تغییر نقش فعال کاربر
-        // ============================================================
         public async Task<LoginResponseDto> ChangeRoleAsync(int userId, int newRoleId)
         {
-            // 1️⃣ پیدا کردن کاربر
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
                 throw new UnauthorizedAccessException("کاربر یافت نشد");
 
-            // 2️⃣ بررسی اینکه کاربر این نقش را دارد
             var userRoles = await _permissionService.GetUserRolesAsync(userId);
             if (!userRoles.Any(r => r.Id == newRoleId))
                 throw new UnauthorizedAccessException("شما به این نقش دسترسی ندارید");
 
-            // 3️⃣ تغییر نقش پیش‌فرض در جدول AppUserRole
             var userRole = await _context.Set<AppUserRole>()
                 .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == newRoleId);
 
             if (userRole != null)
             {
-                // همه نقش‌های کاربر را غیرفعال کن
                 var allUserRoles = await _context.Set<AppUserRole>()
                     .Where(ur => ur.UserId == userId)
                     .ToListAsync();
@@ -177,17 +162,14 @@ namespace PayamBack.Services.Implementations
                     ur.RolePishFarz = false;
                 }
 
-                // نقش جدید را فعال کن
                 userRole.RolePishFarz = true;
                 await _context.SaveChangesAsync();
             }
 
-            // 4️⃣ گرفتن نقش‌ها و منوهای جدید
             var roles = await _permissionService.GetUserRolesAsync(userId);
             var newRole = roles.FirstOrDefault(r => r.Id == newRoleId);
             var menus = await _permissionService.GetUserMenusAsync(userId, newRoleId);
 
-            // 5️⃣ تولید توکن جدید (برای امنیت بیشتر)
             var accessToken = await _tokenService.GenerateAccessToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
