@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PayamBack.Models.Identity
 {
+    [Table("AspNetUserRoles")]  
     public class AppUserRole : IdentityUserRole<int>
     {
         /// <summary>کلید خارجی به جدول مرکز (Markaz)</summary>

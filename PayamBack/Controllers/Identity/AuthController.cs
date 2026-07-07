@@ -6,13 +6,10 @@ using System.Security.Claims;
 
 namespace PayamBack.Controllers.Identity
 {
-    /// <summary>
-    /// کنترلر احراز هویت - ورود، خروج، تمدید توکن و تغییر نقش
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [AllowAnonymous]  // همه اکشن‌های این کنترلر بدون احراز هویت قابل دسترس هستند
-    public class AuthController : BaseController
+    [AllowAnonymous]
+    public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
 
@@ -22,7 +19,7 @@ namespace PayamBack.Controllers.Identity
         }
 
         // ============================================================
-        // 1️⃣ ورود کاربر
+        // 1️⃣ ورود
         // ============================================================
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
@@ -30,16 +27,30 @@ namespace PayamBack.Controllers.Identity
             try
             {
                 var response = await _authService.LoginAsync(request);
-                return Success(response, "ورود موفق");
+                return Ok(new
+                {
+                    success = true,
+                    message = "ورود موفق",
+                    data = response
+                });
             }
-            catch (UnauthorizedAccessException ex)
+            catch (Exception ex)
             {
-                return Error(ex.Message, 401);
+                // ============================================================
+                // مدیریت مستقیم خطاها بدون رفتن به جای دیگر
+                // ============================================================
+                return ex.Message switch
+                {
+                    "captcha_required" => BadRequest(new { success = false, message = "لطفاً کد امنیتی را وارد کنید" }),
+                    "captcha_invalid" => BadRequest(new { success = false, message = "کد امنیتی اشتباه است" }),
+                    "login_invalid" => BadRequest(new { success = false, message = "نام کاربری یا رمز عبور اشتباه است" }),
+                    _ => StatusCode(500, new { success = false, message = "خطای داخلی سرور" })
+                };
             }
         }
 
         // ============================================================
-        // 2️⃣ تمدید AccessToken با RefreshToken
+        // 2️⃣ تمدید توکن
         // ============================================================
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequestDto request)
@@ -47,28 +58,52 @@ namespace PayamBack.Controllers.Identity
             try
             {
                 var response = await _authService.RefreshTokenAsync(request);
-                return Success(response, "توکن بروزرسانی شد");
+                return Ok(new
+                {
+                    success = true,
+                    message = "توکن بروزرسانی شد",
+                    data = response
+                });
             }
-            catch (UnauthorizedAccessException ex)
+            catch (Exception ex)
             {
-                return Error(ex.Message, 401);
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
 
         // ============================================================
-        // 3️⃣ خروج کاربر
+        // 3️⃣ خروج
         // ============================================================
         [HttpPost("logout")]
-        [Authorize]  // برای خروج باید احراز هویت شده باشید
+        [Authorize]
         public async Task<IActionResult> Logout()
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-            await _authService.LogoutAsync(userId);
-            return Success( "خروج موفق");
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _authService.LogoutAsync(userId);
+                return Ok(new
+                {
+                    success = true,
+                    message = "خروج موفق"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطای داخلی سرور"
+                });
+            }
         }
 
         // ============================================================
-        // 4️⃣ تغییر نقش فعال کاربر
+        // 4️⃣ تغییر نقش
         // ============================================================
         [HttpPost("change-role")]
         [Authorize]
@@ -78,11 +113,20 @@ namespace PayamBack.Controllers.Identity
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
                 var response = await _authService.ChangeRoleAsync(userId, dto.RoleId);
-                return Success(response, "نقش با موفقیت تغییر کرد");
+                return Ok(new
+                {
+                    success = true,
+                    message = "نقش با موفقیت تغییر کرد",
+                    data = response
+                });
             }
-            catch (UnauthorizedAccessException ex)
+            catch (Exception ex)
             {
-                return Error(ex.Message, 401);
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
             }
         }
     }

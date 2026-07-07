@@ -36,18 +36,21 @@ namespace PayamBack.Services.Implementations
             _captchaService = captchaService;
         }
 
+        // ============================================================
+        // 1️⃣ ورود کاربر
+        // ============================================================
         public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request)
         {
             // اعتبارسنجی CAPTCHA
             if (string.IsNullOrEmpty(request.CaptchaKey) || string.IsNullOrEmpty(request.CaptchaAnswer))
             {
-                throw new UnauthorizedAccessException("captcha_required");
+                throw new Exception("captcha_required");
             }
 
             var isValidCaptcha = _captchaService.ValidateCaptcha(request.CaptchaKey, request.CaptchaAnswer);
             if (!isValidCaptcha)
             {
-                throw new UnauthorizedAccessException("captcha_invalid");
+                throw new Exception("captcha_invalid");
             }
             _captchaService.RemoveCaptcha(request.CaptchaKey);
 
@@ -55,14 +58,14 @@ namespace PayamBack.Services.Implementations
             var user = await _userManager.FindByNameAsync(request.Username);
             if (user == null)
             {
-                throw new UnauthorizedAccessException("login_invalid");
+                throw new Exception("login_invalid");
             }
 
             // بررسی رمز عبور
             var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
             if (!result.Succeeded)
             {
-                throw new UnauthorizedAccessException("login_invalid");
+                throw new Exception("login_invalid");
             }
 
             // تولید توکن‌ها
@@ -90,20 +93,23 @@ namespace PayamBack.Services.Implementations
             };
         }
 
+        // ============================================================
+        // 2️⃣ تمدید AccessToken با RefreshToken
+        // ============================================================
         public async Task<LoginResponseDto> RefreshTokenAsync(RefreshTokenRequestDto request)
         {
             var principal = _tokenService.GetPrincipalFromExpiredToken(request.AccessToken);
             var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                throw new UnauthorizedAccessException("توکن نامعتبر");
+                throw new Exception("توکن نامعتبر");
 
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                throw new UnauthorizedAccessException("کاربر یافت نشد");
+                throw new Exception("کاربر یافت نشد");
 
             var isValid = await _tokenService.ValidateRefreshToken(user, request.RefreshToken);
             if (!isValid)
-                throw new UnauthorizedAccessException("RefreshToken نامعتبر است");
+                throw new Exception("RefreshToken نامعتبر است");
 
             var newAccessToken = await _tokenService.GenerateAccessToken(user);
             var newRefreshToken = await _tokenService.GenerateRefreshToken(user);
@@ -128,6 +134,9 @@ namespace PayamBack.Services.Implementations
             };
         }
 
+        // ============================================================
+        // 3️⃣ خروج کاربر
+        // ============================================================
         public async Task<bool> LogoutAsync(int userId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
@@ -138,15 +147,18 @@ namespace PayamBack.Services.Implementations
             return true;
         }
 
+        // ============================================================
+        // 4️⃣ تغییر نقش فعال کاربر
+        // ============================================================
         public async Task<LoginResponseDto> ChangeRoleAsync(int userId, int newRoleId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
-                throw new UnauthorizedAccessException("کاربر یافت نشد");
+                throw new Exception("کاربر یافت نشد");
 
             var userRoles = await _permissionService.GetUserRolesAsync(userId);
             if (!userRoles.Any(r => r.Id == newRoleId))
-                throw new UnauthorizedAccessException("شما به این نقش دسترسی ندارید");
+                throw new Exception("شما به این نقش دسترسی ندارید");
 
             var userRole = await _context.Set<AppUserRole>()
                 .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == newRoleId);

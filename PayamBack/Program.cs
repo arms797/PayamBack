@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PayamBack;
 using PayamBack.Data;
-using PayamBack.Middlewares;
 using PayamBack.Models.Identity;
 using PayamBack.Services.Implementations;
 using PayamBack.Services.Interfaces;
@@ -29,6 +28,7 @@ builder.Services.AddIdentity<AppUser, AppRole>(opt =>
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
+
 
 // ============================================================
 // 3️⃣ In-Memory Cache
@@ -56,19 +56,6 @@ builder.Services.AddAuthentication(opt =>
         ValidAudience = jwt["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwt["Key"]!))
-    };
-
-    opt.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
-        {
-            var token = context.Request.Headers["Authorization"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(token) && token.StartsWith("Bearer "))
-            {
-                context.Token = token.Substring("Bearer ".Length).Trim();
-            }
-            return Task.CompletedTask;
-        }
     };
 });
 
@@ -110,28 +97,13 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// ============================================================
-// 8️⃣ HTTPS Redirection (فقط در محیط تولید)
-// ============================================================
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
-
 app.UseCors("React");
-
-// ============================================================
-// 9️⃣ 🔥 میدلور مدیریت خطا (قبل از Authentication)
-// ============================================================
-app.UseMiddleware<GlobalExceptionMiddleware>();  // ← استفاده مستقیم
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 // ============================================================
-// 10️⃣ ایجاد داده‌های اولیه
+// 8️⃣ ایجاد داده‌های اولیه
 // ============================================================
 using (var scope = app.Services.CreateScope())
 {

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.DTOs.Identity;
 using PayamBack.Models.Identity;
@@ -90,8 +91,8 @@ namespace PayamBack.Services.Implementations
         // 3️⃣ گرفتن همه نقش‌های کاربر با مشخص کردن نقش پیش‌فرض
         // ============================================================
         public async Task<List<RoleDto>> GetUserRolesAsync(int userId)
-        {
-            // استفاده از AppUserRole (نه IdentityUserRole)
+        {            
+
             var userRoles = await _context.Set<AppUserRole>()
                 .Where(ur => ur.UserId == userId)
                 .Join(_context.Roles,
@@ -101,7 +102,8 @@ namespace PayamBack.Services.Implementations
                     {
                         Id = r.Id,
                         Name = r.Name ?? "",
-                        IsDefault = ur.RolePishFarz ?? false
+                        IsDefault = ur.RolePishFarz ?? false,
+                        MarkazId = ur.MarkazId ?? 0
                     })
                 .ToListAsync();
 

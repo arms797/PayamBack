@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
-using PayamBack.Models;
 using PayamBack.Models.Core;
 using PayamBack.Models.Identity;
 
@@ -20,24 +19,26 @@ namespace PayamBack
             {
                 await context.Database.EnsureCreatedAsync();
 
-                // فقط نقش Admin را ایجاد کن
-                string sysAdminRole = "ادمین سامانه";
-                if (!await roleManager.RoleExistsAsync(sysAdminRole))
+                // ============================================================
+                // 1️⃣ ایجاد نقش "ادمین سامانه"
+                // ============================================================
+                string adminRoleName = "ادمین سامانه";
+                AppRole? adminRole = await roleManager.FindByNameAsync(adminRoleName);
+                if (adminRole == null)
                 {
-                    var roleResult = await roleManager.CreateAsync(new AppRole
+                    adminRole = new AppRole
                     {
-                        Name = sysAdminRole,
+                        Name = adminRoleName,
                         CodeRole = 1,
                         Vazeeyat = true,
                         Emza = false
-                    });
-                    if (!roleResult.Succeeded)
-                    {
-                        throw new Exception($"خطا در ایجاد نقش: {string.Join(", ", roleResult.Errors)}");
-                    }
+                    };
+                    await roleManager.CreateAsync(adminRole);
                 }
 
-                // ایجاد کاربر SysAdmin (اگر وجود نداشت)
+                // ============================================================
+                // 2️⃣ ایجاد کاربر ادمین
+                // ============================================================
                 var adminEmail = "admin@payam.ac.ir";
                 var adminUser = await userManager.FindByEmailAsync(adminEmail);
                 if (adminUser == null)
@@ -49,19 +50,26 @@ namespace PayamBack
                         Vazeeyat = true,
                         VazeeyatMovaghat = true
                     };
-                    var userResult = await userManager.CreateAsync(adminUser, "Admin@123");
-                    if (!userResult.Succeeded)
-                    {
-                        throw new Exception($"خطا در ایجاد کاربر: {string.Join(", ", userResult.Errors)}");
-                    }
+                    await userManager.CreateAsync(adminUser, "Admin@123");
 
-                    var roleAddResult = await userManager.AddToRoleAsync(adminUser, sysAdminRole);
-                    if (!roleAddResult.Succeeded)
-                    {
-                        throw new Exception($"خطا در افزودن نقش: {string.Join(", ", roleAddResult.Errors)}");
-                    }
+                    // اضافه کردن نقش به کاربر
+                    await userManager.AddToRoleAsync(adminUser, adminRoleName);
 
-                    // ثبت اطلاعات در جدول MoshakhasatAdmin
+                    // ============================================================
+                    // 3️⃣ 🔥 ثبت در جدول AppUserRole (برای RolePishFarz)
+                    // ============================================================
+                    var appUserRole = new AppUserRole
+                    {
+                        UserId = adminUser.Id,
+                        RoleId = adminRole.Id,
+                        MarkazId = 1,  // شناسه مرکز پیش‌فرض
+                        RolePishFarz = true
+                    };
+                    await context.Set<AppUserRole>().AddAsync(appUserRole);
+
+                    // ============================================================
+                    // 4️⃣ ثبت در جدول MoshakhasatAdmin
+                    // ============================================================
                     var moshakhasatAdmin = new MoshakhasatAdmin
                     {
                         CodeMelli = "1234567890",
@@ -77,6 +85,45 @@ namespace PayamBack
                         CodePosti = ""
                     };
                     await context.MoshakhasatAdmins.AddAsync(moshakhasatAdmin);
+
+                    await context.SaveChangesAsync();
+                }
+                else
+                {
+                    // ============================================================
+                    // اگر کاربر وجود دارد، بررسی کن که در AppUserRole ثبت شده است یا نه
+                    // ============================================================
+                    var existsInAppUserRole = await context.Set<AppUserRole>()
+                        .AnyAsync(ur => ur.UserId == adminUser.Id);
+
+                    if (!existsInAppUserRole && adminRole != null)
+                    {
+                        var appUserRole = new AppUserRole
+                        {
+                            UserId = adminUser.Id,
+                            RoleId = adminRole.Id,
+                            MarkazId = 1,
+                            RolePishFarz = true
+                        };
+                        await context.Set<AppUserRole>().AddAsync(appUserRole);
+                        await context.SaveChangesAsync();
+                    }
+                }
+
+                // ============================================================
+                // 5️⃣ اگر مرکزی وجود ندارد، یک مرکز پیش‌فرض ایجاد کن
+                // ============================================================
+                if (!await context.Markazes.AnyAsync())
+                {
+                    var markaz = new Markaz
+                    {
+                        CodeMarkaz = "6293",
+                        NaamMarkaz = "مرکز شیراز",
+                        CodeOstan = "16",
+                        NaamOstan = "فارس",
+                        Vazeeyat = true
+                    };
+                    await context.Markazes.AddAsync(markaz);
                     await context.SaveChangesAsync();
                 }
             }

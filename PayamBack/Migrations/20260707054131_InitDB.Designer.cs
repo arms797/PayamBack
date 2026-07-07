@@ -12,8 +12,8 @@ using PayamBack.Data;
 namespace PayamBack.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260621055557_InitDb")]
-    partial class InitDb
+    [Migration("20260707054131_InitDB")]
+    partial class InitDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -92,30 +92,6 @@ namespace PayamBack.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("AspNetUserLogins", (string)null);
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<int>", b =>
-                {
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RoleId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Discriminator")
-                        .IsRequired()
-                        .HasMaxLength(21)
-                        .HasColumnType("nvarchar(21)");
-
-                    b.HasKey("UserId", "RoleId");
-
-                    b.HasIndex("RoleId");
-
-                    b.ToTable("AspNetUserRoles", (string)null);
-
-                    b.HasDiscriminator<string>("Discriminator").HasValue("IdentityUserRole<int>");
-
-                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<int>", b =>
@@ -969,6 +945,34 @@ namespace PayamBack.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("PayamBack.Models.Identity.AppUserRole", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MarkazId")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("RolePishFarz")
+                        .HasColumnType("bit");
+
+                    b.HasKey("UserId", "RoleId");
+
+                    b.HasIndex("MarkazId");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("UserId", "RoleId", "MarkazId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_AppUserRole_UserId_RoleId_MarkazId")
+                        .HasFilter("[MarkazId] IS NOT NULL");
+
+                    b.ToTable("AspNetUserRoles", (string)null);
+                });
+
             modelBuilder.Entity("PayamBack.Models.Identity.Menu", b =>
                 {
                     b.Property<int>("Id")
@@ -1034,6 +1038,9 @@ namespace PayamBack.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<bool?>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Name")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -1041,9 +1048,6 @@ namespace PayamBack.Migrations
                     b.Property<string>("Resource")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<bool?>("Vazeeat")
-                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 
@@ -1237,26 +1241,6 @@ namespace PayamBack.Migrations
                     b.ToTable("BarnamehTermiOstads");
                 });
 
-            modelBuilder.Entity("PayamBack.Models.Identity.AppUserRole", b =>
-                {
-                    b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityUserRole<int>");
-
-                    b.Property<int?>("MarkazId")
-                        .HasColumnType("int");
-
-                    b.Property<bool?>("RolePishFarz")
-                        .HasColumnType("bit");
-
-                    b.HasIndex("MarkazId");
-
-                    b.HasIndex("UserId", "RoleId", "MarkazId")
-                        .IsUnique()
-                        .HasDatabaseName("IX_AppUserRole_UserId_RoleId_MarkazId")
-                        .HasFilter("[MarkazId] IS NOT NULL");
-
-                    b.HasDiscriminator().HasValue("AppUserRole");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
                 {
                     b.HasOne("PayamBack.Models.Identity.AppRole", null)
@@ -1277,21 +1261,6 @@ namespace PayamBack.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<int>", b =>
                 {
-                    b.HasOne("PayamBack.Models.Identity.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<int>", b =>
-                {
-                    b.HasOne("PayamBack.Models.Identity.AppRole", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("PayamBack.Models.Identity.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -1429,6 +1398,28 @@ namespace PayamBack.Migrations
                     b.Navigation("Ostad");
                 });
 
+            modelBuilder.Entity("PayamBack.Models.Identity.AppUserRole", b =>
+                {
+                    b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
+                        .WithMany("AppUserRoles")
+                        .HasForeignKey("MarkazId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("PayamBack.Models.Identity.AppRole", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PayamBack.Models.Identity.AppUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Markaz");
+                });
+
             modelBuilder.Entity("PayamBack.Models.Identity.Menu", b =>
                 {
                     b.HasOne("PayamBack.Models.Identity.Menu", "Parent")
@@ -1500,16 +1491,6 @@ namespace PayamBack.Migrations
                     b.Navigation("Ostad");
 
                     b.Navigation("Term");
-                });
-
-            modelBuilder.Entity("PayamBack.Models.Identity.AppUserRole", b =>
-                {
-                    b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
-                        .WithMany("AppUserRoles")
-                        .HasForeignKey("MarkazId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("Markaz");
                 });
 
             modelBuilder.Entity("PayamBack.Models.Core.Markaz", b =>

@@ -23,6 +23,7 @@
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public bool IsDefault { get; set; }  // آیا نقش پیش‌فرض است؟
+        public bool IsDefault { get; set; } = false; // آیا نقش پیش‌فرض است؟
+        public int MarkazId { get; set; }
     }
 }

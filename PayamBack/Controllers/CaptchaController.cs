@@ -8,7 +8,7 @@ namespace PayamBack.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [AllowAnonymous]  // بدون احراز هویت
-    public class CaptchaController : BaseController
+    public class CaptchaController : ControllerBase
     {
         private readonly ICaptchaService _captchaService;
 
@@ -23,8 +23,25 @@ namespace PayamBack.Controllers
         [HttpGet("generate")]
         public IActionResult Generate()
         {
-            var captcha = _captchaService.GenerateCaptcha();
-            return Success(captcha, "CAPTCHA ساخته شد");
+            try
+            {
+                var captcha = _captchaService.GenerateCaptcha();
+                return Ok(new
+                {
+                    success = true,
+                    message = "CAPTCHA ساخته شد",
+                    data = captcha
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در تولید کد امنیتی",
+                    error = ex.Message
+                });
+            }
         }
 
         // ============================================================
@@ -33,12 +50,45 @@ namespace PayamBack.Controllers
         [HttpPost("validate")]
         public IActionResult Validate([FromBody] CaptchaValidationRequest request)
         {
-            var isValid = _captchaService.ValidateCaptcha(request.CaptchaKey, request.UserAnswer);
+            try
+            {
+                // اعتبارسنجی ورودی
+                if (string.IsNullOrEmpty(request.CaptchaKey) || string.IsNullOrEmpty(request.UserAnswer))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "اطلاعات کد امنیتی کامل نیست"
+                    });
+                }
 
-            if (!isValid)
-                return Error("کد امنیتی اشتباه است", 400);
+                var isValid = _captchaService.ValidateCaptcha(request.CaptchaKey, request.UserAnswer);
 
-            return Success(new { valid = true }, "کد امنیتی صحیح است");
+                if (!isValid)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "کد امنیتی اشتباه است"
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "کد امنیتی صحیح است",
+                    data = new { valid = true }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در اعتبارسنجی کد امنیتی",
+                    error = ex.Message
+                });
+            }
         }
     }
 }

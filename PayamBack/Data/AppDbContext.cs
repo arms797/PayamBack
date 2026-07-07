@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Models.Audit;
 using PayamBack.Models.Core;
@@ -8,12 +9,25 @@ using PayamBack.Models.Schedule;
 
 namespace PayamBack.Data
 {
-    public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
+    public class AppDbContext
+    : IdentityDbContext<AppUser, AppRole, int,
+                        IdentityUserClaim<int>,
+                        AppUserRole,
+                        IdentityUserLogin<int>,
+                        IdentityRoleClaim<int>,
+                        IdentityUserToken<int>>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options)
         {
-        }
+        }    
+
+    /*public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
+    {
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options)
+        {
+        }*/
 
         public DbSet<Markaz> Markazes { get; set; }
         public DbSet<Ostad> Ostads { get; set; }
@@ -38,17 +52,53 @@ namespace PayamBack.Data
         {
             base.OnModelCreating(builder);
 
+            // ======== AppUser ========
+            builder.Entity<AppUser>()
+                .ToTable("AspNetUsers");
+
+            // ======== AppRole ========
+            builder.Entity<AppRole>()
+                .ToTable("AspNetRoles");
+
             // ======== AppUserRole ========
+            builder.Entity<AppUserRole>(entity =>
+            {
+                entity.ToTable("AspNetUserRoles");
+
+                // کلید مرکب
+                entity.HasKey(e => new { e.UserId, e.RoleId });
+
+                // فیلدهای جدید
+                entity.Property(e => e.MarkazId);
+                entity.Property(e => e.RolePishFarz);
+
+                // ایندکس مرکب
+                entity.HasIndex(e => new { e.UserId, e.RoleId, e.MarkazId })
+                    .IsUnique()
+                    .HasDatabaseName("IX_AppUserRole_UserId_RoleId_MarkazId");
+
+                // رابطه با Markaz
+                entity.HasOne(e => e.Markaz)
+                    .WithMany(m => m.AppUserRoles)
+                    .HasForeignKey(e => e.MarkazId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+
+
+            /*builder.Entity<AppUserRole>()
+                .ToTable("AspNetUserRoles");
+
             builder.Entity<AppUserRole>()
                 .HasIndex(ur => new { ur.UserId, ur.RoleId, ur.MarkazId })
                 .IsUnique()
-                .HasDatabaseName("IX_AppUserRole_UserId_RoleId_MarkazId");
+                .HasDatabaseName("IX_AppUserRole_UserId_RoleId_MarkazId");                
 
             builder.Entity<AppUserRole>()
                 .HasOne(ur => ur.Markaz)
                 .WithMany(m => m.AppUserRoles)
                 .HasForeignKey(ur => ur.MarkazId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.NoAction);*/
 
             // ======== Markaz ========
             builder.Entity<Markaz>()
