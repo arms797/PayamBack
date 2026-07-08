@@ -17,7 +17,7 @@ namespace PayamBack.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -864,6 +864,9 @@ namespace PayamBack.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<int?>("AdminId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -924,6 +927,8 @@ namespace PayamBack.Migrations
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AdminId");
 
                     b.HasIndex("DaneshjooId");
 
@@ -1376,6 +1381,10 @@ namespace PayamBack.Migrations
 
             modelBuilder.Entity("PayamBack.Models.Identity.AppUser", b =>
                 {
+                    b.HasOne("PayamBack.Models.Core.MoshakhasatAdmin", "MoshakhasatAdmin")
+                        .WithMany()
+                        .HasForeignKey("AdminId");
+
                     b.HasOne("PayamBack.Models.Core.Daneshjoo", "Daneshjoo")
                         .WithMany()
                         .HasForeignKey("DaneshjooId");
@@ -1391,6 +1400,8 @@ namespace PayamBack.Migrations
                     b.Navigation("Daneshjoo");
 
                     b.Navigation("Karmand");
+
+                    b.Navigation("MoshakhasatAdmin");
 
                     b.Navigation("Ostad");
                 });

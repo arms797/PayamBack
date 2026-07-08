@@ -9,6 +9,8 @@
         public string RefreshToken { get; set; } = string.Empty;     // برای تمدید توکن
         public string Username { get; set; } = string.Empty;         // نام کاربری
         public string Email { get; set; } = string.Empty;            // ایمیل
+        public string FirstName { get; set; } = string.Empty;        // ← نام
+        public string LastName { get; set; } = string.Empty;         // ← نام خانوادگی
         public int? CurrentRoleId { get; set; }                      // شناسه نقش فعال فعلی
         public string CurrentRoleName { get; set; } = string.Empty;  // نام نقش فعال فعلی
         public List<RoleDto> Roles { get; set; } = new();           // لیست همه نقش‌ها
@@ -23,7 +25,7 @@
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public bool IsDefault { get; set; } = false; // آیا نقش پیش‌فرض است؟
+        public bool IsDefault { get; set; } = false;
         public int MarkazId { get; set; }
     }
 }

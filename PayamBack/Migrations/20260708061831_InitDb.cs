@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace PayamBack.Migrations
 {
     /// <inheritdoc />
-    public partial class InitDB : Migration
+    public partial class InitDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -530,6 +530,7 @@ namespace PayamBack.Migrations
                     OstadId = table.Column<int>(type: "int", nullable: true),
                     KarmandId = table.Column<int>(type: "int", nullable: true),
                     DaneshjooId = table.Column<int>(type: "int", nullable: true),
+                    AdminId = table.Column<int>(type: "int", nullable: true),
                     Vazeeyat = table.Column<bool>(type: "bit", nullable: true),
                     VazeeyatMovaghat = table.Column<bool>(type: "bit", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -559,6 +560,11 @@ namespace PayamBack.Migrations
                         name: "FK_AspNetUsers_Karmands_KarmandId",
                         column: x => x.KarmandId,
                         principalTable: "Karmands",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_MoshakhasatAdmins_AdminId",
+                        column: x => x.AdminId,
+                        principalTable: "MoshakhasatAdmins",
                         principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_AspNetUsers_Ostads_OstadId",
@@ -730,6 +736,11 @@ namespace PayamBack.Migrations
                 name: "EmailIndex",
                 table: "AspNetUsers",
                 column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_AdminId",
+                table: "AspNetUsers",
+                column: "AdminId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUsers_DaneshjooId",
@@ -914,9 +925,6 @@ namespace PayamBack.Migrations
                 name: "Menus");
 
             migrationBuilder.DropTable(
-                name: "MoshakhasatAdmins");
-
-            migrationBuilder.DropTable(
                 name: "OstadMadrak");
 
             migrationBuilder.DropTable(
@@ -948,6 +956,9 @@ namespace PayamBack.Migrations
 
             migrationBuilder.DropTable(
                 name: "Karmands");
+
+            migrationBuilder.DropTable(
+                name: "MoshakhasatAdmins");
 
             migrationBuilder.DropTable(
                 name: "Ostads");

@@ -17,6 +17,9 @@ namespace PayamBack.Models.Identity
         /// <summary>شناسه دانشجو در جدول Daneshjoo</summary>
         public int? DaneshjooId { get; set; }
 
+        /// <summary>شناسه ادمین در جدول MoshakhasateAdmin</summary>
+        public int? AdminId { get; set; }
+
         /// <summary>وضعیت فعال/غیرفعال کاربر</summary>
         public bool? Vazeeyat { get; set; }
 
@@ -36,6 +39,10 @@ namespace PayamBack.Models.Identity
         /// <summary>اطلاعات دانشجو مرتبط</summary>
         [ForeignKey(nameof(DaneshjooId))]
         public virtual Daneshjoo? Daneshjoo { get; set; }
+
+        /// <summary>اطلاعات ادمین مرتبط</summary>
+        [ForeignKey(nameof(AdminId))]
+        public virtual MoshakhasatAdmin? MoshakhasatAdmin { get; set; }
 
         /// <summary>سوابق فعالیت‌های کاربر</summary>
         public virtual ICollection<Sabeghe>? Sabeghes { get; set; }

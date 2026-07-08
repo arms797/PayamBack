@@ -72,21 +72,90 @@ namespace PayamBack.Services.Implementations
             var accessToken = await _tokenService.GenerateAccessToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
-            // دریافت اطلاعات کاربر
+            // ============================================================
+            // دریافت نقش‌های کاربر
+            // ============================================================
             var roles = await _permissionService.GetUserRolesAsync(user.Id);
-            var defaultRole = roles.FirstOrDefault(r => r.IsDefault);
-            var menus = defaultRole != null
-                ? await _permissionService.GetUserMenusAsync(user.Id, defaultRole.Id)
+
+            // ============================================================
+            // 🔥 تعیین نقش فعال (پیش‌فرض یا اولین نقش)
+            // ============================================================
+            RoleDto? activeRole = roles.FirstOrDefault(r => r.IsDefault);
+
+            // اگر نقش پیش‌فرض وجود نداشت، اولین نقش را انتخاب کن
+            if (activeRole == null && roles.Any())
+            {
+                activeRole = roles.First();
+            }
+
+            // ============================================================
+            // دریافت منوها بر اساس نقش فعال
+            // ============================================================
+            var menus = activeRole != null
+                ? await _permissionService.GetUserMenusAsync(user.Id, activeRole.Id)
                 : new List<MenuDto>();
 
+            // ============================================================
+            // 🔥 دریافت نام و نام خانوادگی کاربر
+            // ============================================================
+            string firstName = "";
+            string lastName = "";
+
+            // اگر کاربر استاد است
+            if (user.OstadId.HasValue)
+            {
+                var ostad = await _context.Ostads.FindAsync(user.OstadId.Value);
+                if (ostad != null)
+                {
+                    firstName = ostad.Naam ?? "";
+                    lastName = ostad.NaamKhanevadegi ?? "";
+                }
+            }
+            // اگر کاربر کارمند است
+            else if (user.KarmandId.HasValue)
+            {
+                var karmand = await _context.Karmands.FindAsync(user.KarmandId.Value);
+                if (karmand != null)
+                {
+                    firstName = karmand.Naam ?? "";
+                    lastName = karmand.NaameKhanevadeghi ?? "";
+                }
+            }
+            // اگر کاربر دانشجو است
+            else if (user.DaneshjooId.HasValue)
+            {
+                var daneshjoo = await _context.Daneshjoos.FindAsync(user.DaneshjooId.Value);
+                if (daneshjoo != null)
+                {
+                    firstName = daneshjoo.Naam ?? "";
+                    lastName = daneshjoo.NaamKhanevadegi ?? "";
+                }
+            }
+            // اگر کاربر ادمین است (از جدول MoshakhasatAdmin)
+            else
+            {
+                var admin = await _context.MoshakhasatAdmins
+                    .FirstOrDefaultAsync(m => m.Email == user.Email);
+                if (admin != null)
+                {
+                    firstName = admin.Naam ?? "";
+                    lastName = admin.NaameKhanevadeghi ?? "";
+                }
+            }
+
+            // ============================================================
+            // برگرداندن پاسخ
+            // ============================================================
             return new LoginResponseDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 Username = user.UserName ?? "",
                 Email = user.Email ?? "",
-                CurrentRoleId = defaultRole?.Id,
-                CurrentRoleName = defaultRole?.Name ?? "",
+                FirstName = firstName,
+                LastName = lastName,
+                CurrentRoleId = activeRole?.Id,
+                CurrentRoleName = activeRole?.Name ?? "",
                 Roles = roles,
                 Menus = menus,
                 ExpiresIn = Convert.ToInt32(_configuration["Jwt:AccessTokenExpiryMinutes"] ?? "15")
