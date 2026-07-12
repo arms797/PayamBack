@@ -20,6 +20,27 @@ namespace PayamBack
                 await context.Database.EnsureCreatedAsync();
 
                 // ============================================================
+                // 6️⃣ اگر مرکزی وجود ندارد، یک مرکز پیش‌فرض ایجاد کن
+                // ============================================================
+                //var existsMarkaz =await context.Set<Markaz>()
+                //    .AnyAsync();
+                int markazId = 0;
+                if (!await context.Markazes.AnyAsync())
+                {
+                    var markaz = new Markaz
+                    {
+                        CodeMarkaz = "6293",
+                        NaamMarkaz = "مرکز شیراز",
+                        CodeOstan = "16",
+                        NaamOstan = "فارس",
+                        Vazeeyat = true
+                    };
+                    await context.Markazes.AddAsync(markaz);
+                    await context.SaveChangesAsync();
+                    markazId = markaz.Id;
+                }
+
+                // ============================================================
                 // 1️⃣ ایجاد نقش "ادمین سامانه"
                 // ============================================================
                 string adminRoleName = "ادمین سامانه";
@@ -86,7 +107,7 @@ namespace PayamBack
                     {
                         UserId = adminUser.Id,
                         RoleId = adminRole.Id,
-                        MarkazId = 1,
+                        MarkazId = markazId,
                         RolePishFarz = true
                     };
                     await context.Set<AppUserRole>().AddAsync(appUserRole);
@@ -129,23 +150,7 @@ namespace PayamBack
                         }
                     }
                 }
-
-                // ============================================================
-                // 6️⃣ اگر مرکزی وجود ندارد، یک مرکز پیش‌فرض ایجاد کن
-                // ============================================================
-                if (!await context.Markazes.AnyAsync())
-                {
-                    var markaz = new Markaz
-                    {
-                        CodeMarkaz = "6293",
-                        NaamMarkaz = "مرکز شیراز",
-                        CodeOstan = "16",
-                        NaamOstan = "فارس",
-                        Vazeeyat = true
-                    };
-                    await context.Markazes.AddAsync(markaz);
-                    await context.SaveChangesAsync();
-                }
+                
             }
             catch (Exception ex)
             {
