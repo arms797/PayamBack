@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PayamBack;
 using PayamBack.Data;
+using PayamBack.Filters;
 using PayamBack.Models.Identity;
 using PayamBack.Services.Implementations;
 using PayamBack.Services.Interfaces;
@@ -72,6 +73,14 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddOpenApi();
+
+// اضافه کردن فیلتر به همه کنترلرها
+builder.Services.AddScoped<PermissionFilter>();
+
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<PermissionFilter>();
+});
 
 // ============================================================
 // 6️⃣ سرویس‌های پروژه

@@ -72,36 +72,41 @@ namespace PayamBack.Services.Implementations
             var accessToken = await _tokenService.GenerateAccessToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
-            // ============================================================
             // دریافت نقش‌های کاربر
-            // ============================================================
             var roles = await _permissionService.GetUserRolesAsync(user.Id);
 
-            // ============================================================
-            // 🔥 تعیین نقش فعال (پیش‌فرض یا اولین نقش)
-            // ============================================================
+            // تعیین نقش فعال
             RoleDto? activeRole = roles.FirstOrDefault(r => r.IsDefault);
-
-            // اگر نقش پیش‌فرض وجود نداشت، اولین نقش را انتخاب کن
             if (activeRole == null && roles.Any())
             {
                 activeRole = roles.First();
             }
 
-            // ============================================================
             // دریافت منوها بر اساس نقش فعال
-            // ============================================================
             var menus = activeRole != null
                 ? await _permissionService.GetUserMenusAsync(user.Id, activeRole.Id)
                 : new List<MenuDto>();
 
             // ============================================================
-            // 🔥 دریافت نام و نام خانوادگی کاربر
+            // 🔥 دریافت مجوزهای نقش فعال
             // ============================================================
+            List<string> permissions = new List<string>();
+
+            if (activeRole != null)
+            {
+                permissions = await _context.RolePermissions
+                    .Where(rp => rp.RoleId == activeRole.Id && rp.Vazeeat == true)
+                    .Join(_context.Permissions,
+                        rp => rp.PermissionId,
+                        p => p.Id,
+                        (rp, p) => p.Name ?? "")
+                    .ToListAsync();
+            }
+
+            // دریافت نام و نام خانوادگی کاربر
             string firstName = "";
             string lastName = "";
 
-            // اگر کاربر استاد است
             if (user.OstadId.HasValue)
             {
                 var ostad = await _context.Ostads.FindAsync(user.OstadId.Value);
@@ -111,7 +116,6 @@ namespace PayamBack.Services.Implementations
                     lastName = ostad.NaamKhanevadegi ?? "";
                 }
             }
-            // اگر کاربر کارمند است
             else if (user.KarmandId.HasValue)
             {
                 var karmand = await _context.Karmands.FindAsync(user.KarmandId.Value);
@@ -121,7 +125,6 @@ namespace PayamBack.Services.Implementations
                     lastName = karmand.NaameKhanevadeghi ?? "";
                 }
             }
-            // اگر کاربر دانشجو است
             else if (user.DaneshjooId.HasValue)
             {
                 var daneshjoo = await _context.Daneshjoos.FindAsync(user.DaneshjooId.Value);
@@ -131,7 +134,6 @@ namespace PayamBack.Services.Implementations
                     lastName = daneshjoo.NaamKhanevadegi ?? "";
                 }
             }
-            // اگر کاربر ادمین است (از جدول MoshakhasatAdmin)
             else
             {
                 var admin = await _context.MoshakhasatAdmins
@@ -143,9 +145,7 @@ namespace PayamBack.Services.Implementations
                 }
             }
 
-            // ============================================================
             // برگرداندن پاسخ
-            // ============================================================
             return new LoginResponseDto
             {
                 AccessToken = accessToken,
@@ -158,6 +158,7 @@ namespace PayamBack.Services.Implementations
                 CurrentRoleName = activeRole?.Name ?? "",
                 Roles = roles,
                 Menus = menus,
+                Permissions = permissions,
                 ExpiresIn = Convert.ToInt32(_configuration["Jwt:AccessTokenExpiryMinutes"] ?? "15")
             };
         }
@@ -189,6 +190,20 @@ namespace PayamBack.Services.Implementations
                 ? await _permissionService.GetUserMenusAsync(user.Id, defaultRole.Id)
                 : new List<MenuDto>();
 
+            // دریافت مجوزهای نقش فعال
+            List<string> permissions = new List<string>();
+
+            if (defaultRole != null)
+            {
+                permissions = await _context.RolePermissions
+                    .Where(rp => rp.RoleId == defaultRole.Id && rp.Vazeeat == true)
+                    .Join(_context.Permissions,
+                        rp => rp.PermissionId,
+                        p => p.Id,
+                        (rp, p) => p.Name ?? "")
+                    .ToListAsync();
+            }
+
             return new LoginResponseDto
             {
                 AccessToken = newAccessToken,
@@ -199,6 +214,7 @@ namespace PayamBack.Services.Implementations
                 CurrentRoleName = defaultRole?.Name ?? "",
                 Roles = roles,
                 Menus = menus,
+                Permissions = permissions,
                 ExpiresIn = Convert.ToInt32(_configuration["Jwt:AccessTokenExpiryMinutes"] ?? "15")
             };
         }
@@ -251,6 +267,20 @@ namespace PayamBack.Services.Implementations
             var newRole = roles.FirstOrDefault(r => r.Id == newRoleId);
             var menus = await _permissionService.GetUserMenusAsync(userId, newRoleId);
 
+            // دریافت مجوزهای نقش جدید
+            List<string> permissions = new List<string>();
+
+            if (newRole != null)
+            {
+                permissions = await _context.RolePermissions
+                    .Where(rp => rp.RoleId == newRole.Id && rp.Vazeeat == true)
+                    .Join(_context.Permissions,
+                        rp => rp.PermissionId,
+                        p => p.Id,
+                        (rp, p) => p.Name ?? "")
+                    .ToListAsync();
+            }
+
             var accessToken = await _tokenService.GenerateAccessToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
@@ -264,6 +294,7 @@ namespace PayamBack.Services.Implementations
                 CurrentRoleName = newRole?.Name ?? "",
                 Roles = roles,
                 Menus = menus,
+                Permissions = permissions,
                 ExpiresIn = Convert.ToInt32(_configuration["Jwt:AccessTokenExpiryMinutes"] ?? "15")
             };
         }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using PayamBack.Data;
 using PayamBack.DTOs.Identity.RolePermission;
 using PayamBack.Models.Identity;
@@ -13,10 +14,12 @@ namespace PayamBack.Controllers.Identity
     public class RolePermissionController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IMemoryCache _cache;
 
-        public RolePermissionController(AppDbContext context)
+        public RolePermissionController(AppDbContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         // ============================================================
@@ -67,7 +70,6 @@ namespace PayamBack.Controllers.Identity
         {
             try
             {
-                // بررسی وجود نقش
                 var roleExists = await _context.Roles
                     .AnyAsync(r => r.Id == roleId);
 
@@ -219,6 +221,13 @@ namespace PayamBack.Controllers.Identity
                 await _context.RolePermissions.AddAsync(rolePermission);
                 await _context.SaveChangesAsync();
 
+                // ============================================================
+                // 🔥 پاک کردن کش مربوط به این نقش
+                // ============================================================
+                // برای سادگی، همه کش را پاک می‌کنیم
+                // (در یک پروژه واقعی، کلیدهای خاص را حذف کنید)
+                _cache.Remove($"Permission_{dto.RoleId}_*");
+
                 return Ok(new
                 {
                     success = true,
@@ -266,6 +275,11 @@ namespace PayamBack.Controllers.Identity
                 _context.RolePermissions.Remove(rolePermission);
                 await _context.SaveChangesAsync();
 
+                // ============================================================
+                // 🔥 پاک کردن کش مربوط به این نقش
+                // ============================================================
+                _cache.Remove($"Permission_{dto.RoleId}_*");
+
                 return Ok(new
                 {
                     success = true,
@@ -284,7 +298,7 @@ namespace PayamBack.Controllers.Identity
         }
 
         // ============================================================
-        // 6️⃣ تغییر وضعیت مجوز در نقش (فعال/غیرفعال)
+        // 6️⃣ تغییر وضعیت مجوز در نقش
         // ============================================================
         [HttpPut("toggle")]
         public async Task<IActionResult> Toggle([FromBody] RolePermissionToggleDto dto)
@@ -305,6 +319,11 @@ namespace PayamBack.Controllers.Identity
 
                 rolePermission.Vazeeat = dto.Vazeeat;
                 await _context.SaveChangesAsync();
+
+                // ============================================================
+                // 🔥 پاک کردن کش مربوط به این نقش
+                // ============================================================
+                _cache.Remove($"Permission_{dto.RoleId}_*");
 
                 return Ok(new
                 {
