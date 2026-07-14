@@ -9,7 +9,7 @@ namespace PayamBack.Controllers.Core
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]  // فقط کاربران لاگین شده
+    [AllowAnonymous]  // ← کل کنترلر بدون احراز هویت و بدون مجوز
     public class MarkazController : ControllerBase
     {
         private readonly AppDbContext _context;
