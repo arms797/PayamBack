@@ -42,7 +42,7 @@ namespace PayamBack.Controllers.Core
                         MarkazName = o.Markaz != null ? o.Markaz.NaamMarkaz ?? "" : "",
                         Mobile = o.Mobile ?? "",
                         Email = o.Email ?? "",
-                        NoeHamkari = o.NoeHamkari ?? 0,
+                        NoeHamkari = (int)(o.NoeHamkari ?? 0),
                         Vazeeat = o.Vazeeat ?? true
                     })
                     .ToListAsync();
@@ -95,7 +95,7 @@ namespace PayamBack.Controllers.Core
                     MahalEshteghal = ostad.MahalEshteghal ?? "",
                     Emza = ostad.Emza ?? "",
                     Vazeeat = ostad.Vazeeat ?? true,
-                    NoeHamkari = ostad.NoeHamkari ?? 0,
+                    NoeHamkari = (int)(ostad.NoeHamkari ?? 0),
                     NoeBimeh = ostad.NoeBimeh ?? "",
                     ShomarehBimeh = ostad.ShomarehBimeh ?? ""
                 };
@@ -151,7 +151,7 @@ namespace PayamBack.Controllers.Core
                     MahalEshteghal = dto.MahalEshteghal,
                     Emza = dto.Emza,
                     Vazeeat = true,
-                    NoeHamkari = dto.NoeHamkari,
+                    NoeHamkari = (NoeHamkariEnum?)dto.NoeHamkari,
                     NoeBimeh = dto.NoeBimeh,
                     ShomarehBimeh = dto.ShomarehBimeh
                 };

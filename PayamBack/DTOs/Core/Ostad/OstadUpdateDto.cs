@@ -1,4 +1,6 @@
-﻿namespace PayamBack.DTOs.Core.Ostad
+﻿using PayamBack.Models.Core;
+
+namespace PayamBack.DTOs.Core.Ostad
 {
     public class OstadUpdateDto
     {
@@ -11,7 +13,7 @@
         public string? Mobile { get; set; }
         public string? Mobile2 { get; set; }
         public bool? Vazeeat { get; set; }
-        public int? NoeHamkari { get; set; }
+        public NoeHamkariEnum ? NoeHamkari { get; set; }
         public string? NoeBimeh { get; set; }
         public string? ShomarehBimeh { get; set; }
     }

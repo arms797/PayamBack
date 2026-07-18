@@ -47,6 +47,7 @@ namespace PayamBack.Data
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<Menu> Menus { get; set; }
+        public DbSet<OstadMadrak> OstadMadraks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
