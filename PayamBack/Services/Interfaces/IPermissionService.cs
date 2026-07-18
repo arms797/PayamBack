@@ -2,30 +2,21 @@
 
 namespace PayamBack.Services.Interfaces
 {
-    /// <summary>
-    /// اینترفیس سرویس مدیریت دسترسی‌ها و مجوزها
-    /// </summary>
     public interface IPermissionService
     {
-        /// <summary>
-        /// بررسی دسترسی کاربر به یک منبع و عملیات خاص
-        /// پشتیبانی از "*" برای دسترسی به همه عملیات‌ها
-        /// </summary>
-        Task<bool> HasPermissionAsync(int userId, int roleId, string resource, string action);
+        // دریافت مجوزهای یک نقش (برای لاگین و تغییر نقش)
+        Task<List<string>> GetRolePermissionsAsync(int roleId);
 
-        /// <summary>
-        /// گرفتن منوهایی که کاربر بر اساس نقش فعال به آنها دسترسی دارد
-        /// </summary>
-        Task<List<MenuDto>> GetUserMenusAsync(int userId, int roleId);
+        // بررسی دسترسی با لیست مجوزها (بدون کوئری)
+        bool HasPermission(List<string> permissions, string resource, string action);
 
-        /// <summary>
-        /// گرفتن همه نقش‌های کاربر با مشخص کردن نقش پیش‌فرض
-        /// </summary>
+        // گرفتن منوهای کاربر (برای لاگین و تغییر نقش)
+        Task<List<MenuDto>> GetUserMenusAsync(int userId, int roleId, List<string> permissions);
+
+        // گرفتن نقش‌های کاربر (برای لاگین)
         Task<List<RoleDto>> GetUserRolesAsync(int userId);
 
-        /// <summary>
-        /// گرفتن نقش پیش‌فرض کاربر
-        /// </summary>
+        // گرفتن نقش پیش‌فرض کاربر (برای لاگین)
         Task<int?> GetDefaultRoleIdAsync(int userId);
     }
 }

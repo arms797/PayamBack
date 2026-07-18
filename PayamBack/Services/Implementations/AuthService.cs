@@ -68,10 +68,6 @@ namespace PayamBack.Services.Implementations
                 throw new Exception("login_invalid");
             }
 
-            // تولید توکن‌ها
-            var accessToken = await _tokenService.GenerateAccessToken(user);
-            var refreshToken = await _tokenService.GenerateRefreshToken(user);
-
             // دریافت نقش‌های کاربر
             var roles = await _permissionService.GetUserRolesAsync(user.Id);
 
@@ -82,11 +78,6 @@ namespace PayamBack.Services.Implementations
                 activeRole = roles.First();
             }
 
-            // دریافت منوها بر اساس نقش فعال
-            var menus = activeRole != null
-                ? await _permissionService.GetUserMenusAsync(user.Id, activeRole.Id)
-                : new List<MenuDto>();
-
             // ============================================================
             // 🔥 دریافت مجوزهای نقش فعال
             // ============================================================
@@ -94,14 +85,19 @@ namespace PayamBack.Services.Implementations
 
             if (activeRole != null)
             {
-                permissions = await _context.RolePermissions
-                    .Where(rp => rp.RoleId == activeRole.Id && rp.Vazeeat == true)
-                    .Join(_context.Permissions,
-                        rp => rp.PermissionId,
-                        p => p.Id,
-                        (rp, p) => p.Name ?? "")
-                    .ToListAsync();
+                permissions = await _permissionService.GetRolePermissionsAsync(activeRole.Id);
             }
+
+            // ============================================================
+            // 🔥 دریافت منوها بر اساس نقش فعال و مجوزها
+            // ============================================================
+            var menus = activeRole != null
+                ? await _permissionService.GetUserMenusAsync(user.Id, activeRole.Id, permissions)
+                : new List<MenuDto>();
+
+            // تولید توکن‌ها
+            var accessToken = await _tokenService.GenerateAccessToken(user);
+            var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
             // دریافت نام و نام خانوادگی کاربر
             string firstName = "";
@@ -145,7 +141,6 @@ namespace PayamBack.Services.Implementations
                 }
             }
 
-            // برگرداندن پاسخ
             return new LoginResponseDto
             {
                 AccessToken = accessToken,
@@ -181,28 +176,28 @@ namespace PayamBack.Services.Implementations
             if (!isValid)
                 throw new Exception("RefreshToken نامعتبر است");
 
-            var newAccessToken = await _tokenService.GenerateAccessToken(user);
-            var newRefreshToken = await _tokenService.GenerateRefreshToken(user);
-
             var roles = await _permissionService.GetUserRolesAsync(user.Id);
             var defaultRole = roles.FirstOrDefault(r => r.IsDefault);
-            var menus = defaultRole != null
-                ? await _permissionService.GetUserMenusAsync(user.Id, defaultRole.Id)
-                : new List<MenuDto>();
 
-            // دریافت مجوزهای نقش فعال
+            // ============================================================
+            // 🔥 دریافت مجوزهای نقش فعال
+            // ============================================================
             List<string> permissions = new List<string>();
 
             if (defaultRole != null)
             {
-                permissions = await _context.RolePermissions
-                    .Where(rp => rp.RoleId == defaultRole.Id && rp.Vazeeat == true)
-                    .Join(_context.Permissions,
-                        rp => rp.PermissionId,
-                        p => p.Id,
-                        (rp, p) => p.Name ?? "")
-                    .ToListAsync();
+                permissions = await _permissionService.GetRolePermissionsAsync(defaultRole.Id);
             }
+
+            // ============================================================
+            // 🔥 دریافت منوها
+            // ============================================================
+            var menus = defaultRole != null
+                ? await _permissionService.GetUserMenusAsync(user.Id, defaultRole.Id, permissions)
+                : new List<MenuDto>();
+
+            var newAccessToken = await _tokenService.GenerateAccessToken(user);
+            var newRefreshToken = await _tokenService.GenerateRefreshToken(user);
 
             return new LoginResponseDto
             {
@@ -265,21 +260,23 @@ namespace PayamBack.Services.Implementations
 
             var roles = await _permissionService.GetUserRolesAsync(userId);
             var newRole = roles.FirstOrDefault(r => r.Id == newRoleId);
-            var menus = await _permissionService.GetUserMenusAsync(userId, newRoleId);
 
-            // دریافت مجوزهای نقش جدید
+            // ============================================================
+            // 🔥 دریافت مجوزهای نقش جدید
+            // ============================================================
             List<string> permissions = new List<string>();
 
             if (newRole != null)
             {
-                permissions = await _context.RolePermissions
-                    .Where(rp => rp.RoleId == newRole.Id && rp.Vazeeat == true)
-                    .Join(_context.Permissions,
-                        rp => rp.PermissionId,
-                        p => p.Id,
-                        (rp, p) => p.Name ?? "")
-                    .ToListAsync();
+                permissions = await _permissionService.GetRolePermissionsAsync(newRole.Id);
             }
+
+            // ============================================================
+            // 🔥 دریافت منوهای نقش جدید
+            // ============================================================
+            var menus = newRole != null
+                ? await _permissionService.GetUserMenusAsync(userId, newRole.Id, permissions)
+                : new List<MenuDto>();
 
             var accessToken = await _tokenService.GenerateAccessToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken(user);

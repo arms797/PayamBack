@@ -168,7 +168,7 @@ namespace PayamBack.Controllers.Identity
         // 4️⃣ تخصیص مجوز به نقش
         // ============================================================
         [HttpPost("assign")]
-        public async Task<IActionResult> Assign([FromBody] RolePermissionAssignDto dto)
+        public async Task<IActionResult> Create([FromBody] RolePermissionAssignDto dto)
         {
             try
             {

@@ -9,8 +9,7 @@ namespace PayamBack.Services.Implementations
 {
     /// <summary>
     /// پیاده‌سازی سرویس مدیریت دسترسی‌ها و مجوزها
-    /// دسترسی‌ها مستقیماً از دیتابیس خوانده می‌شوند (بدون Cache)
-    /// چون نقش‌ها تندتند تغییر نمی‌کنند
+    /// مجوزها و منوها فقط در زمان لاگین و تغییر نقش از دیتابیس خوانده می‌شوند
     /// </summary>
     public class PermissionService : IPermissionService
     {
@@ -22,44 +21,11 @@ namespace PayamBack.Services.Implementations
         }
 
         // ============================================================
-        // 1️⃣ بررسی دسترسی کاربر به یک منبع و عملیات خاص
-        // پشتیبانی از "*" برای دسترسی به همه عملیات‌ها
+        // 1️⃣ دریافت همه مجوزهای یک نقش (فقط در لاگین و تغییر نقش)
         // ============================================================
-        public async Task<bool> HasPermissionAsync(int userId, int roleId, string resource, string action)
+        public async Task<List<string>> GetRolePermissionsAsync(int roleId)
         {
-            // 1️⃣ بررسی دسترسی "*" (همه عملیات‌ها)
-            var hasWildcardPermission = await _context.RolePermissions
-                .Where(rp => rp.RoleId == roleId && rp.Vazeeat == true)
-                .Join(_context.Permissions,
-                    rp => rp.PermissionId,
-                    p => p.Id,
-                    (rp, p) => p)
-                .AnyAsync(p => p.Resource == resource && p.Action == "*");
-
-            if (hasWildcardPermission)
-                return true;
-
-            // 2️⃣ بررسی دسترسی دقیق
-            var permissionName = $"{resource}.{action}";
-
-            var hasExactPermission = await _context.RolePermissions
-                .Where(rp => rp.RoleId == roleId && rp.Vazeeat == true)
-                .Join(_context.Permissions,
-                    rp => rp.PermissionId,
-                    p => p.Id,
-                    (rp, p) => p)
-                .AnyAsync(p => p.Name == permissionName);
-
-            return hasExactPermission;
-        }
-
-        // ============================================================
-        // 2️⃣ گرفتن منوهایی که کاربر بر اساس نقش فعال به آنها دسترسی دارد
-        // ============================================================
-        public async Task<List<MenuDto>> GetUserMenusAsync(int userId, int roleId)
-        {
-            // 1️⃣ گرفتن همه مجوزهای نقش فعال
-            var rolePermissions = await _context.RolePermissions
+            var permissions = await _context.RolePermissions
                 .Where(rp => rp.RoleId == roleId && rp.Vazeeat == true)
                 .Join(_context.Permissions,
                     rp => rp.PermissionId,
@@ -67,33 +33,53 @@ namespace PayamBack.Services.Implementations
                     (rp, p) => p.Name ?? "")
                 .ToListAsync();
 
-            // 2️⃣ گرفتن همه منوهای فعال
+            return permissions;
+        }
+
+        // ============================================================
+        // 2️⃣ بررسی دسترسی با لیست مجوزها (بدون کوئری)
+        // این متد در PermissionFilter استفاده می‌شود
+        // ============================================================
+        public bool HasPermission(List<string> permissions, string resource, string action)
+        {
+            // نرمال‌سازی action به View, Create, Update, Delete
+            var normalizedAction = NormalizeAction(action);
+            var permissionName = $"{resource}.{normalizedAction}";
+
+            // بررسی دسترسی "*" (همه عملیات‌ها)
+            if (permissions.Any(p => p == $"{resource}.*"))
+                return true;
+
+            // بررسی دسترسی دقیق
+            return permissions.Contains(permissionName);
+        }
+
+        // ============================================================
+        // 3️⃣ گرفتن منوهای کاربر (فقط در لاگین و تغییر نقش)
+        // ============================================================
+        public async Task<List<MenuDto>> GetUserMenusAsync(int userId, int roleId, List<string> permissions)
+        {
             var allMenus = await _context.Menus
                 .Where(m => m.Vazeeat == true)
                 .OrderBy(m => m.Order)
                 .ToListAsync();
 
-            // 3️⃣ فیلتر کردن منوها بر اساس مجوزهای نقش
             var accessibleMenus = allMenus
-                .Where(m => string.IsNullOrEmpty(m.PermissionName) || rolePermissions.Contains(m.PermissionName))
+                .Where(m => string.IsNullOrEmpty(m.PermissionName) || permissions.Contains(m.PermissionName))
                 .ToList();
 
-            // 4️⃣ تبدیل به ساختار درختی
-            var menuDtos = accessibleMenus
+            return accessibleMenus
                 .Where(m => m.ParentId == null)
                 .Select(m => MapToMenuDto(m, accessibleMenus))
                 .ToList();
-
-            return menuDtos;
         }
 
         // ============================================================
-        // 3️⃣ گرفتن همه نقش‌های کاربر با مشخص کردن نقش پیش‌فرض
+        // 4️⃣ گرفتن همه نقش‌های کاربر (فقط در لاگین)
         // ============================================================
         public async Task<List<RoleDto>> GetUserRolesAsync(int userId)
-        {            
-
-            var userRoles = await _context.Set<AppUserRole>()
+        {
+            return await _context.Set<AppUserRole>()
                 .Where(ur => ur.UserId == userId)
                 .Join(_context.Roles,
                     ur => ur.RoleId,
@@ -106,12 +92,10 @@ namespace PayamBack.Services.Implementations
                         MarkazId = ur.MarkazId ?? 0
                     })
                 .ToListAsync();
-
-            return userRoles;
         }
 
         // ============================================================
-        // 4️⃣ گرفتن نقش پیش‌فرض کاربر
+        // 5️⃣ گرفتن نقش پیش‌فرض کاربر (فقط در لاگین)
         // ============================================================
         public async Task<int?> GetDefaultRoleIdAsync(int userId)
         {
@@ -120,7 +104,40 @@ namespace PayamBack.Services.Implementations
         }
 
         // ============================================================
-        // متد کمکی برای تبدیل Menu به MenuDto با ساختار درختی
+        // متد کمکی برای تبدیل اکشن‌ها به چهار نوع اصلی
+        // ============================================================
+        private string NormalizeAction(string action)
+        {
+            // 1️⃣ خواندن → View
+            if (action.StartsWith("Get") ||
+                action == "List" || action == "All" || action == "Active" ||
+                action == "Inactive" || action == "Search" || action == "Filter" ||
+                action == "Index" || action == "Details")
+                return "View";
+
+            // 2️⃣ ایجاد → Create
+            if (action == "Create" || action == "Add" || action == "Insert" || action == "Register")
+                return "Create";
+
+            // 3️⃣ ویرایش → Update
+            if (action == "Update" || action == "Edit" || action == "Modify" ||
+                action == "Change" || action == "Toggle" || action == "Active" ||
+                action == "Deactive" || action == "Activate" || action == "Deactivate")
+                return "Update";
+
+            // 4️⃣ حذف → Delete
+            if (action == "Delete" || action == "Remove" || action == "Deactivate" || action == "Archive")
+                return "Delete";
+
+            // 5️⃣ BulkUpload → مجوز خاص (فقط ادمین)
+            if (action == "BulkUpload")
+                return "BulkUpload";
+
+            return action;
+        }
+
+        // ============================================================
+        // متد کمکی برای ساخت منوی درختی
         // ============================================================
         private MenuDto MapToMenuDto(Menu menu, List<Menu> allMenus)
         {

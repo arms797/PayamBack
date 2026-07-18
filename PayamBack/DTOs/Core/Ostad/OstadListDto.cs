@@ -7,10 +7,14 @@
         public string Naam { get; set; } = string.Empty;
         public string NaamKhanevadegi { get; set; } = string.Empty;
         public int MarkazId { get; set; }
-        public string MarkazName { get; set; } = string.Empty;
-        public string Mobile { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
+        public string MarkazName { get; set; } = string.Empty;  // ← از Join با Markaz
         public int NoeHamkari { get; set; }
+        public string MartabeElmi { get; set; } = string.Empty;
         public bool Vazeeat { get; set; }
+
+        // ============================================================
+        // 🔥 رشته تحصیلی پیش‌فرض استاد
+        // ============================================================
+        public string? Reshteh { get; set; }  // از OstadMadrak (PishFarz = true)
     }
 }

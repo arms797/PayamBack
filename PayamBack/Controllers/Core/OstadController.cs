@@ -23,15 +23,106 @@ namespace PayamBack.Controllers.Core
         }
 
         // ============================================================
-        // 1️⃣ دریافت لیست اساتید
+        // 1️⃣ دریافت لیست اساتید با صفحه‌بندی و فیلتر
         // ============================================================
         [HttpGet("list")]
-        public async Task<IActionResult> GetList()
+        public async Task<IActionResult> GetList(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string? search = null,
+            [FromQuery] string? reshteh = null,
+            [FromQuery] int? ostanId = null,
+            [FromQuery] int? markazId = null,
+            [FromQuery] int? noeHamkari = null,
+            [FromQuery] bool? vazeeat = null)  // ← پارامتر جدید
         {
             try
             {
-                var ostads = await _context.Ostads
+                // ============================================================
+                // 1️⃣ ساخت کوئری پایه
+                // ============================================================
+                var query = _context.Ostads
                     .Include(o => o.Markaz)
+                    .AsQueryable();
+
+                // ============================================================
+                // 2️⃣ فیلتر بر اساس جستجو (نام، نام خانوادگی، کد استادی)
+                // ============================================================
+                if (!string.IsNullOrEmpty(search))
+                {
+                    // اگر عددی است، بر اساس کد استادی جستجو کن
+                    if (int.TryParse(search, out _))
+                    {
+                        query = query.Where(o => o.CodeOstadi != null && o.CodeOstadi.Contains(search));
+                    }
+                    else
+                    {
+                        // در غیر این صورت بر اساس نام یا نام خانوادگی
+                        query = query.Where(o =>
+                            (o.Naam != null && o.Naam.Contains(search)) ||
+                            (o.NaamKhanevadegi != null && o.NaamKhanevadegi.Contains(search)));
+                    }
+                }
+
+                // ============================================================
+                // 3️⃣ فیلتر بر اساس رشته تحصیلی
+                // ============================================================
+                if (!string.IsNullOrEmpty(reshteh))
+                {
+                    query = query.Where(o =>
+                        _context.OstadMadraks
+                            .Any(m => m.OstadId == o.Id && m.Reshteh != null && m.Reshteh.Contains(reshteh)));
+                }
+
+                // ============================================================
+                // 4️⃣ فیلتر بر اساس استان و مرکز
+                // ============================================================
+                if (ostanId.HasValue && !markazId.HasValue)
+                {
+                    // فقط استان - همه مراکز آن استان
+                    var markazIdsInOstan = await _context.Markazes
+                        .Where(m => m.CodeOstan == ostanId.Value.ToString() && m.Vazeeyat == true)
+                        .Select(m => m.Id)
+                        .ToListAsync();
+
+                    query = query.Where(o => o.MarkazId.HasValue && markazIdsInOstan.Contains(o.MarkazId.Value));
+                }
+                else if (ostanId.HasValue && markazId.HasValue)
+                {
+                    // استان و مرکز خاص
+                    query = query.Where(o => o.MarkazId == markazId.Value);
+                }
+
+                // ============================================================
+                // 5️⃣ فیلتر بر اساس نوع همکاری
+                // ============================================================
+                if (noeHamkari.HasValue)
+                {
+                    query = query.Where(o => o.NoeHamkari == (NoeHamkariEnum)noeHamkari.Value);
+                }
+
+                // ============================================================
+                // 6️⃣ 🔥 فیلتر بر اساس وضعیت استاد (فعال/غیرفعال)
+                // ============================================================
+                if (vazeeat.HasValue)
+                {
+                    query = query.Where(o => o.Vazeeat == vazeeat.Value);
+                }
+                // اگر vazeeat null باشد، همه اساتید (هم فعال و هم غیرفعال) نمایش داده می‌شوند
+
+                // ============================================================
+                // 7️⃣ محاسبه تعداد کل رکوردها
+                // ============================================================
+                var totalCount = await query.CountAsync();
+
+                // ============================================================
+                // 🔥 صفحه‌بندی با نام مرکز و رشته تحصیلی پیش‌فرض
+                // ============================================================
+                var ostads = await query
+                    .OrderBy(o => o.NaamKhanevadegi)
+                    .ThenBy(o => o.Naam)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
                     .Select(o => new OstadListDto
                     {
                         Id = o.Id,
@@ -40,18 +131,42 @@ namespace PayamBack.Controllers.Core
                         NaamKhanevadegi = o.NaamKhanevadegi ?? "",
                         MarkazId = o.MarkazId ?? 0,
                         MarkazName = o.Markaz != null ? o.Markaz.NaamMarkaz ?? "" : "",
-                        Mobile = o.Mobile ?? "",
-                        Email = o.Email ?? "",
                         NoeHamkari = (int)(o.NoeHamkari ?? 0),
-                        Vazeeat = o.Vazeeat ?? true
+                        MartabeElmi = o.MartabeElmi ?? "",
+                        Vazeeat = o.Vazeeat ?? true,
+
+                        // ============================================================
+                        // 🔥 دریافت رشته تحصیلی پیش‌فرض استاد از OstadMadrak
+                        // ============================================================
+                        Reshteh = _context.OstadMadraks
+                            .Where(m => m.OstadId == o.Id && m.PishFarz == true)
+                            .Select(m => m.Reshteh)
+                            .FirstOrDefault() ?? ""
                     })
                     .ToListAsync();
 
-                return Ok(new { success = true, message = "لیست اساتید دریافت شد", data = ostads });
+                return Ok(new
+                {
+                    success = true,
+                    message = "لیست اساتید دریافت شد",
+                    data = ostads,
+                    pagination = new
+                    {
+                        page,
+                        pageSize,
+                        totalCount,
+                        totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                    }
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = "خطا در دریافت اساتید", error = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در دریافت اساتید",
+                    error = ex.Message
+                });
             }
         }
 
@@ -123,14 +238,10 @@ namespace PayamBack.Controllers.Core
                 if (exists)
                     return BadRequest(new { success = false, message = "کد استادی قبلاً ثبت شده است" });
 
-                // بررسی تکراری بودن نام کاربری
                 var existingUser = await _userManager.FindByNameAsync(dto.CodeOstadi);
                 if (existingUser != null)
                     return BadRequest(new { success = false, message = "کد استادی قبلاً به عنوان نام کاربری ثبت شده است" });
 
-                // ============================================================
-                // 1️⃣ ایجاد استاد
-                // ============================================================
                 var ostad = new Ostad
                 {
                     CodeOstadi = dto.CodeOstadi,
@@ -159,9 +270,6 @@ namespace PayamBack.Controllers.Core
                 await _context.Ostads.AddAsync(ostad);
                 await _context.SaveChangesAsync();
 
-                // ============================================================
-                // 2️⃣ ایجاد کاربر متناظر (نام کاربری = کد استادی)
-                // ============================================================
                 var user = new AppUser
                 {
                     UserName = dto.CodeOstadi,
@@ -171,7 +279,7 @@ namespace PayamBack.Controllers.Core
                     VazeeyatMovaghat = false
                 };
 
-                var password = dto.ShomareMelli; // رمز = کد ملی
+                var password = dto.ShomareMelli;
                 var result = await _userManager.CreateAsync(user, password);
 
                 if (!result.Succeeded)
@@ -187,7 +295,6 @@ namespace PayamBack.Controllers.Core
                     });
                 }
 
-                // اضافه کردن نقش
                 if (!string.IsNullOrEmpty(dto.RoleName))
                 {
                     await _userManager.AddToRoleAsync(user, dto.RoleName);
@@ -205,6 +312,7 @@ namespace PayamBack.Controllers.Core
                 return StatusCode(500, new { success = false, message = "خطا در ایجاد استاد", error = ex.Message });
             }
         }
+
 
         // ============================================================
         // 4️⃣ آپلود گروهی اساتید از Excel

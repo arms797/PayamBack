@@ -22,33 +22,127 @@ namespace PayamBack.Controllers.Core
         }
 
         // ============================================================
-        // 1️⃣ دریافت لیست کارمندان
+        // 1️⃣ دریافت لیست کارمندان با صفحه‌بندی و فیلتر
         // ============================================================
         [HttpGet("list")]
-        public async Task<IActionResult> GetList()
+        public async Task<IActionResult> GetList(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string? search = null,
+            [FromQuery] int? ostanId = null,
+            [FromQuery] int? markazId = null,
+            [FromQuery] bool? vazeeat = null)
         {
             try
             {
-                var karmands = await _context.Karmands
-                    .Include(k => k.Markaz)
-                    .Select(k => new KarmandListDto
+                // ============================================================
+                // 1️⃣ ساخت کوئری پایه با Join به AppUser برای وضعیت
+                // ============================================================
+                var query = from k in _context.Karmands
+                            join u in _context.Users on k.Id equals u.KarmandId into userJoin
+                            from u in userJoin.DefaultIfEmpty()
+                            select new { Karmand = k, User = u };
+
+                // ============================================================
+                // 2️⃣ فیلتر بر اساس جستجو (نام، نام خانوادگی، کد ملی)
+                // ============================================================
+                if (!string.IsNullOrEmpty(search))
+                {
+                    query = query.Where(x =>
+                        (x.Karmand.Naam != null && x.Karmand.Naam.Contains(search)) ||
+                        (x.Karmand.NaameKhanevadeghi != null && x.Karmand.NaameKhanevadeghi.Contains(search)) ||
+                        (x.Karmand.CodeMelli != null && x.Karmand.CodeMelli.Contains(search)));
+                }
+
+                // ============================================================
+                // 3️⃣ فیلتر بر اساس استان و مرکز
+                // ============================================================
+                if (ostanId.HasValue && !markazId.HasValue)
+                {
+                    // فقط استان - همه مراکز آن استان
+                    var markazIdsInOstan = await _context.Markazes
+                        .Where(m => m.CodeOstan == ostanId.Value.ToString() && m.Vazeeyat == true)
+                        .Select(m => m.Id)
+                        .ToListAsync();
+
+                    query = query.Where(x =>
+                        x.Karmand.MarkazId.HasValue &&
+                        markazIdsInOstan.Contains(x.Karmand.MarkazId.Value));
+                }
+                else if (ostanId.HasValue && markazId.HasValue)
+                {
+                    // استان و مرکز خاص
+                    query = query.Where(x => x.Karmand.MarkazId == markazId.Value);
+                }
+
+                // ============================================================
+                // 4️⃣ فیلتر بر اساس وضعیت (Vazeeat از AppUser)
+                // ============================================================
+                if (vazeeat.HasValue)
+                {
+                    query = query.Where(x => x.User != null && x.User.Vazeeyat == vazeeat.Value);
+                }
+                else
+                {
+                    // پیش‌فرض: فقط کاربران فعال
+                    query = query.Where(x => x.User == null || x.User.Vazeeyat == true);
+                }
+
+                // ============================================================
+                // 5️⃣ محاسبه تعداد کل رکوردها
+                // ============================================================
+                var totalCount = await query.CountAsync();
+
+                // ============================================================
+                // 6️⃣ اعمال صفحه‌بندی
+                // ============================================================
+                var karmands = await query
+                    .OrderBy(x => x.Karmand.NaameKhanevadeghi)
+                    .ThenBy(x => x.Karmand.Naam)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(x => new KarmandListDto
                     {
-                        Id = k.Id,
-                        CodeMelli = k.CodeMelli ?? "",
-                        Naam = k.Naam ?? "",
-                        NaameKhanevadeghi = k.NaameKhanevadeghi ?? "",
-                        MarkazId = k.MarkazId ?? 0,
-                        MarkazName = k.Markaz != null ? k.Markaz.NaamMarkaz ?? "" : "",
-                        Mobile = k.Mobile ?? "",
-                        Email = k.Email ?? ""
+                        Id = x.Karmand.Id,
+                        CodeMelli = x.Karmand.CodeMelli ?? "",
+                        Naam = x.Karmand.Naam ?? "",
+                        NaameKhanevadeghi = x.Karmand.NaameKhanevadeghi ?? "",
+                        MarkazId = x.Karmand.MarkazId ?? 0,
+                        MarkazName = _context.Markazes
+                            .Where(m => m.Id == x.Karmand.MarkazId)
+                            .Select(m => m.NaamMarkaz ?? "")
+                            .FirstOrDefault() ?? "",
+                        Mobile = x.Karmand.Mobile ?? "",
+                        Email = x.Karmand.Email ?? "",
+                        Vazeeat = x.User != null ? x.User.Vazeeyat ?? true : true
                     })
                     .ToListAsync();
 
-                return Ok(new { success = true, message = "لیست کارمندان دریافت شد", data = karmands });
+                // ============================================================
+                // 7️⃣ برگرداندن پاسخ با اطلاعات صفحه‌بندی
+                // ============================================================
+                return Ok(new
+                {
+                    success = true,
+                    message = "لیست کارمندان دریافت شد",
+                    data = karmands,
+                    pagination = new
+                    {
+                        page,
+                        pageSize,
+                        totalCount,
+                        totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                    }
+                });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = "خطا در دریافت کارمندان", error = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در دریافت کارمندان",
+                    error = ex.Message
+                });
             }
         }
 

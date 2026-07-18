@@ -66,11 +66,10 @@ namespace PayamBack.Filters
 
             if (!activeRoleId.HasValue)
             {
-                // ✅ استفاده از FirstOrDefaultAsync با نوع مشخص
                 activeRoleId = await _context.Roles
                     .Where(r => r.Name == activeRoleName)
                     .Select(r => r.Id)
-                    .FirstOrDefaultAsync<int>();  // ← صریحاً نوع مشخص شده
+                    .FirstOrDefaultAsync<int>();
 
                 if (activeRoleId == 0)
                 {
@@ -84,7 +83,12 @@ namespace PayamBack.Filters
             // 6️⃣ دریافت نام کنترلر و اکشن
             var controllerName = context.Controller.GetType().Name.Replace("Controller", "");
             var actionName = context.ActionDescriptor.RouteValues["action"] ?? "";
-            var permissionName = $"{controllerName}.{actionName}";
+
+            // ============================================================
+            // 🔥 نرمال‌سازی actionName به View, Create, Update, Delete
+            // ============================================================
+            var normalizedAction = NormalizeAction(actionName);
+            var permissionName = $"{controllerName}.{normalizedAction}";
 
             // 7️⃣ بررسی مجوز از Cache
             var permissionCacheKey = $"Permission_{activeRoleId.Value}_{permissionName}";
@@ -94,15 +98,13 @@ namespace PayamBack.Filters
             {
                 var wildcardPermissionName = $"{controllerName}.*";
 
-                // ✅ استفاده از AnyAsync با نوع مشخص
                 var hasWildcardPermission = await _context.RolePermissions
                     .Where(rp => rp.RoleId == activeRoleId.Value && rp.Vazeeat == true)
                     .Join(_context.Permissions,
                         rp => rp.PermissionId,
                         p => p.Id,
                         (rp, p) => p)
-                    .Where(p => p.Name == wildcardPermissionName)
-                    .AnyAsync();  // ← AnyAsync بدون نیاز به نوع مشخص
+                    .AnyAsync(p => p.Name == wildcardPermissionName);
 
                 if (hasWildcardPermission)
                 {
@@ -116,8 +118,7 @@ namespace PayamBack.Filters
                             rp => rp.PermissionId,
                             p => p.Id,
                             (rp, p) => p)
-                        .Where(p => p.Name == permissionName)
-                        .AnyAsync();  // ← AnyAsync بدون نیاز به نوع مشخص
+                        .AnyAsync(p => p.Name == permissionName);
                 }
 
                 _cache.Set(permissionCacheKey, hasPermission.Value, TimeSpan.FromMinutes(10));
@@ -167,6 +168,39 @@ namespace PayamBack.Filters
             }
 
             await next();
+        }
+
+        // ============================================================
+        // 🔥 متد نرمال‌سازی اکشن‌ها
+        // ============================================================
+        private string NormalizeAction(string action)
+        {
+            // 1️⃣ خواندن → View
+            if (action.StartsWith("Get") ||
+                action == "List" || action == "All" || action == "Active" ||
+                action == "Inactive" || action == "Search" || action == "Filter" ||
+                action == "Index" || action == "Details")
+                return "View";
+
+            // 2️⃣ ایجاد → Create
+            if (action == "Create" || action == "Add" || action == "Insert" || action == "Register")
+                return "Create";
+
+            // 3️⃣ ویرایش → Update
+            if (action == "Update" || action == "Edit" || action == "Modify" ||
+                action == "Change" || action == "Toggle" || action == "Active" ||
+                action == "Deactive" || action == "Activate" || action == "Deactivate")
+                return "Update";
+
+            // 4️⃣ حذف → Delete
+            if (action == "Delete" || action == "Remove" || action == "Deactivate" || action == "Archive")
+                return "Delete";
+
+            // 5️⃣ BulkUpload → مجوز خاص
+            if (action == "BulkUpload")
+                return "BulkUpload";
+
+            return action;
         }
 
         private int? GetTargetMarkazId(ActionExecutingContext context)

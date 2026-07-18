@@ -114,6 +114,12 @@ namespace PayamBack.Data
                 .HasDatabaseName("IX_Ostad_CodeOstadi");
 
             builder.Entity<Ostad>()
+                .HasIndex(o => o.MarkazId)
+                .HasDatabaseName("IX_Ostad_MarkazId");
+
+
+
+            builder.Entity<Ostad>()
                 .HasOne(o => o.Markaz)
                 .WithMany(m => m.Ostads)
                 .HasForeignKey(o => o.MarkazId)
@@ -124,6 +130,12 @@ namespace PayamBack.Data
                 .WithMany()
                 .HasForeignKey(o => o.MarkazAsliId)
                 .OnDelete(DeleteBehavior.NoAction);
+            // ============================================================
+            // 🔥 ایندکس ترکیبی برای OstadMadrak (جدید)
+            // ============================================================
+            builder.Entity<OstadMadrak>()
+                .HasIndex(om => new { om.OstadId, om.PishFarz })
+                .HasDatabaseName("IX_OstadMadrak_OstadId_PishFarz");
 
             // ======== BarnamehHaftegiOstad ========
             builder.Entity<BarnamehHaftegiOstad>()
