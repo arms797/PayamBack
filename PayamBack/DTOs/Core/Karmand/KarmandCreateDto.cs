@@ -32,6 +32,6 @@ namespace PayamBack.DTOs.Core.Karmand
 
         public string? Emza { get; set; }
 
-        public string? RoleName { get; set; }
+        //public string? RoleName { get; set; }
     }
 }

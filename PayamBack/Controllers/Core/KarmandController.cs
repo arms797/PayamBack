@@ -240,7 +240,7 @@ namespace PayamBack.Controllers.Core
                     Email = dto.Email,
                     KarmandId = karmand.Id,
                     Vazeeyat = true,
-                    VazeeyatMovaghat = false
+                    VazeeyatMovaghat = true
                 };
 
                 var password = dto.CodeMelli; // رمز = کد ملی
