@@ -65,6 +65,15 @@ namespace PayamBack.Models.Core
         /// <summary>داخل ایران=1 ک خارج از ایران=0</summary>
         public bool? Dakheli { get; set; } = true;
 
+        /// <summary>
+        /// سطح سازمانی مرکز
+        /// 1 = ادمین سامانه (ستاد مرکزی)
+        /// 2 = سازمان مرکزی
+        /// 3 = ستاد استان
+        /// 4 = مرکز یا واحد دانشگاهی
+        /// </summary>
+        public int? Level { get; set; } = 4;  // ← فیلد جدید با مقدار پیش‌فرض 4
+
         // ======== Navigation Properties (ICollection) ========
 
         /// <summary>نقش‌های کاربری مرتبط با این مرکز</summary>

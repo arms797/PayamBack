@@ -8,5 +8,6 @@
         public string CodeOstan { get; set; } = string.Empty;
         public string NaamOstan { get; set; } = string.Empty;
         public bool Vazeeyat { get; set; }
+        public int? Level { get; set; }  // ← اضافه شد
     }
 }

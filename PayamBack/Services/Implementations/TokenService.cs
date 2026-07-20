@@ -29,46 +29,63 @@ namespace PayamBack.Services.Implementations
         public async Task<string> GenerateAccessToken(AppUser user)
         {
             // ============================================================
-            // 1️⃣ دریافت نقش فعال و MarkazId (با ToListAsync و سپس FirstOrDefault)
+            // 1️⃣ دریافت نقش فعال
             // ============================================================
             var activeRole = await _context.UserRoles
                 .Where(ur => ur.UserId == user.Id && ur.RolePishFarz == true)
                 .Select(ur => new { ur.RoleId, ur.MarkazId })
                 .FirstOrDefaultAsync();
 
+            int? activeRoleId = null;
+            string? activeRoleName = null;
             int? codeRole = null;
             int? markazId = null;
-            string? ostanId = null;
+            int? markazLevel = null;
+            string? markazCode = null;
+            string? ostanCode = null;
 
             if (activeRole != null)
             {
-                // ============================================================
-                // 2️⃣ دریافت CodeRole
-                // ============================================================
-                var role = await _context.Roles
-                    .Where(r => r.Id == activeRole.RoleId)
-                    .Select(r => r.CodeRole)
-                    .FirstOrDefaultAsync();
-
-                codeRole = role;
+                activeRoleId = activeRole.RoleId;
                 markazId = activeRole.MarkazId;
 
                 // ============================================================
-                // 3️⃣ دریافت OstanId از Markaz
+                // 2️⃣ دریافت اطلاعات نقش (نام و CodeRole)
+                // ============================================================
+                var role = await _context.Roles
+                    .Where(r => r.Id == activeRole.RoleId)
+                    .Select(r => new { r.Name, r.CodeRole })
+                    .FirstOrDefaultAsync();
+
+                activeRoleName = role?.Name;
+                codeRole = role?.CodeRole;
+
+                // ============================================================
+                // 3️⃣ دریافت اطلاعات مرکز (Level, CodeMarkaz, CodeOstan)
                 // ============================================================
                 if (markazId.HasValue)
                 {
                     var markaz = await _context.Markazes
                         .Where(m => m.Id == markazId.Value)
-                        .Select(m => m.CodeOstan)
+                        .Select(m => new
+                        {
+                            m.Level,
+                            m.CodeMarkaz,
+                            m.CodeOstan
+                        })
                         .FirstOrDefaultAsync();
 
-                    ostanId = markaz;
+                    if (markaz != null)
+                    {
+                        markazLevel = markaz.Level;
+                        markazCode = markaz.CodeMarkaz;
+                        ostanCode = markaz.CodeOstan;
+                    }
                 }
             }
 
             // ============================================================
-            // 4️⃣ گرفتن نقش‌های کاربر
+            // 4️⃣ گرفتن نقش‌های کاربر (برای ClaimTypes.Role)
             // ============================================================
             var roles = await _userManager.GetRolesAsync(user);
 
@@ -76,23 +93,41 @@ namespace PayamBack.Services.Implementations
             // 5️⃣ ساخت Claims
             // ============================================================
             var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.UserName ?? ""),
-                new Claim(ClaimTypes.Email, user.Email ?? ""),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim("MarkazId", markazId?.ToString() ?? ""),
-                new Claim("CodeRole", codeRole?.ToString() ?? "4"),
-                new Claim("OstanId", ostanId ?? "")
-            };
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Name, user.UserName ?? ""),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
 
+        // ============================================================
+        // 🔥 اطلاعات نقش فعال
+        // ============================================================
+        new Claim("ActiveRoleId", activeRoleId?.ToString() ?? ""),
+        new Claim("ActiveRoleName", activeRoleName ?? ""),
+        new Claim("ActiveCodeRole", codeRole?.ToString() ?? "4"),
+
+        // ============================================================
+        // 🔥 اطلاعات مرکز نقش فعال
+        // ============================================================
+        new Claim("ActiveMarkazId", markazId?.ToString() ?? ""),
+        new Claim("ActiveMarkazLevel", markazLevel?.ToString() ?? "4"),
+        new Claim("ActiveMarkazCode", markazCode ?? ""),
+
+        // ============================================================
+        // 🔥 اطلاعات استان مرکز نقش فعال
+        // ============================================================
+        new Claim("ActiveOstanCode", ostanCode ?? "")
+    };
+
+            // ============================================================
+            // 6️⃣ همه نقش‌های کاربر (برای سازگاری با سیستم)
+            // ============================================================
             foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
             // ============================================================
-            // 6️⃣ ساخت توکن
+            // 7️⃣ ساخت توکن
             // ============================================================
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

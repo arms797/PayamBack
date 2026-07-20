@@ -36,7 +36,8 @@ namespace PayamBack.Controllers.Identity
                         Name = r.Name ?? "",
                         CodeRole = r.CodeRole ?? 0,
                         Vazeeyat = r.Vazeeyat ?? true,
-                        Emza = r.Emza ?? false
+                        Emza = r.Emza ?? false,
+                        IsAdmin = r.IsAdmin ?? false  // ← اضافه شد
                     })
                     .OrderBy(r => r.CodeRole)
                     .ToListAsync();
@@ -75,7 +76,8 @@ namespace PayamBack.Controllers.Identity
                         Name = r.Name ?? "",
                         CodeRole = r.CodeRole ?? 0,
                         Vazeeyat = r.Vazeeyat ?? true,
-                        Emza = r.Emza ?? false
+                        Emza = r.Emza ?? false,
+                        IsAdmin = r.IsAdmin ?? false  // ← اضافه شد
                     })
                     .FirstOrDefaultAsync();
 
@@ -141,7 +143,8 @@ namespace PayamBack.Controllers.Identity
                     Name = dto.Name,
                     CodeRole = dto.CodeRole,
                     Vazeeyat = dto.Vazeeyat ?? true,
-                    Emza = dto.Emza ?? false
+                    Emza = dto.Emza ?? false,
+                    IsAdmin = dto.IsAdmin ?? false  // ← اضافه شد
                 };
 
                 var result = await _roleManager.CreateAsync(role);
@@ -223,6 +226,7 @@ namespace PayamBack.Controllers.Identity
                 role.CodeRole = dto.CodeRole ?? role.CodeRole;
                 role.Vazeeyat = dto.Vazeeyat ?? role.Vazeeyat;
                 role.Emza = dto.Emza ?? role.Emza;
+                role.IsAdmin = dto.IsAdmin ?? role.IsAdmin;  // ← اضافه شد
 
                 var result = await _roleManager.UpdateAsync(role);
                 if (!result.Succeeded)
