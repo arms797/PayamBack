@@ -21,7 +21,9 @@ namespace PayamBack.Filters
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
+            // ============================================================
             // 1️⃣ بررسی AllowAnonymous
+            // ============================================================
             var endpoint = context.HttpContext.GetEndpoint();
             var allowAnonymous = endpoint?.Metadata?.GetMetadata<AllowAnonymousAttribute>() != null;
             var controllerAllowAnonymous = context.Controller.GetType()
@@ -34,7 +36,9 @@ namespace PayamBack.Filters
                 return;
             }
 
+            // ============================================================
             // 2️⃣ بررسی احراز هویت
+            // ============================================================
             var userIdClaim = context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
             {
@@ -42,25 +46,21 @@ namespace PayamBack.Filters
                 return;
             }
 
-            // 3️⃣ دریافت اطلاعات از JWT
-            var markazIdClaim = context.HttpContext.User.FindFirst("MarkazId")?.Value;
-            var codeRoleClaim = context.HttpContext.User.FindFirst("CodeRole")?.Value;
-            var ostanIdClaim = context.HttpContext.User.FindFirst("OstanId")?.Value;
+            // ============================================================
+            // 3️⃣ دریافت نقش فعال از JWT
+            // ============================================================
             var roleClaims = context.HttpContext.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
-
-            int? userMarkazId = string.IsNullOrEmpty(markazIdClaim) ? null : int.Parse(markazIdClaim);
-            int? userCodeRole = string.IsNullOrEmpty(codeRoleClaim) ? 4 : int.Parse(codeRoleClaim);
-            string? userOstanId = string.IsNullOrEmpty(ostanIdClaim) ? null : ostanIdClaim;
-
-            // 4️⃣ دریافت نقش فعال از JWT
             var activeRoleName = roleClaims.FirstOrDefault();
+
             if (string.IsNullOrEmpty(activeRoleName))
             {
                 context.Result = new ForbidResult();
                 return;
             }
 
-            // 5️⃣ دریافت RoleId از Cache
+            // ============================================================
+            // 4️⃣ دریافت RoleId از Cache
+            // ============================================================
             var roleCacheKey = $"RoleId_{activeRoleName}";
             var activeRoleId = _cache.Get<int?>(roleCacheKey);
 
@@ -80,17 +80,21 @@ namespace PayamBack.Filters
                 _cache.Set(roleCacheKey, activeRoleId.Value, TimeSpan.FromDays(1));
             }
 
-            // 6️⃣ دریافت نام کنترلر و اکشن
+            // ============================================================
+            // 5️⃣ دریافت نام کنترلر و اکشن
+            // ============================================================
             var controllerName = context.Controller.GetType().Name.Replace("Controller", "");
             var actionName = context.ActionDescriptor.RouteValues["action"] ?? "";
 
             // ============================================================
-            // 🔥 نرمال‌سازی actionName به View, Create, Update, Delete
+            // 6️⃣ نرمال‌سازی actionName به View, Create, Update, Delete
             // ============================================================
             var normalizedAction = NormalizeAction(actionName);
             var permissionName = $"{controllerName}.{normalizedAction}";
 
+            // ============================================================
             // 7️⃣ بررسی مجوز از Cache
+            // ============================================================
             var permissionCacheKey = $"Permission_{activeRoleId.Value}_{permissionName}";
             var hasPermission = _cache.Get<bool?>(permissionCacheKey);
 
@@ -137,41 +141,14 @@ namespace PayamBack.Filters
                 return;
             }
 
-            // 8️⃣ بررسی سطح دسترسی
-            var isChangeAction = actionName == "Create" ||
-                                 actionName == "Update" ||
-                                 actionName == "Delete" ||
-                                 actionName == "BulkUpload";
-
-            if (isChangeAction)
-            {
-                var targetMarkazId = GetTargetMarkazId(context);
-
-                var hasAccessLevel = CheckAccessLevel(
-                    userMarkazId,
-                    userCodeRole,
-                    userOstanId,
-                    targetMarkazId);
-
-                if (!hasAccessLevel)
-                {
-                    context.Result = new ObjectResult(new
-                    {
-                        success = false,
-                        message = "شما مجوز تغییر این داده را ندارید"
-                    })
-                    {
-                        StatusCode = 403
-                    };
-                    return;
-                }
-            }
-
+            // ============================================================
+            // ✅ مجوز تأیید شد، ادامه بده
+            // ============================================================
             await next();
         }
 
         // ============================================================
-        // 🔥 متد نرمال‌سازی اکشن‌ها
+        // متد نرمال‌سازی اکشن‌ها
         // ============================================================
         private string NormalizeAction(string action)
         {
@@ -201,48 +178,6 @@ namespace PayamBack.Filters
                 return "BulkUpload";
 
             return action;
-        }
-
-        private int? GetTargetMarkazId(ActionExecutingContext context)
-        {
-            if (context.ActionArguments.TryGetValue("markazId", out var value) && value is int id)
-                return id;
-
-            if (context.ActionArguments.TryGetValue("id", out var idValue) && idValue is int idInt)
-            {
-                var controllerName = context.Controller.GetType().Name;
-                if (controllerName.Contains("Markaz"))
-                    return idInt;
-            }
-
-            return null;
-        }
-
-        private bool CheckAccessLevel(
-            int? userMarkazId,
-            int? userCodeRole,
-            string? userOstanId,
-            int? targetMarkazId)
-        {
-            switch (userCodeRole)
-            {
-                case 1:
-                case 2:
-                    return true;
-
-                case 3:
-                    if (!targetMarkazId.HasValue || string.IsNullOrEmpty(userOstanId))
-                        return false;
-                    return true;
-
-                case 4:
-                    if (!userMarkazId.HasValue || !targetMarkazId.HasValue)
-                        return false;
-                    return userMarkazId == targetMarkazId;
-
-                default:
-                    return false;
-            }
         }
     }
 }

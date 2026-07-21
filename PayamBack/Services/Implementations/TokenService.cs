@@ -101,30 +101,30 @@ namespace PayamBack.Services.Implementations
         // ============================================================
         // 🔥 اطلاعات نقش فعال
         // ============================================================
-        new Claim("ActiveRoleId", activeRoleId?.ToString() ?? ""),
-        new Claim("ActiveRoleName", activeRoleName ?? ""),
-        new Claim("ActiveCodeRole", codeRole?.ToString() ?? "4"),
+        new Claim("RoleId", activeRoleId?.ToString() ?? ""),
+        new Claim("RoleName", activeRoleName ?? ""),
+        new Claim("CodeRole", codeRole?.ToString() ?? "4"),
 
         // ============================================================
         // 🔥 اطلاعات مرکز نقش فعال
         // ============================================================
-        new Claim("ActiveMarkazId", markazId?.ToString() ?? ""),
-        new Claim("ActiveMarkazLevel", markazLevel?.ToString() ?? "4"),
-        new Claim("ActiveMarkazCode", markazCode ?? ""),
+        new Claim("MarkazId", markazId?.ToString() ?? ""),
+        new Claim("MarkazLevel", markazLevel?.ToString() ?? "4"),
+        new Claim("MarkazMarkaz", markazCode ?? ""),
 
         // ============================================================
         // 🔥 اطلاعات استان مرکز نقش فعال
         // ============================================================
-        new Claim("ActiveOstanCode", ostanCode ?? "")
+        new Claim("MarkazOstan", ostanCode ?? "")
     };
 
             // ============================================================
             // 6️⃣ همه نقش‌های کاربر (برای سازگاری با سیستم)
             // ============================================================
-            foreach (var role in roles)
+            /*foreach (var role in roles)
             {
                 claims.Add(new Claim(ClaimTypes.Role, role));
-            }
+            }*/
 
             // ============================================================
             // 7️⃣ ساخت توکن
@@ -150,7 +150,8 @@ namespace PayamBack.Services.Implementations
             await _userManager.SetAuthenticationTokenAsync(user, "PayamBack", "RefreshToken", refreshToken);
 
             var cacheKey = $"RefreshToken_{user.Id}";
-            _cache.Set(cacheKey, refreshToken, TimeSpan.FromDays(7));
+            var expiryDays = Convert.ToDouble(_configuration["Jwt:RefreshTokenExpiryDays"] ?? "1");
+            _cache.Set(cacheKey, refreshToken, TimeSpan.FromDays(expiryDays));
 
             return refreshToken;
         }

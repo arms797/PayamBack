@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using PayamBack.Models.Identity;
+using System.ComponentModel.DataAnnotations;
 
 namespace PayamBack.DTOs.Core.Karmand
 {
@@ -32,6 +33,6 @@ namespace PayamBack.DTOs.Core.Karmand
 
         public string? Emza { get; set; }
 
-        public string? RoleName { get; set; }
+        public int? RoleId { get; set; }
     }
 }
