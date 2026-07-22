@@ -260,10 +260,10 @@ namespace PayamBack.Controllers.Core
                 }
 
                 // اضافه کردن نقش
-                if (!string.IsNullOrEmpty(dto.RoleName))
+                /*if (!string.IsNullOrEmpty(dto.RoleName))
                 {
                     await _userManager.AddToRoleAsync(user, dto.RoleName);
-                }
+                }*/
 
                 return Ok(new
                 {

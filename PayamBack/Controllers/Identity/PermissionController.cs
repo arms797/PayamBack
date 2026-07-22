@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.DTOs.Identity.Permission;
 using PayamBack.Models.Identity;
+using System.Reflection;
 
 namespace PayamBack.Controllers.Identity
 {
@@ -318,5 +319,139 @@ namespace PayamBack.Controllers.Identity
                 });
             }
         }
+
+        // ============================================================
+        // 🔥 7️⃣ دریافت لیست همه کنترلرها و اکشن‌های نرمال‌سازی‌شده
+        // ============================================================
+        [HttpGet("actions-list")]
+        public IActionResult GetActionsList()
+        {
+            try
+            {
+                // ============================================================
+                // 1️⃣ دریافت همه کنترلرها از اسمبلی جاری
+                // ============================================================
+                var controllers = Assembly.GetExecutingAssembly()
+                    .GetTypes()
+                    .Where(t => t.IsClass &&
+                                !t.IsAbstract &&
+                                typeof(ControllerBase).IsAssignableFrom(t) &&
+                                t.Namespace != null &&
+                                t.Namespace.StartsWith("PayamBack.Controllers"))
+                    .ToList();
+
+                var result = new List<ControllerActionDto>();
+
+                foreach (var controller in controllers)
+                {
+                    // ============================================================
+                    // 2️⃣ دریافت نام کنترلر (بدون پسوند "Controller")
+                    // ============================================================
+                    var controllerName = controller.Name.Replace("Controller", "");
+
+                    // ============================================================
+                    // 3️⃣ دریافت همه متدهای عمومی (اکشن‌ها)
+                    // ============================================================
+                    var methods = controller.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                        .Where(m => m.IsPublic &&
+                                    !m.IsSpecialName &&  // حذف getter/setter
+                                    m.DeclaringType == controller &&  // فقط متدهای خود کنترلر
+                                    m.ReturnType != typeof(void) &&  // متدهایی که مقدار برمی‌گردانند
+                                    m.GetCustomAttributes<NonActionAttribute>().Count() == 0 &&  // حذف [NonAction]
+                                    m.GetCustomAttributes<AllowAnonymousAttribute>().Count() == 0) // حذف [AllowAnonymous]
+                        .ToList();
+
+                    foreach (var method in methods)
+                    {
+                        // ============================================================
+                        // 4️⃣ نرمال‌سازی نام اکشن
+                        // ============================================================
+                        var actionName = method.Name;
+                        var normalizedAction = NormalizeAction(actionName);
+
+                        // ============================================================
+                        // 5️⃣ اضافه کردن به لیست (با شرط یکتا)
+                        // ============================================================
+                        var existing = result.FirstOrDefault(r => r.Resource == controllerName && r.Action == normalizedAction);
+                        if (existing == null)
+                        {
+                            result.Add(new ControllerActionDto
+                            {
+                                Resource = controllerName,
+                                Action = normalizedAction,
+                                PermissionName = $"{controllerName}.{normalizedAction}"
+                            });
+                        }
+                    }
+                }
+
+                // ============================================================
+                // 6️⃣ مرتب‌سازی بر اساس Resource و Action
+                // ============================================================
+                result = result
+                    .OrderBy(r => r.Resource)
+                    .ThenBy(r => r.Action)
+                    .ToList();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "لیست کنترلرها و اکشن‌های نرمال‌سازی‌شده دریافت شد",
+                    data = result,
+                    totalCount = result.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در دریافت لیست اکشن‌ها",
+                    error = ex.Message
+                });
+            }
+        }
+        // ============================================================
+        // 🔥 متد نرمال‌سازی اکشن‌ها (همانند PermissionFilter)
+        // ============================================================
+        private string NormalizeAction(string action)
+        {
+            // 1️⃣ خواندن → View
+            if (action.StartsWith("Get") ||
+                action == "List" || action == "All" || action == "Active" ||
+                action == "Inactive" || action == "Search" || action == "Filter" ||
+                action == "Index" || action == "Details")
+                return "View";
+
+            // 2️⃣ ایجاد → Create
+            if (action == "Create" || action == "Add" || action == "Insert" || action == "Register")
+                return "Create";
+
+            // 3️⃣ ویرایش → Update
+            if (action == "Update" || action == "Edit" || action == "Modify" ||
+                action == "Change" || action == "Toggle" || action == "Active" ||
+                action == "Deactive" || action == "Activate" || action == "Deactivate")
+                return "Update";
+
+            // 4️⃣ حذف → Delete
+            if (action == "Delete" || action == "Remove" || action == "Deactivate" || action == "Archive")
+                return "Delete";
+
+            // 5️⃣ BulkUpload → مجوز خاص
+            if (action == "BulkUpload")
+                return "BulkUpload";
+
+            return action;
+        }
+    }
+
+    // ============================================================
+    // DTO برای خروجی
+    // ============================================================
+    public class ControllerActionDto
+    {
+        public string Resource { get; set; } = string.Empty;
+        public string Action { get; set; } = string.Empty;
+        public string PermissionName { get; set; } = string.Empty;
     }
 }

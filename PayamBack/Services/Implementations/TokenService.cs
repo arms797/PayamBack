@@ -102,7 +102,7 @@ namespace PayamBack.Services.Implementations
         // 🔥 اطلاعات نقش فعال
         // ============================================================
         new Claim("RoleId", activeRoleId?.ToString() ?? ""),
-        new Claim("RoleName", activeRoleName ?? ""),
+        new Claim(ClaimTypes.Role, activeRoleName ?? ""),
         new Claim("CodeRole", codeRole?.ToString() ?? "4"),
 
         // ============================================================
