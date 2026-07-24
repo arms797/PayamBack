@@ -9,5 +9,6 @@ namespace PayamBack.DTOs.Identity
     {
         [Required]
         public int RoleId { get; set; }
+        public int? MarkazId {  get; set; }
     }
 }

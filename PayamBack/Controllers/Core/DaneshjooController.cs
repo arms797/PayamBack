@@ -163,7 +163,7 @@ namespace PayamBack.Controllers.Core
                     VazeeyatMovaghat = false
                 };
 
-                var password = dto.ShomareMelli; // رمز = کد ملی
+                var password = dto.ShomareMelli+"aA"; // رمز = کد ملی
                 var result = await _userManager.CreateAsync(user, password);
 
                 if (!result.Succeeded)

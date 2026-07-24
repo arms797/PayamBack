@@ -430,7 +430,8 @@ namespace PayamBack.Controllers.Identity
             // 3️⃣ ویرایش → Update
             if (action == "Update" || action == "Edit" || action == "Modify" ||
                 action == "Change" || action == "Toggle" || action == "Active" ||
-                action == "Deactive" || action == "Activate" || action == "Deactivate")
+                action == "Deactive" || action == "Activate" || action == "Deactivate" ||
+                action == "ResetPassword" || action == "ToggleStatus")
                 return "Update";
 
             // 4️⃣ حذف → Delete

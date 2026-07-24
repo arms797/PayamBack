@@ -54,8 +54,54 @@ namespace PayamBack.Data
             base.OnModelCreating(builder);
 
             // ======== AppUser ========
-            builder.Entity<AppUser>()
-                .ToTable("AspNetUsers");
+            builder.Entity<AppUser>(entity =>
+            {
+                entity.ToTable("AspNetUsers");
+
+                // ============================================================
+                // 🔥 رابطه یک‌به‌یک با Karmand
+                // ============================================================
+                entity.HasOne(e => e.Karmand)
+                    .WithOne()  // Karmand به AppUser اشاره نمی‌کند (یک‌طرفه)
+                    .HasForeignKey<AppUser>(e => e.KarmandId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                // ============================================================
+                // 🔥 رابطه یک‌به‌یک با Ostad
+                // ============================================================
+                entity.HasOne(e => e.Ostad)
+                    .WithOne()
+                    .HasForeignKey<AppUser>(e => e.OstadId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                // ============================================================
+                // 🔥 رابطه یک‌به‌یک با Daneshjoo
+                // ============================================================
+                entity.HasOne(e => e.Daneshjoo)
+                    .WithOne()
+                    .HasForeignKey<AppUser>(e => e.DaneshjooId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                // ============================================================
+                // 🔥 رابطه یک‌به‌یک با MoshakhasatAdmin
+                // ============================================================
+                entity.HasOne(e => e.MoshakhasatAdmin)
+                    .WithOne()
+                    .HasForeignKey<AppUser>(e => e.AdminId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+
+            // ======== AppRole ========
+            builder.Entity<AppRole>(entity =>
+            {
+                entity.ToTable("AspNetRoles");
+            });
+
+
+            // ======== AppUser ========
+            //builder.Entity<AppUser>()
+            //    .ToTable("AspNetUsers");
 
             // ======== AppRole ========
             builder.Entity<AppRole>()
@@ -66,40 +112,65 @@ namespace PayamBack.Data
             {
                 entity.ToTable("AspNetUserRoles");
 
-                // کلید مرکب
-                entity.HasKey(e => new { e.UserId, e.RoleId });
+                // ============================================================
+                // 1️⃣ کلید اصلی
+                // ============================================================
+                entity.HasKey(e => e.Id);
 
-                // فیلدهای جدید
-                entity.Property(e => e.MarkazId);
-                entity.Property(e => e.RolePishFarz);
-
-                // ایندکس مرکب
+                // ============================================================
+                // 2️⃣ ایندکس یکتا
+                // ============================================================
                 entity.HasIndex(e => new { e.UserId, e.RoleId, e.MarkazId })
                     .IsUnique()
                     .HasDatabaseName("IX_AppUserRole_UserId_RoleId_MarkazId");
 
-                // رابطه با Markaz
+                // ============================================================
+                // 3️⃣ ایندکس برای ParentUserRoleId
+                // ============================================================
+                entity.HasIndex(e => e.ParentUserRoleId)
+                    .HasDatabaseName("IX_AppUserRole_ParentUserRoleId");
+
+                // ============================================================
+                // 4️⃣ 🔥 رابطه با AppUser (از سمت AppUserRole)
+                // ============================================================
+                entity.HasOne(e => e.User)
+                    .WithMany(u => u.AppUserRoles)  // ← AppUser دارای AppUserRoles است
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                // ============================================================
+                // 5️⃣ 🔥 رابطه با AppRole (از سمت AppUserRole)
+                // ============================================================
+                entity.HasOne(e => e.Role)
+                    .WithMany(r => r.AppUserRoles)  // ← AppRole دارای AppUserRoles است
+                    .HasForeignKey(e => e.RoleId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                // ============================================================
+                // 6️⃣ رابطه با Markaz
+                // ============================================================
                 entity.HasOne(e => e.Markaz)
                     .WithMany(m => m.AppUserRoles)
                     .HasForeignKey(e => e.MarkazId)
                     .OnDelete(DeleteBehavior.NoAction);
-            });
 
+                // ============================================================
+                // 7️⃣ 🔥 رابطه خود ارجاعی
+                // ============================================================
+                entity.HasOne(e => e.ParentUserRole)
+                    .WithMany(e => e.ChildUserRoles)
+                    .HasForeignKey(e => e.ParentUserRoleId)
+                    .OnDelete(DeleteBehavior.NoAction);
 
+                // ============================================================
+                // 8️⃣ ایندکس‌های کمکی
+                // ============================================================
+                entity.HasIndex(e => e.RoleId)
+                    .HasDatabaseName("IX_AppUserRole_RoleId");
 
-            /*builder.Entity<AppUserRole>()
-                .ToTable("AspNetUserRoles");
-
-            builder.Entity<AppUserRole>()
-                .HasIndex(ur => new { ur.UserId, ur.RoleId, ur.MarkazId })
-                .IsUnique()
-                .HasDatabaseName("IX_AppUserRole_UserId_RoleId_MarkazId");                
-
-            builder.Entity<AppUserRole>()
-                .HasOne(ur => ur.Markaz)
-                .WithMany(m => m.AppUserRoles)
-                .HasForeignKey(ur => ur.MarkazId)
-                .OnDelete(DeleteBehavior.NoAction);*/
+                entity.HasIndex(e => e.UserId)
+                    .HasDatabaseName("IX_AppUserRole_UserId");
+            });           
 
             // ======== Markaz ========
             builder.Entity<Markaz>()

@@ -126,17 +126,17 @@ namespace PayamBack.Controllers.Identity
                     });
                 }
 
-                var codeExists = await _roleManager.Roles
-                    .AnyAsync(r => r.CodeRole == dto.CodeRole);
+                //var codeExists = await _roleManager.Roles
+                //    .AnyAsync(r => r.CodeRole == dto.CodeRole);
 
-                if (codeExists)
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "کد نقش تکراری است"
-                    });
-                }
+                //if (codeExists)
+                //{
+                //    return BadRequest(new
+                //    {
+                //        success = false,
+                //        message = "کد نقش تکراری است"
+                //    });
+                //}
 
                 var role = new AppRole
                 {
@@ -207,20 +207,20 @@ namespace PayamBack.Controllers.Identity
                     }
                 }
 
-                if (dto.CodeRole.HasValue && dto.CodeRole.Value != role.CodeRole)
-                {
-                    var codeExists = await _roleManager.Roles
-                        .AnyAsync(r => r.Id != id && r.CodeRole == dto.CodeRole.Value);
+                //if (dto.CodeRole.HasValue && dto.CodeRole.Value != role.CodeRole)
+                //{
+                //    var codeExists = await _roleManager.Roles
+                //        .AnyAsync(r => r.Id != id && r.CodeRole == dto.CodeRole.Value);
 
-                    if (codeExists)
-                    {
-                        return BadRequest(new
-                        {
-                            success = false,
-                            message = "کد نقش تکراری است"
-                        });
-                    }
-                }
+                //    if (codeExists)
+                //    {
+                //        return BadRequest(new
+                //        {
+                //            success = false,
+                //            message = "کد نقش تکراری است"
+                //        });
+                //    }
+                //}
 
                 role.Name = dto.Name ?? role.Name;
                 role.CodeRole = dto.CodeRole ?? role.CodeRole;

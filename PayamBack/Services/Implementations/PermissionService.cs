@@ -89,7 +89,10 @@ namespace PayamBack.Services.Implementations
                         Id = r.Id,
                         Name = r.Name ?? "",
                         IsDefault = ur.RolePishFarz ?? false,
-                        MarkazId = ur.MarkazId ?? 0
+                        MarkazId = ur.MarkazId ?? 0,
+                        CodeRole = ur.Role.CodeRole?? 4,
+                        IsAdmin=r.IsAdmin ?? false
+                        //IsUniquePerMarkazId =r.IsUniquePerMarkaz?? false
                     })
                 .ToListAsync();
         }

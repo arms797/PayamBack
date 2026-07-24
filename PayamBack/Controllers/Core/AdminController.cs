@@ -140,7 +140,7 @@ namespace PayamBack.Controllers.Core
                     VazeeyatMovaghat = false
                 };
 
-                var password = dto.CodeMelli; // رمز = کد ملی
+                var password = dto.CodeMelli + "aA"; // رمز = کد ملی
                 var result = await _userManager.CreateAsync(user, password);
 
                 if (!result.Succeeded)

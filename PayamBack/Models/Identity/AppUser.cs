@@ -47,6 +47,10 @@ namespace PayamBack.Models.Identity
         /// <summary>سوابق فعالیت‌های کاربر</summary>
         public virtual ICollection<Sabeghe>? Sabeghes { get; set; }
 
+        // 🔥 نقش‌های کاربر در مراکز مختلف
+        public virtual ICollection<AppUserRole>? AppUserRoles { get; set; }
+
+
         //فیلدهای ساخته شده توسط Identity
 
         //public int Id { get; set; }

@@ -42,7 +42,7 @@ namespace PayamBack.Services.Implementations
             int? markazId = null;
             int? markazLevel = null;
             string? markazCode = null;
-            string? ostanCode = null;
+            string? ostanCode = null;            
 
             if (activeRole != null)
             {

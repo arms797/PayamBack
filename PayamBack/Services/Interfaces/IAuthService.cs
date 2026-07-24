@@ -25,6 +25,6 @@ namespace PayamBack.Services.Interfaces
         /// <summary>
         /// تغییر نقش فعال کاربر - بروزرسانی منوها و دسترسی‌ها
         /// </summary>
-        Task<LoginResponseDto> ChangeRoleAsync(int userId, int newRoleId);
+        Task<LoginResponseDto> ChangeRoleAsync(int userId, int newRoleId,int?markazId);
     }
 }

@@ -5,6 +5,8 @@ using PayamBack.DTOs.Identity;
 using PayamBack.Models.Identity;
 using PayamBack.Services.Interfaces;
 using System.Security.Claims;
+using Microsoft.Extensions.Caching.Memory; 
+
 
 namespace PayamBack.Services.Implementations
 {
@@ -17,6 +19,7 @@ namespace PayamBack.Services.Implementations
         private readonly IConfiguration _configuration;
         private readonly AppDbContext _context;
         private readonly ICaptchaService _captchaService;
+        private readonly IMemoryCache _cache;  
 
         public AuthService(
             UserManager<AppUser> userManager,
@@ -25,7 +28,8 @@ namespace PayamBack.Services.Implementations
             IPermissionService permissionService,
             IConfiguration configuration,
             AppDbContext context,
-            ICaptchaService captchaService)
+            ICaptchaService captchaService,
+            IMemoryCache cache)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -34,6 +38,7 @@ namespace PayamBack.Services.Implementations
             _configuration = configuration;
             _context = context;
             _captchaService = captchaService;
+            _cache = cache;
         }
 
         // ============================================================
@@ -230,18 +235,52 @@ namespace PayamBack.Services.Implementations
         // ============================================================
         // 4️⃣ تغییر نقش فعال کاربر
         // ============================================================
-        public async Task<LoginResponseDto> ChangeRoleAsync(int userId, int newRoleId)
+        public async Task<LoginResponseDto> ChangeRoleAsync(int userId, int newRoleId, int? markazId = null)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
                 throw new Exception("کاربر یافت نشد");
 
+            // ============================================================
+            // 🔥 دریافت نقش قبلی برای پاک کردن کش
+            // ============================================================
+            var oldUserRole = await _context.Set<AppUserRole>()
+                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RolePishFarz == true);
+
+            string? oldRoleName = null;
+            int? oldRoleId = null;
+            if (oldUserRole != null)
+            {
+                oldRoleId = oldUserRole.RoleId;
+                oldRoleName = await _context.Roles
+                    .Where(r => r.Id == oldUserRole.RoleId)
+                    .Select(r => r.Name)
+                    .FirstOrDefaultAsync();
+            }
+
+            // ============================================================
+            // 🔥 دریافت نقش‌های کاربر با مرکز
+            // ============================================================
             var userRoles = await _permissionService.GetUserRolesAsync(userId);
-            if (!userRoles.Any(r => r.Id == newRoleId))
+
+            bool hasAccess;
+            if (markazId.HasValue)
+            {
+                hasAccess = userRoles.Any(r => r.Id == newRoleId && r.MarkazId == markazId.Value);
+            }
+            else
+            {
+                hasAccess = userRoles.Any(r => r.Id == newRoleId);
+            }
+
+            if (!hasAccess)
                 throw new Exception("شما به این نقش دسترسی ندارید");
 
+            // ============================================================
+            // 🔥 پیدا کردن رکورد AppUserRole با RoleId و MarkazId
+            // ============================================================
             var userRole = await _context.Set<AppUserRole>()
-                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == newRoleId);
+                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RoleId == newRoleId && ur.MarkazId == markazId);
 
             if (userRole != null)
             {
@@ -260,6 +299,26 @@ namespace PayamBack.Services.Implementations
 
             var roles = await _permissionService.GetUserRolesAsync(userId);
             var newRole = roles.FirstOrDefault(r => r.Id == newRoleId);
+
+            // ============================================================
+            // 🔥 پاک کردن کش نقش قدیمی
+            // ============================================================
+            if (!string.IsNullOrEmpty(oldRoleName))
+            {
+                var oldRoleCacheKey = $"RoleId_{oldRoleName}";
+                _cache.Remove(oldRoleCacheKey);
+                Console.WriteLine($"🗑️ Cache removed for old role: {oldRoleName}");
+            }
+
+            // ============================================================
+            // 🔥 پاک کردن کش نقش جدید (اجبار به خواندن مجدد از دیتابیس)
+            // ============================================================
+            if (newRole != null && !string.IsNullOrEmpty(newRole.Name))
+            {
+                var newRoleCacheKey = $"RoleId_{newRole.Name}";
+                _cache.Remove(newRoleCacheKey);
+                Console.WriteLine($"🗑️ Cache removed for new role: {newRole.Name}");
+            }
 
             // ============================================================
             // 🔥 دریافت مجوزهای نقش جدید

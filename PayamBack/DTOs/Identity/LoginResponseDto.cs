@@ -28,5 +28,8 @@
         public string Name { get; set; } = string.Empty;
         public bool IsDefault { get; set; } = false;
         public int MarkazId { get; set; }
+        public int CodeRole { get; set; } = 4;
+        public bool IsAdmin {  get; set; }=false;
+        //public bool IsUniquePerMarkazId {  get; set; } = false;
     }
 }

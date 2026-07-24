@@ -112,7 +112,7 @@ namespace PayamBack.Controllers.Identity
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var response = await _authService.ChangeRoleAsync(userId, dto.RoleId);
+                var response = await _authService.ChangeRoleAsync(userId, dto.RoleId,dto.MarkazId);
                 return Ok(new
                 {
                     success = true,

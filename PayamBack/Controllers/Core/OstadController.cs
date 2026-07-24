@@ -279,7 +279,7 @@ namespace PayamBack.Controllers.Core
                     VazeeyatMovaghat = false
                 };
 
-                var password = dto.ShomareMelli;
+                var password = dto.ShomareMelli + "aA";
                 var result = await _userManager.CreateAsync(user, password);
 
                 if (!result.Succeeded)

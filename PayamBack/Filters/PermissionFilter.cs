@@ -166,11 +166,12 @@ namespace PayamBack.Filters
             // 3️⃣ ویرایش → Update
             if (action == "Update" || action == "Edit" || action == "Modify" ||
                 action == "Change" || action == "Toggle" || action == "Active" ||
-                action == "Deactive" || action == "Activate" || action == "Deactivate")
+                action == "Deactive" || action == "Activate" || action == "Deactivate" ||
+                action == "ResetPassword" || action == "ToggleStatus")
                 return "Update";
 
             // 4️⃣ حذف → Delete
-            if (action == "Delete" || action == "Remove" || action == "Deactivate" || action == "Archive")
+            if (action == "Delete" || action == "Remove" || action == "Archive")
                 return "Delete";
 
             // 5️⃣ BulkUpload → مجوز خاص
