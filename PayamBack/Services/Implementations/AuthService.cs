@@ -336,7 +336,7 @@ namespace PayamBack.Services.Implementations
             var menus = newRole != null
                 ? await _permissionService.GetUserMenusAsync(userId, newRole.Id, permissions)
                 : new List<MenuDto>();
-
+            
             var accessToken = await _tokenService.GenerateAccessToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 

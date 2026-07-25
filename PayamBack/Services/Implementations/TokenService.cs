@@ -35,6 +35,17 @@ namespace PayamBack.Services.Implementations
                 .Where(ur => ur.UserId == user.Id && ur.RolePishFarz == true)
                 .Select(ur => new { ur.RoleId, ur.MarkazId })
                 .FirstOrDefaultAsync();
+            if(activeRole==null)
+            {
+                activeRole = await _context.UserRoles
+                .Where(ur => ur.UserId == user.Id)
+                .Select(ur => new { ur.RoleId, ur.MarkazId })
+                .FirstOrDefaultAsync();
+            }
+            if (activeRole == null)
+            {
+                throw new Exception($"کاربر {user.UserName} هیچ نقشی ندارد");
+            }
 
             int? activeRoleId = null;
             string? activeRoleName = null;
