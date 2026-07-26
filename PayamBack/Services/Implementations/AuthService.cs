@@ -156,6 +156,7 @@ namespace PayamBack.Services.Implementations
                 LastName = lastName,
                 CurrentRoleId = activeRole?.Id,
                 CurrentRoleName = activeRole?.Name ?? "",
+                MarkazId = activeRole?.MarkazId,
                 Roles = roles,
                 Menus = menus,
                 Permissions = permissions,
@@ -297,8 +298,35 @@ namespace PayamBack.Services.Implementations
                 await _context.SaveChangesAsync();
             }
 
+            // ============================================================
+            // 🔥 بعد از ذخیره، دوباره از دیتابیس بخوان تا مطمئن شوی
+            // ============================================================
+            var checkRole = await _context.Set<AppUserRole>()
+                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RolePishFarz == true);
+
+            Console.WriteLine($"✅ AFTER SAVE - UserId: {userId}, RoleId: {checkRole?.RoleId}, MarkazId: {checkRole?.MarkazId}");
+
+            // ============================================================
+            // 🔥 roles را با MarkazId درست بگیر
+            // ============================================================
             var roles = await _permissionService.GetUserRolesAsync(userId);
-            var newRole = roles.FirstOrDefault(r => r.Id == newRoleId);
+
+            // ============================================================
+            // 🔥 newRole را با RoleId و MarkazId پیدا کن
+            // ============================================================
+            RoleDto? newRole = null;
+            if (markazId.HasValue)
+            {
+                newRole = roles.FirstOrDefault(r => r.Id == newRoleId && r.MarkazId == markazId.Value);
+            }
+
+            // اگر با MarkazId پیدا نشد، فقط با RoleId پیدا کن
+            if (newRole == null)
+            {
+                newRole = roles.FirstOrDefault(r => r.Id == newRoleId);
+            }
+
+            Console.WriteLine($"🔍 newRole - Id: {newRole?.Id}, Name: {newRole?.Name}, MarkazId: {newRole?.MarkazId}");
 
             // ============================================================
             // 🔥 پاک کردن کش نقش قدیمی
@@ -336,10 +364,13 @@ namespace PayamBack.Services.Implementations
             var menus = newRole != null
                 ? await _permissionService.GetUserMenusAsync(userId, newRole.Id, permissions)
                 : new List<MenuDto>();
-            
+
             var accessToken = await _tokenService.GenerateAccessToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
+            // ============================================================
+            // 🔥 در پاسخ، MarkazId را از newRole بگیر
+            // ============================================================
             return new LoginResponseDto
             {
                 AccessToken = accessToken,
@@ -348,6 +379,7 @@ namespace PayamBack.Services.Implementations
                 Email = user.Email ?? "",
                 CurrentRoleId = newRole?.Id,
                 CurrentRoleName = newRole?.Name ?? "",
+                MarkazId = newRole?.MarkazId ?? markazId,  // ← اگر null بود، از ورودی بگیر
                 Roles = roles,
                 Menus = menus,
                 Permissions = permissions,

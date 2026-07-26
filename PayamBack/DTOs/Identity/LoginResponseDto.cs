@@ -13,6 +13,7 @@
         public string LastName { get; set; } = string.Empty;         // ← نام خانوادگی
         public int? CurrentRoleId { get; set; }                      // شناسه نقش فعال فعلی
         public string CurrentRoleName { get; set; } = string.Empty;  // نام نقش فعال فعلی
+        public int? MarkazId { get; set; }                           //مرکز نقش فعال
         public List<RoleDto> Roles { get; set; } = new();           // لیست همه نقش‌ها
         public List<MenuDto> Menus { get; set; } = new();           // منوهای قابل نمایش
         public List<string> Permissions { get; set; } = new();      //لیست مجوزهای نقش فعال

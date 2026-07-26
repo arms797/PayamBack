@@ -90,7 +90,7 @@ namespace PayamBack.Services.Implementations
                         Name = r.Name ?? "",
                         IsDefault = ur.RolePishFarz ?? false,
                         MarkazId = ur.MarkazId ?? 0,
-                        CodeRole = ur.Role.CodeRole?? 4,
+                        CodeRole = r.CodeRole ?? 4,
                         IsAdmin=r.IsAdmin ?? false
                         //IsUniquePerMarkazId =r.IsUniquePerMarkaz?? false
                     })
