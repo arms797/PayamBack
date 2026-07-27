@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using OfficeOpenXml;
+//using OfficeOpenXml;
 using PayamBack.Data;
 using PayamBack.DTOs.Core.Daneshjoo;
 using PayamBack.Models.Core;
@@ -201,7 +201,7 @@ namespace PayamBack.Controllers.Core
         // ============================================================
         // 4️⃣ آپلود گروهی دانشجویان از Excel
         // ============================================================
-        [HttpPost("bulk-upload")]
+        /*[HttpPost("bulk-upload")]
         public async Task<IActionResult> BulkUpload(IFormFile file)
         {
             try
@@ -324,7 +324,9 @@ namespace PayamBack.Controllers.Core
             {
                 return StatusCode(500, new { success = false, message = "خطا در آپلود فایل", error = ex.Message });
             }
+       
         }
+        */
 
         private async Task SaveDaneshjooBatch(List<Daneshjoo> daneshjoos, List<AppUser> users)
         {

@@ -12,7 +12,6 @@ namespace PayamBack.DTOs.Core.Ostad
         public string? Email { get; set; }
         public string? Mobile { get; set; }
         public string? Mobile2 { get; set; }
-        public bool? Vazeeat { get; set; }
         public NoeHamkariEnum ? NoeHamkari { get; set; }
         public string? NoeBimeh { get; set; }
         public string? ShomarehBimeh { get; set; }
