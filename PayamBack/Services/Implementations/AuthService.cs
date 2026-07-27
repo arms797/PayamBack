@@ -72,7 +72,20 @@ namespace PayamBack.Services.Implementations
             {
                 throw new Exception("login_invalid");
             }
+            // بررسی فعال بودن کاربر
+            
+            if (user != null)
+            {
+                if (user.Vazeeyat == false)
+                {
+                    throw new Exception("vazeat_false");
+                }
+                if (user.VazeeyatMovaghat == false)
+                {
+                    throw new Exception("vazeatMovaghat_false");
+                }
 
+            }
             // دریافت نقش‌های کاربر
             var roles = await _permissionService.GetUserRolesAsync(user.Id);
 

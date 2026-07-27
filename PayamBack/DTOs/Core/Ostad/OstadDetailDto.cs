@@ -22,7 +22,7 @@
         public string SazmanMarboote { get; set; } = string.Empty;
         public string MahalEshteghal { get; set; } = string.Empty;
         public string Emza { get; set; } = string.Empty;
-        public bool Vazeeat { get; set; }
+        public bool VazeeatMovaghat { get; set; }
         public int NoeHamkari { get; set; }
         public string NoeBimeh { get; set; } = string.Empty;
         public string ShomarehBimeh { get; set; } = string.Empty;

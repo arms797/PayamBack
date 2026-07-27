@@ -215,7 +215,17 @@ namespace PayamBack.Controllers.Core
                 // ============================================================
                 if (vazeeat.HasValue)
                 {
-                    query = query.Where(x => x.User != null && x.User.Vazeeyat == vazeeat.Value);
+                    if (vazeeat == true)
+                    {
+                        query = query.Where(x => x.User != null &&
+                            (x.User.Vazeeyat == true && x.User.VazeeyatMovaghat == true));
+                    }
+                    else
+                    {
+                        query = query.Where(x => x.User != null &&
+                            (x.User.Vazeeyat == vazeeat.Value || x.User.VazeeyatMovaghat == vazeeat.Value));
+                    }
+                    
                 }
                 else
                 {

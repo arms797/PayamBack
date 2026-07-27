@@ -80,21 +80,25 @@ namespace PayamBack.Services.Implementations
         public async Task<List<RoleDto>> GetUserRolesAsync(int userId)
         {
             return await _context.Set<AppUserRole>()
-                .Where(ur => ur.UserId == userId)
-                .Join(_context.Roles,
-                    ur => ur.RoleId,
-                    r => r.Id,
-                    (ur, r) => new RoleDto
-                    {
-                        Id = r.Id,
-                        Name = r.Name ?? "",
-                        IsDefault = ur.RolePishFarz ?? false,
-                        MarkazId = ur.MarkazId ?? 0,
-                        CodeRole = r.CodeRole ?? 4,
-                        IsAdmin=r.IsAdmin ?? false
-                        //IsUniquePerMarkazId =r.IsUniquePerMarkaz?? false
-                    })
-                .ToListAsync();
+        .Where(ur => ur.UserId == userId)
+        .Join(_context.Roles.Where(r => r.Vazeeyat == true),
+            ur => ur.RoleId,
+            r => r.Id,
+            (ur, r) => new { ur, r })
+        .Join(_context.Markazes.Where(m => m.Vazeeyat == true),
+            ur => ur.ur.MarkazId,
+            m => m.Id,
+            (ur, m) => new RoleDto
+            {
+                Id = ur.r.Id,
+                Name = ur.r.Name ?? "",
+                IsDefault = ur.ur.RolePishFarz ?? false,
+                MarkazId = ur.ur.MarkazId ?? 0,
+                CodeRole = ur.r.CodeRole ?? 4,
+                IsAdmin = ur.r.IsAdmin ?? false
+                //IsUniquePerMarkazId = ur.r.IsUniquePerMarkaz ?? false
+            })
+        .ToListAsync();
         }
 
         // ============================================================

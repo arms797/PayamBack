@@ -98,9 +98,6 @@ namespace PayamBack.Models.Core
         [MaxLength(250)]
         public string? Emza { get; set; }
 
-        /// <summary>وضعیت استاد (فعال یا غیر فعال)</summary>
-        public bool? Vazeeat { get; set; }
-
         /// <summary>نوع همکاری (Enum)</summary>
         public NoeHamkariEnum? NoeHamkari { get; set; }
 

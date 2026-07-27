@@ -44,6 +44,8 @@ namespace PayamBack.Controllers.Identity
                     "captcha_required" => BadRequest(new { success = false, message = "لطفاً کد امنیتی را وارد کنید" }),
                     "captcha_invalid" => BadRequest(new { success = false, message = "کد امنیتی اشتباه است" }),
                     "login_invalid" => BadRequest(new { success = false, message = "نام کاربری یا رمز عبور اشتباه است" }),
+                    "vazeat_false"=>BadRequest(new { success = false, message = "این کاربر غیر فعال می باشد" }),
+                    "vazeatMovaghat_false" => BadRequest(new { success = false, message = "ورود این نوع کاربری موقتا محدود شده است" }),
                     _ => StatusCode(500, new { success = false, message = "خطای داخلی سرور" })
                 };
             }

@@ -110,43 +110,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors("React");
 app.UseAuthentication();
 
-// ============================================================
-// 🔥 Middleware برای دیباگ توکن و کاربر
-// ============================================================
-/*app.Use(async (context, next) =>
-{
-    // 1️⃣ لاگ کردن هدر Authorization
-    var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
-    var token = authHeader?.Split(" ").Last();
 
-    if (!string.IsNullOrEmpty(token))
-    {
-        Console.WriteLine($"🔍 [Middleware] Authorization header: {token.Substring(0, Math.Min(30, token.Length))}...");
-    }
-    else
-    {
-        Console.WriteLine("🔍 [Middleware] No Authorization header found");
-    }
-
-    // 2️⃣ ادامه به Middleware بعدی (Authentication)
-    await next();
-
-    // 3️⃣ بعد از احراز هویت، اطلاعات کاربر را لاگ کن
-    var user = context.User;
-    if (user?.Identity?.IsAuthenticated == true)
-    {
-        var userName = user.Identity.Name ?? "unknown";
-        var roleClaims = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
-        var activeRole = roleClaims.FirstOrDefault() ?? "No Role";
-
-        Console.WriteLine($"🔍 [Middleware] After Auth - User: {userName}, Role: {activeRole}");
-    }
-    else
-    {
-        Console.WriteLine("🔍 [Middleware] User not authenticated");
-    }
-});
-*/
 app.UseAuthorization();
 app.MapControllers();
 
