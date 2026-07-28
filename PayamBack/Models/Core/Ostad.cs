@@ -60,7 +60,7 @@ namespace PayamBack.Models.Core
 
         /// <summary>تاریخ تولد</summary>
         [MaxLength(10)]
-        public string TarikhTavalod { get; set; }
+        public string? TarikhTavalod { get; set; }
 
         /// <summary>شماره شناسنامه</summary>
         [MaxLength(20)]

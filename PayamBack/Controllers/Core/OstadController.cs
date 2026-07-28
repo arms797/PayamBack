@@ -410,7 +410,7 @@ namespace PayamBack.Controllers.Core
                     if (existingRole == null)
                     {
                         // اضافه کردن نقش به کاربر
-                        await _userManager.AddToRoleAsync(user, ostadRole.Name);
+                        //await _userManager.AddToRoleAsync(user, ostadRole.Name);
 
                         // ثبت در AppUserRole
                         var appUserRole = new AppUserRole
@@ -535,7 +535,7 @@ namespace PayamBack.Controllers.Core
                         g => g.CodeDaneshkade! + "_" + g.CodeGrooheAmoozeshi!,
                         g => g.Id
                     );
-               
+
                 // ============================================================
                 // 🔥 پردازش هر ردیف
                 // ============================================================
@@ -795,21 +795,17 @@ namespace PayamBack.Controllers.Core
                                 .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == ostadRole.Id);
 
                             if (existingRole == null)
-                            {
-                                // ✅ اضافه کردن نقش به کاربر (با نام نقش)
-                                await _userManager.AddToRoleAsync(user, "استاد");
-
-                                // ثبت در AppUserRole
-                                var appUserRole = new AppUserRole
+                            {                                
+                                var assignRole = new AppUserRole
                                 {
                                     UserId = user.Id,
-                                    RoleId = ostadRole.Id,
-                                    MarkazId = markazKhedmatiId,
-                                    RolePishFarz = true
+                                    RoleId=ostadRole.Id,
+                                    MarkazId=ostad.MarkazId,
+                                    RolePishFarz=true,
+                                    ParentUserRole=null
                                 };
-
-                                _context.Set<AppUserRole>().Add(appUserRole);
-                                await _context.SaveChangesAsync();
+                                await _context.Set<AppUserRole>().AddAsync(assignRole);
+                                await _context.SaveChangesAsync();                                
                             }
 
                             await transaction.CommitAsync();
