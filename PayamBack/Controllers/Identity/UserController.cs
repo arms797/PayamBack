@@ -87,19 +87,94 @@ namespace PayamBack.Controllers.Identity
         }
 
         // ============================================================
-        // 1️⃣ دریافت کاربر بر اساس KarmandId
+        // 1️⃣ دریافت کاربر بر اساس نوع و شناسه
         // ============================================================
-        [HttpGet("by-karmand/{karmandId}")]
+        [HttpGet("by-type")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetUserByKarmandId(int karmandId)
+        public async Task<IActionResult> GetUserByType(
+            [FromQuery] string type,
+            [FromQuery] int id)
         {
             try
             {
-                var user = await _userManager.Users
-                    .FirstOrDefaultAsync(u => u.KarmandId == karmandId);
+                if (string.IsNullOrEmpty(type))
+                    return BadRequest(new { success = false, message = "نوع کاربر مشخص نشده است" });
+
+                AppUser? user = null;
+
+                // ============================================================
+                // 🔥 انتخاب فیلد بر اساس نوع کاربر
+                // ============================================================
+                switch (type.ToLower())
+                {
+                    case "karmand":
+                        user = await _userManager.Users
+                            .FirstOrDefaultAsync(u => u.KarmandId == id);
+                        break;
+                    case "ostad":
+                        user = await _userManager.Users
+                            .FirstOrDefaultAsync(u => u.OstadId == id);
+                        break;
+                    case "daneshjoo":
+                        user = await _userManager.Users
+                            .FirstOrDefaultAsync(u => u.DaneshjooId == id);
+                        break;
+                    case "admin":
+                        user = await _userManager.Users
+                            .FirstOrDefaultAsync(u => u.AdminId == id);
+                        break;
+                    default:
+                        return BadRequest(new { success = false, message = "نوع کاربر نامعتبر است" });
+                }
 
                 if (user == null)
-                    return NotFound(new { success = false, message = "کاربری برای این کارمند یافت نشد" });
+                    return NotFound(new { success = false, message = $"کاربری برای این {type} یافت نشد" });
+
+                // ============================================================
+                // 🔥 دریافت اطلاعات نام و نام خانوادگی بر اساس نوع
+                // ============================================================
+                string? firstName = null;
+                string? lastName = null;
+
+                switch (type.ToLower())
+                {
+                    case "karmand":
+                        var karmand = await _context.Karmands
+                            .FirstOrDefaultAsync(k => k.Id == id);
+                        if (karmand != null)
+                        {
+                            firstName = karmand.Naam;
+                            lastName = karmand.NaameKhanevadeghi;
+                        }
+                        break;
+                    case "ostad":
+                        var ostad = await _context.Ostads
+                            .FirstOrDefaultAsync(o => o.Id == id);
+                        if (ostad != null)
+                        {
+                            firstName = ostad.Naam;
+                            lastName = ostad.NaamKhanevadegi;
+                        }
+                        break;
+                    case "daneshjoo":
+                        var daneshjoo = await _context.Daneshjoos
+                            .FirstOrDefaultAsync(d => d.Id == id);
+                        if (daneshjoo != null)
+                        {
+                            firstName = daneshjoo.Naam;
+                            lastName = daneshjoo.NaamKhanevadegi;
+                        }
+                        break;
+                    case "admin":
+                        var admin = await _context.MoshakhasatAdmins
+                            .FirstOrDefaultAsync(a => a.Id == id);
+                        if (admin != null)
+                        {
+                            firstName = admin.Naam;
+                            lastName = admin.NaameKhanevadeghi;
+                        }
+                        break;
+                }
 
                 return Ok(new
                 {
@@ -111,7 +186,10 @@ namespace PayamBack.Controllers.Identity
                         user.UserName,
                         user.Email,
                         user.Vazeeyat,
-                        user.VazeeyatMovaghat
+                        user.VazeeyatMovaghat,
+                        FirstName = firstName,
+                        LastName = lastName,
+                        UserType = type.ToLower()
                     }
                 });
             }
