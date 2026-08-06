@@ -51,8 +51,8 @@ namespace PayamBack.Filters
             // ============================================================
             var roleClaims = context.HttpContext.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
             var activeRoleName = roleClaims.FirstOrDefault();
-            Console.WriteLine($"🔍 [PermissionFilter] Role from JWT: {activeRoleName}");
-            Console.WriteLine($"🔍 [PermissionFilter] User: {context.HttpContext.User.Identity?.Name}");
+            //Console.WriteLine($"🔍 [PermissionFilter] Role from JWT: {activeRoleName}");
+            //Console.WriteLine($"🔍 [PermissionFilter] User: {context.HttpContext.User.Identity?.Name}");
 
             if (string.IsNullOrEmpty(activeRoleName))
             {

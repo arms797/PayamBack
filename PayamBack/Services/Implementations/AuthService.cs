@@ -161,6 +161,7 @@ namespace PayamBack.Services.Implementations
 
             return new LoginResponseDto
             {
+                Id=user.Id,
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 Username = user.UserName ?? "",
@@ -382,6 +383,50 @@ namespace PayamBack.Services.Implementations
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
             // ============================================================
+            // 🔥 دریافت نام و نام خانوادگی کاربر
+            // ============================================================
+            string firstName = "";
+            string lastName = "";
+
+            if (user.OstadId.HasValue)
+            {
+                var ostad = await _context.Ostads.FindAsync(user.OstadId.Value);
+                if (ostad != null)
+                {
+                    firstName = ostad.Naam ?? "";
+                    lastName = ostad.NaamKhanevadegi ?? "";
+                }
+            }
+            else if (user.KarmandId.HasValue)
+            {
+                var karmand = await _context.Karmands.FindAsync(user.KarmandId.Value);
+                if (karmand != null)
+                {
+                    firstName = karmand.Naam ?? "";
+                    lastName = karmand.NaameKhanevadeghi ?? "";
+                }
+            }
+            else if (user.DaneshjooId.HasValue)
+            {
+                var daneshjoo = await _context.Daneshjoos.FindAsync(user.DaneshjooId.Value);
+                if (daneshjoo != null)
+                {
+                    firstName = daneshjoo.Naam ?? "";
+                    lastName = daneshjoo.NaamKhanevadegi ?? "";
+                }
+            }
+            else
+            {
+                var admin = await _context.MoshakhasatAdmins
+                    .FirstOrDefaultAsync(m => m.Email == user.Email);
+                if (admin != null)
+                {
+                    firstName = admin.Naam ?? "";
+                    lastName = admin.NaameKhanevadeghi ?? "";
+                }
+            }
+
+            // ============================================================
             // 🔥 در پاسخ، MarkazId را از newRole بگیر
             // ============================================================
             return new LoginResponseDto
@@ -390,6 +435,8 @@ namespace PayamBack.Services.Implementations
                 RefreshToken = refreshToken,
                 Username = user.UserName ?? "",
                 Email = user.Email ?? "",
+                FirstName = firstName,   
+                LastName = lastName,     
                 CurrentRoleId = newRole?.Id,
                 CurrentRoleName = newRole?.Name ?? "",
                 MarkazId = newRole?.MarkazId ?? markazId,  // ← اگر null بود، از ورودی بگیر

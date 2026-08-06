@@ -20,14 +20,7 @@ namespace PayamBack.Data
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options)
         {
-        }    
-
-    /*public class AppDbContext : IdentityDbContext<AppUser, AppRole, int>
-    {
-        public AppDbContext(DbContextOptions<AppDbContext> options)
-            : base(options)
-        {
-        }*/
+        }
 
         public DbSet<Markaz> Markazes { get; set; }
         public DbSet<Ostad> Ostads { get; set; }
@@ -36,8 +29,6 @@ namespace PayamBack.Data
         public DbSet<MoshakhasatAdmin> MoshakhasatAdmins { get; set; }
         public DbSet<GrooheAmoozeshi> GrooheAmoozeshis { get; set; }
         public DbSet<Reshteh> Reshtehs { get; set; }
-        //public DbSet<Emkanat> Emkanats { get; set; }
-        //public DbSet<RoleEmkanat> RoleEmkanats { get; set; }
         public DbSet<BarnamehHaftegiOstad> BarnamehHaftegiOstads { get; set; }
         public DbSet<BarnamehTermiOstad> BarnamehTermiOstads { get; set; }
         public DbSet<SaatBargozariKelasha> SaatBargozariKelashas { get; set; }
@@ -49,6 +40,14 @@ namespace PayamBack.Data
         public DbSet<Menu> Menus { get; set; }
         public DbSet<OstadMadrak> OstadMadraks { get; set; }
 
+        // ============================================================
+        // 🔥 DbSetهای جدید
+        // ============================================================
+        public DbSet<Hamjavar> Hamjavars { get; set; }
+        public DbSet<Hamjavar1> Hamjavar1s { get; set; }
+        public DbSet<Faaliat> Faaliats { get; set; }
+        public DbSet<ElmiTerm> ElmiTerms { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -58,50 +57,32 @@ namespace PayamBack.Data
             {
                 entity.ToTable("AspNetUsers");
 
-                // ============================================================
-                // 🔥 رابطه یک‌به‌یک با Karmand
-                // ============================================================
                 entity.HasOne(e => e.Karmand)
-                    .WithOne()  // Karmand به AppUser اشاره نمی‌کند (یک‌طرفه)
+                    .WithOne()
                     .HasForeignKey<AppUser>(e => e.KarmandId)
                     .OnDelete(DeleteBehavior.NoAction);
 
-                // ============================================================
-                // 🔥 رابطه یک‌به‌یک با Ostad
-                // ============================================================
                 entity.HasOne(e => e.Ostad)
                     .WithOne()
                     .HasForeignKey<AppUser>(e => e.OstadId)
                     .OnDelete(DeleteBehavior.NoAction);
 
-                // ============================================================
-                // 🔥 رابطه یک‌به‌یک با Daneshjoo
-                // ============================================================
                 entity.HasOne(e => e.Daneshjoo)
                     .WithOne()
                     .HasForeignKey<AppUser>(e => e.DaneshjooId)
                     .OnDelete(DeleteBehavior.NoAction);
 
-                // ============================================================
-                // 🔥 رابطه یک‌به‌یک با MoshakhasatAdmin
-                // ============================================================
                 entity.HasOne(e => e.MoshakhasatAdmin)
                     .WithOne()
                     .HasForeignKey<AppUser>(e => e.AdminId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
-
             // ======== AppRole ========
             builder.Entity<AppRole>(entity =>
             {
                 entity.ToTable("AspNetRoles");
             });
-
-
-            // ======== AppUser ========
-            //builder.Entity<AppUser>()
-            //    .ToTable("AspNetUsers");
 
             // ======== AppRole ========
             builder.Entity<AppRole>()
@@ -112,65 +93,41 @@ namespace PayamBack.Data
             {
                 entity.ToTable("AspNetUserRoles");
 
-                // ============================================================
-                // 1️⃣ کلید اصلی
-                // ============================================================
                 entity.HasKey(e => e.Id);
 
-                // ============================================================
-                // 2️⃣ ایندکس یکتا
-                // ============================================================
                 entity.HasIndex(e => new { e.UserId, e.RoleId, e.MarkazId })
                     .IsUnique()
                     .HasDatabaseName("IX_AppUserRole_UserId_RoleId_MarkazId");
 
-                // ============================================================
-                // 3️⃣ ایندکس برای ParentUserRoleId
-                // ============================================================
                 entity.HasIndex(e => e.ParentUserRoleId)
                     .HasDatabaseName("IX_AppUserRole_ParentUserRoleId");
 
-                // ============================================================
-                // 4️⃣ 🔥 رابطه با AppUser (از سمت AppUserRole)
-                // ============================================================
                 entity.HasOne(e => e.User)
-                    .WithMany(u => u.AppUserRoles)  // ← AppUser دارای AppUserRoles است
+                    .WithMany(u => u.AppUserRoles)
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.NoAction);
 
-                // ============================================================
-                // 5️⃣ 🔥 رابطه با AppRole (از سمت AppUserRole)
-                // ============================================================
                 entity.HasOne(e => e.Role)
-                    .WithMany(r => r.AppUserRoles)  // ← AppRole دارای AppUserRoles است
+                    .WithMany(r => r.AppUserRoles)
                     .HasForeignKey(e => e.RoleId)
                     .OnDelete(DeleteBehavior.NoAction);
 
-                // ============================================================
-                // 6️⃣ رابطه با Markaz
-                // ============================================================
                 entity.HasOne(e => e.Markaz)
                     .WithMany(m => m.AppUserRoles)
                     .HasForeignKey(e => e.MarkazId)
                     .OnDelete(DeleteBehavior.NoAction);
 
-                // ============================================================
-                // 7️⃣ 🔥 رابطه خود ارجاعی
-                // ============================================================
                 entity.HasOne(e => e.ParentUserRole)
                     .WithMany(e => e.ChildUserRoles)
                     .HasForeignKey(e => e.ParentUserRoleId)
                     .OnDelete(DeleteBehavior.NoAction);
 
-                // ============================================================
-                // 8️⃣ ایندکس‌های کمکی
-                // ============================================================
                 entity.HasIndex(e => e.RoleId)
                     .HasDatabaseName("IX_AppUserRole_RoleId");
 
                 entity.HasIndex(e => e.UserId)
                     .HasDatabaseName("IX_AppUserRole_UserId");
-            });           
+            });
 
             // ======== Markaz ========
             builder.Entity<Markaz>()
@@ -188,8 +145,6 @@ namespace PayamBack.Data
                 .HasIndex(o => o.MarkazId)
                 .HasDatabaseName("IX_Ostad_MarkazId");
 
-
-
             builder.Entity<Ostad>()
                 .HasOne(o => o.Markaz)
                 .WithMany(m => m.Ostads)
@@ -201,12 +156,23 @@ namespace PayamBack.Data
                 .WithMany()
                 .HasForeignKey(o => o.MarkazAsliId)
                 .OnDelete(DeleteBehavior.NoAction);
-            // ============================================================
-            // 🔥 ایندکس ترکیبی برای OstadMadrak (جدید)
-            // ============================================================
-            builder.Entity<OstadMadrak>()
-                .HasIndex(om => new { om.OstadId, om.PishFarz })
-                .HasDatabaseName("IX_OstadMadrak_OstadId_PishFarz");
+
+            // ======== OstadMadrak ========
+            builder.Entity<OstadMadrak>(entity =>
+            {
+                entity.HasIndex(om => new { om.OstadId, om.PishFarz })
+                    .HasDatabaseName("IX_OstadMadrak_OstadId_PishFarz");
+
+                entity.HasOne(om => om.CreatedByUser)
+                    .WithMany()
+                    .HasForeignKey(om => om.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(om => om.ApprovedByUser)
+                    .WithMany()
+                    .HasForeignKey(om => om.ApprovedByUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
 
             // ======== BarnamehHaftegiOstad ========
             builder.Entity<BarnamehHaftegiOstad>()
@@ -327,32 +293,123 @@ namespace PayamBack.Data
                 .HasForeignKey(m => m.ParentId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // ============================================================
+            // 🔥 تنظیمات مدل‌های جدید
+            // ============================================================
 
-            /*
-            // ======== Emkanat ========
-            builder.Entity<Emkanat>()
-                .HasIndex(e => e.Code)
-                .IsUnique()
-                .HasDatabaseName("IX_Emkanat_Code");
+            // ======== Hamjavar ========
+            builder.Entity<Hamjavar>(entity =>
+            {
+                entity.HasKey(e => e.Id);
 
-            // ======== RoleEmkanat ========
-            builder.Entity<RoleEmkanat>()
-                .HasIndex(re => new { re.RoleId, re.EmkanatId })
-                .IsUnique()
-                .HasDatabaseName("IX_RoleEmkanat_RoleId_EmkanatId");
+                entity.HasOne(e => e.Ostad)
+                    .WithMany()
+                    .HasForeignKey(e => e.OstadId)
+                    .OnDelete(DeleteBehavior.NoAction);
 
-            builder.Entity<RoleEmkanat>()
-                .HasOne(re => re.Role)
-                .WithMany()
-                .HasForeignKey(re => re.RoleId)
-                .OnDelete(DeleteBehavior.NoAction);
+                entity.HasOne(e => e.Term)
+                    .WithMany()
+                    .HasForeignKey(e => e.TermCode)
+                    .OnDelete(DeleteBehavior.NoAction);
 
-            builder.Entity<RoleEmkanat>()
-                .HasOne(re => re.Emkanat)
-                .WithMany()
-                .HasForeignKey(re => re.EmkanatId)
-                .OnDelete(DeleteBehavior.NoAction);
-            */
+                entity.HasIndex(e => e.OstadId)
+                    .HasDatabaseName("IX_Hamjavar_OstadId");
+
+                entity.HasIndex(e => e.TermCode)
+                    .HasDatabaseName("IX_Hamjavar_TermCode");
+
+                entity.HasIndex(e => e.AkharinTaghaza)
+                    .HasDatabaseName("IX_Hamjavar_AkharinTaghaza");
+            });
+
+            // ======== Hamjavar1 ========
+            builder.Entity<Hamjavar1>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.Hamjavar)
+                    .WithOne()
+                    .HasForeignKey<Hamjavar1>(e => e.HamjavarId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.UserSabtKonandeh)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserIdSabtKonandeh)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.RoleSabtKonandeh)
+                    .WithMany()
+                    .HasForeignKey(e => e.RoleIdSabtKonandeh)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.Markaz)
+                    .WithMany()
+                    .HasForeignKey(e => e.MarkazId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.Faaliat)
+                    .WithMany()
+                    .HasForeignKey(e => e.FaaliatId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasIndex(e => e.HamjavarId)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Hamjavar1_HamjavarId");
+
+                entity.HasIndex(e => e.FaaliatId)
+                    .HasDatabaseName("IX_Hamjavar1_FaaliatId");
+            });
+
+            // ======== Faaliat ========
+            builder.Entity<Faaliat>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasIndex(e => e.Onvan)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Faaliat_Onvan");
+
+                entity.HasIndex(e => e.Vazeeat)
+                    .HasDatabaseName("IX_Faaliat_Vazeeat");
+            });
+
+            // ======== ElmiTerm ========
+            builder.Entity<ElmiTerm>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.Term)
+                    .WithMany()
+                    .HasForeignKey(e => e.TermCode)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.UserSabtKonandeh)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserIdSabtKonandeh)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.RoleSabtKonandeh)
+                    .WithMany()
+                    .HasForeignKey(e => e.RoleIdSabtKonandeh)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.ApprovedByUser)
+                    .WithMany()
+                    .HasForeignKey(e => e.ApprovedByUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasIndex(e => new { e.UserId, e.TermCode })
+                    .IsUnique()
+                    .HasDatabaseName("IX_ElmiTerm_UserId_TermCode");
+
+                entity.HasIndex(e => e.ApproveStatus)
+                    .HasDatabaseName("IX_ElmiTerm_Approve");
+            });
         }
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PayamBack.Data;
 
@@ -11,9 +12,11 @@ using PayamBack.Data;
 namespace PayamBack.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260802100954_AddHamjavarModels")]
+    partial class AddHamjavarModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1313,24 +1316,11 @@ namespace PayamBack.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("ApproveStatus")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ApproveTozihat")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ApprovedByRoleMarkaz")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<bool?>("Approve")
+                        .HasColumnType("bit");
 
                     b.Property<int?>("ApprovedByUserId")
                         .HasColumnType("int");
-
-                    b.Property<string>("FilePath")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool?>("FullTime")
                         .HasColumnType("bit");
@@ -1345,7 +1335,7 @@ namespace PayamBack.Migrations
                     b.Property<int?>("RoleIdSabtKonandeh")
                         .HasColumnType("int");
 
-                    b.Property<string>("TedadSaatMovazafi")
+                    b.Property<string>("TedadVahedMovazafi")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -1361,7 +1351,7 @@ namespace PayamBack.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ApproveStatus")
+                    b.HasIndex("Approve")
                         .HasDatabaseName("IX_ElmiTerm_Approve");
 
                     b.HasIndex("ApprovedByUserId");

@@ -5,6 +5,7 @@
     /// </summary>
     public class LoginResponseDto
     {
+        public int Id { get; set; } 
         public string AccessToken { get; set; } = string.Empty;      // توکن اصلی JWT
         public string RefreshToken { get; set; } = string.Empty;     // برای تمدید توکن
         public string Username { get; set; } = string.Empty;         // نام کاربری

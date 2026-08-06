@@ -50,7 +50,13 @@ namespace PayamBack.Controllers.Core
                 return (user, null, null, null);
 
             var activeRole = await _context.Set<AppUserRole>()
-                .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
+                .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id &&
+                ur.RolePishFarz==true);
+            if(activeRole== null)
+            {
+                activeRole = await _context.Set<AppUserRole>()
+                    .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
+            }
 
             Markaz? markaz = null;
             if (activeRole?.MarkazId != null)
@@ -128,8 +134,7 @@ namespace PayamBack.Controllers.Core
             [FromQuery] int? ostanId = null,
             [FromQuery] int? markazId = null,
             [FromQuery] int? noeHamkari = null,
-            [FromQuery] bool? vazeeat = null,
-            [FromQuery] bool? vazeeatMovaghat = null)
+            [FromQuery] int? vazeeat = null)
         {
             try
             {
@@ -145,7 +150,7 @@ namespace PayamBack.Controllers.Core
                 var query = from o in _context.Ostads
                             join u in _context.Users on o.Id equals u.OstadId into userJoin
                             from u in userJoin.DefaultIfEmpty()
-                            where o.MarkazId.HasValue && accessibleMarkazIds.Contains(o.MarkazId.Value)
+                            where o.MarkazId.HasValue //&& accessibleMarkazIds.Contains(o.MarkazId.Value)
                             select new { Ostad = o, User = u };
 
                 if (!string.IsNullOrEmpty(search))
@@ -193,24 +198,24 @@ namespace PayamBack.Controllers.Core
                 // ============================================================
                 // 🔥 فیلتر بر اساس وضعیت از AppUser (نه از Ostad)
                 // ============================================================
-                if (vazeeat.HasValue)
+               
+                if (vazeeat == 1)
                 {
-                    if (vazeeat == true)
-                    {
-                        query = query.Where(x => x.User != null &&
-                            (x.User.Vazeeyat == true && x.User.VazeeyatMovaghat == true));
-                    }
-                    else
-                    {
-                        query = query.Where(x => x.User != null &&
-                            (x.User.Vazeeyat == vazeeat.Value || x.User.VazeeyatMovaghat == vazeeat.Value));
-                    }
-
+                    query = query.Where(x => x.User != null &&
+                        (x.User.Vazeeyat == true && x.User.VazeeyatMovaghat == true));
+                }
+                else if(vazeeat==2)
+                {
+                    query = query.Where(x => x.User != null &&
+                        (x.User.Vazeeyat == false || x.User.VazeeyatMovaghat == false));
                 }
                 else
                 {
-                    query = query.Where(x => x.User == null || x.User.Vazeeyat == true);
+                    query = query.Where(x => x.User != null );
                 }
+
+
+
 
                 var totalCount = await query.CountAsync();
 
@@ -341,6 +346,8 @@ namespace PayamBack.Controllers.Core
                 var existingUser = await _userManager.FindByNameAsync(dto.CodeOstadi);
                 if (existingUser != null)
                     return BadRequest(new { success = false, message = "کد استادی قبلاً به عنوان نام کاربری ثبت شده است" });
+                
+                var shomareMelli = NormalizeShomareMelli(dto.ShomareMelli);
 
                 var ostad = new Ostad
                 {
@@ -353,7 +360,7 @@ namespace PayamBack.Controllers.Core
                     NaamPedar = dto.NaamPedar,
                     TarikhTavalod = dto.TarikhTavalod,
                     ShomareShenasname = dto.ShomareShenasname,
-                    ShomareMelli = dto.ShomareMelli,
+                    ShomareMelli = shomareMelli,
                     Email = dto.Email,
                     Mobile = dto.Mobile,
                     Mobile2 = dto.Mobile2,
@@ -451,6 +458,7 @@ namespace PayamBack.Controllers.Core
             }
         }
 
+        
         // ============================================================
         // 4️⃣ آپلود گروهی اساتید از Excel (23 ستون)
         // ============================================================
@@ -580,6 +588,11 @@ namespace PayamBack.Controllers.Core
                         var maghtaText = rowData[21];
                         var mahalAkhz = rowData[22];
 
+                        // ============================================================
+                        // 🔥 نرمال‌سازی کد ملی
+                        // ============================================================
+                        shomareMelli = NormalizeShomareMelli(shomareMelli);
+
                         processedItem.CodeOstadi = codeOstadi;
                         processedItem.ShomareMelli = shomareMelli;
 
@@ -664,6 +677,10 @@ namespace PayamBack.Controllers.Core
                         int? grooheAmoozeshiId = null;
                         if (!string.IsNullOrEmpty(codeDaneshkadeh) && !string.IsNullOrEmpty(codeGroohAmoozeshi))
                         {
+                            if (codeDaneshkadeh.Length == 1)
+                                codeDaneshkadeh = "0" + codeDaneshkadeh;
+                            if (codeGroohAmoozeshi.Length == 1)
+                                codeGroohAmoozeshi = "0" + codeGroohAmoozeshi;
                             var key = codeDaneshkadeh + "_" + codeGroohAmoozeshi;
                             if (!allGroohes.TryGetValue(key, out int gId))
                             {
@@ -749,7 +766,8 @@ namespace PayamBack.Controllers.Core
                             Maghta = maghtaValue,
                             MahalAkhz = mahalAkhz,
                             GrooheAmoozeshiId = grooheAmoozeshiId,
-                            PishFarz = true
+                            PishFarz = true,
+                            IsApproved=true
                         };
 
                         var user = new AppUser
@@ -870,8 +888,12 @@ namespace PayamBack.Controllers.Core
                         {
                             errorWorksheet.Cell(row + 2, col + 1).Value = rowData[col];
                         }
-                        // ستون آخر: توضیح خطا
-                        var errorMsg = errorDetails.FirstOrDefault(e => e.RowNumber == row + 2)?.Message ?? "خطای ناشناخته";
+
+                        // ============================================================
+                        // 🔥 اصلاح: استفاده از errorDetails با اندیس row (نه جستجو با RowNumber)
+                        // ============================================================
+                        var errorDetail = errorDetails[row];
+                        var errorMsg = errorDetail?.Message ?? "خطای ناشناخته";
                         errorWorksheet.Cell(row + 2, headers.Count + 1).Value = errorMsg;
                     }
 
@@ -884,7 +906,6 @@ namespace PayamBack.Controllers.Core
                     errorWorkbook.SaveAs(ms);
                     errorFileBytes = ms.ToArray();
                 }
-
                 // ============================================================
                 // 🔥 پاسخ نهایی
                 // ============================================================
@@ -923,6 +944,39 @@ namespace PayamBack.Controllers.Core
             {
                 return StatusCode(500, new { success = false, message = "خطا در آپلود فایل", error = ex.Message });
             }
+        }
+
+        // ============================================================
+        // 🔥 نرمال‌سازی کد ملی (پر کردن صفرهای ابتدایی)
+        // ============================================================
+        private string NormalizeShomareMelli(string? shomareMelli)
+        {
+            if (string.IsNullOrEmpty(shomareMelli))
+                return string.Empty;
+
+            // 1️⃣ حذف فضاهای خالی
+            shomareMelli = shomareMelli.Trim();
+
+            // 2️⃣ اگر رشته خالی شد
+            if (string.IsNullOrEmpty(shomareMelli))
+                return string.Empty;
+
+            // 3️⃣ اگر فقط شامل اعداد است
+            if (System.Text.RegularExpressions.Regex.IsMatch(shomareMelli, @"^\d+$"))
+            {
+                // 4️⃣ اگر طول کمتر از ۱۰ رقم است، صفرهای ابتدایی را اضافه کن
+                if (shomareMelli.Length < 10)
+                {
+                    shomareMelli = shomareMelli.PadLeft(10, '0');
+                }
+                // 5️⃣ اگر طول بیشتر از ۱۰ رقم است، ۱۰ رقم اول را بگیر
+                else if (shomareMelli.Length > 10)
+                {
+                    shomareMelli = shomareMelli.Substring(0, 10);
+                }
+            }
+
+            return shomareMelli;
         }
 
         public class BulkUploadResult
@@ -1011,7 +1065,8 @@ namespace PayamBack.Controllers.Core
 
             await _context.SaveChangesAsync();
         }
-
+        
+        
         // ============================================================
         // 5️⃣ ویرایش استاد
         // ============================================================
@@ -1078,22 +1133,82 @@ namespace PayamBack.Controllers.Core
                 if (codeRole != 1)
                     return Forbid();
 
-                var ostad = await _context.Ostads.FindAsync(id);
+                // ============================================================
+                // 1️⃣ پیدا کردن استاد
+                // ============================================================
+                var ostad = await _context.Ostads
+                    .Include(o => o.OstadMadraks)  // ← مدارک را هم بارگذاری کن
+                    .FirstOrDefaultAsync(o => o.Id == id);
+
                 if (ostad == null)
                     return NotFound(new { success = false, message = "استاد یافت نشد" });
 
-                var user = await _userManager.Users.FirstOrDefaultAsync(u => u.OstadId == id);
-                if (user != null)
-                    await _userManager.DeleteAsync(user);
+                // ============================================================
+                // 2️⃣ پیدا کردن کاربر مرتبط
+                // ============================================================
+                var user = await _userManager.Users
+                    .FirstOrDefaultAsync(u => u.OstadId == id);
 
-                _context.Ostads.Remove(ostad);
-                await _context.SaveChangesAsync();
+                // ============================================================
+                // 3️⃣ استفاده از تراکنش برای حذف همه وابسته‌ها
+                // ============================================================
+                using var transaction = await _context.Database.BeginTransactionAsync();
 
-                return Ok(new { success = true, message = "استاد و کاربر مربوطه حذف شد" });
+                try
+                {
+                    // 🔥 1️⃣ حذف مدارک استاد (OstadMadrak)
+                    if (ostad.OstadMadraks != null && ostad.OstadMadraks.Any())
+                    {
+                        _context.OstadMadraks.RemoveRange(ostad.OstadMadraks);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    // 🔥 2️⃣ اگر کاربر وجود دارد، نقش‌های او را حذف کن
+                    if (user != null)
+                    {
+                        // حذف نقش‌های کاربر از AppUserRole
+                        var userRoles = await _context.Set<AppUserRole>()
+                            .Where(ur => ur.UserId == user.Id)
+                            .ToListAsync();
+
+                        if (userRoles.Any())
+                        {
+                            _context.Set<AppUserRole>().RemoveRange(userRoles);
+                            await _context.SaveChangesAsync();
+                        }
+
+                        // حذف خود کاربر
+                        var deleteResult = await _userManager.DeleteAsync(user);
+                        if (!deleteResult.Succeeded)
+                        {
+                            throw new Exception($"خطا در حذف کاربر: {string.Join(", ", deleteResult.Errors.Select(e => e.Description))}");
+                        }
+                    }
+
+                    // 🔥 3️⃣ حذف استاد
+                    _context.Ostads.Remove(ostad);
+                    await _context.SaveChangesAsync();
+
+                    // ✅ تراکنش را تایید کن
+                    await transaction.CommitAsync();
+
+                    return Ok(new { success = true, message = "استاد، کاربر و مدارک مربوطه با موفقیت حذف شدند" });
+                }
+                catch (Exception ex)
+                {
+                    // ❌ در صورت خطا، تراکنش را لغو کن
+                    await transaction.RollbackAsync();
+                    throw;
+                }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = "خطا در حذف استاد", error = ex.Message });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در حذف استاد",
+                    error = ex.Message
+                });
             }
         }
 

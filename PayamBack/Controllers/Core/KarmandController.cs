@@ -48,9 +48,16 @@ namespace PayamBack.Controllers.Core
                 return (user, null, null, null);
 
             // دریافت مرکز نقش فعال
+            //var activeRole = await _context.Set<AppUserRole>()
+            //    .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id &&);
             var activeRole = await _context.Set<AppUserRole>()
-                .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
-
+                .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id &&
+                ur.RolePishFarz == true);
+            if (activeRole == null)
+            {
+                activeRole = await _context.Set<AppUserRole>()
+                    .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
+            }
             Markaz? markaz = null;
             if (activeRole?.MarkazId != null)
             {
@@ -155,7 +162,7 @@ namespace PayamBack.Controllers.Core
             [FromQuery] string? search = null,
             [FromQuery] int? ostanId = null,
             [FromQuery] int? markazId = null,
-            [FromQuery] bool? vazeeat = null)
+            [FromQuery] int? vazeeat = 3)
         {
             try
             {
@@ -177,7 +184,7 @@ namespace PayamBack.Controllers.Core
                 var query = from k in _context.Karmands
                             join u in _context.Users on k.Id equals u.KarmandId into userJoin
                             from u in userJoin.DefaultIfEmpty()
-                            where k.MarkazId.HasValue && accessibleMarkazIds.Contains(k.MarkazId.Value)
+                            where k.MarkazId.HasValue //&& accessibleMarkazIds.Contains(k.MarkazId.Value)
                             select new { Karmand = k, User = u };
 
                 // ============================================================
@@ -213,24 +220,28 @@ namespace PayamBack.Controllers.Core
                 // ============================================================
                 // 4️⃣ فیلتر بر اساس وضعیت
                 // ============================================================
-                if (vazeeat.HasValue)
-                {
-                    if (vazeeat == true)
+                //if (vazeeat.HasValue)
+                //{
+                    if (vazeeat == 1)
                     {
                         query = query.Where(x => x.User != null &&
                             (x.User.Vazeeyat == true && x.User.VazeeyatMovaghat == true));
                     }
-                    else
+                    else if(vazeeat==2)
                     {
                         query = query.Where(x => x.User != null &&
-                            (x.User.Vazeeyat == vazeeat.Value || x.User.VazeeyatMovaghat == vazeeat.Value));
+                            (x.User.Vazeeyat == false || x.User.VazeeyatMovaghat == false));
                     }
-                    
-                }
                 else
                 {
-                    query = query.Where(x => x.User == null || x.User.Vazeeyat == true);
+                    query = query.Where(x => x.User != null);
                 }
+
+                //}
+                //else
+                //{
+                //query = query.Where(x => x.User == null || x.User.Vazeeyat == true);
+                //}
 
                 // ============================================================
                 // 5️⃣ محاسبه تعداد کل
@@ -527,9 +538,6 @@ namespace PayamBack.Controllers.Core
         {
             try
             {
-                // ============================================================
-                // 🔥 بررسی ادمین سامانه بودن (CodeRole == 1)
-                // ============================================================
                 var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
@@ -537,9 +545,6 @@ namespace PayamBack.Controllers.Core
                 if (codeRole != 1)
                     return Forbid();
 
-                // ============================================================
-                // 2️⃣ حذف کارمند
-                // ============================================================
                 var karmand = await _context.Karmands.FindAsync(id);
                 if (karmand == null)
                     return NotFound(new { success = false, message = "کارمند یافت نشد" });
@@ -547,15 +552,38 @@ namespace PayamBack.Controllers.Core
                 var user = await _userManager.Users
                     .FirstOrDefaultAsync(u => u.KarmandId == id);
 
-                if (user != null)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
                 {
-                    await _userManager.DeleteAsync(user);
+                    // حذف نقش‌های کاربر
+                    if (user != null)
+                    {
+                        var userRoles = await _context.Set<AppUserRole>()
+                            .Where(ur => ur.UserId == user.Id)
+                            .ToListAsync();
+
+                        if (userRoles.Any())
+                        {
+                            _context.Set<AppUserRole>().RemoveRange(userRoles);
+                            await _context.SaveChangesAsync();
+                        }
+
+                        await _userManager.DeleteAsync(user);
+                    }
+
+                    _context.Karmands.Remove(karmand);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+
+                    return Ok(new { success = true, message = "کارمند و کاربر مربوطه حذف شد" });
                 }
-
-                _context.Karmands.Remove(karmand);
-                await _context.SaveChangesAsync();
-
-                return Ok(new { success = true, message = "کارمند و کاربر مربوطه حذف شد" });
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
             }
             catch (Exception ex)
             {

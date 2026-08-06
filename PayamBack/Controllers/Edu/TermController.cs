@@ -35,6 +35,13 @@ namespace PayamBack.Controllers.Edu
                         CodeTerm = t.CodeTerm ?? "",
                         OnvanTerm = t.OnvanTerm ?? "",
                         TermJari = t.TermJari,
+                        TarikheDastrasi = t.TarikheDastrasi,
+                        TarikheEraeeDars = t.TarikheEraeeDars,
+                        TarikhePayanDars = t.TarikhePayanDars,
+                        TarikheShorooClass = t.TarikheShorooClass,
+                        TarikhePayanClass = t.TarikhePayanClass,
+                        TarikheShorooMojavezMarakez = t.TarikheShorooMojavezMarakez,
+                        TarikhePayanMojavezMarakez = t.TarikhePayanMojavezMarakez,
                         Vazeeyat = t.Vazeeyat ?? false
                     })
                     .ToListAsync();
@@ -258,6 +265,18 @@ namespace PayamBack.Controllers.Edu
                     });
                 }
 
+                // ============================================================
+                // 🔥 جلوگیری از حذف ترم جاری (فعال)
+                // ============================================================
+                if (term.Vazeeyat == true)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "حذف ترم جاری امکان‌پذیر نمی‌باشد. ابتدا ترم جاری را غیرفعال کنید."
+                    });
+                }
+
                 _context.Terms.Remove(term);
                 await _context.SaveChangesAsync();
 
@@ -294,8 +313,14 @@ namespace PayamBack.Controllers.Edu
                         CodeTerm = t.CodeTerm ?? "",
                         OnvanTerm = t.OnvanTerm ?? "",
                         TermJari = t.TermJari,
+                        TarikheDastrasi=t.TarikheDastrasi,
+                        TarikheEraeeDars=t.TarikheEraeeDars,
+                        TarikhePayanDars=t.TarikhePayanDars,
                         TarikheShorooClass = t.TarikheShorooClass,
-                        TarikhePayanClass = t.TarikhePayanClass
+                        TarikhePayanClass = t.TarikhePayanClass,
+                        TarikheShorooMojavezMarakez=t.TarikheShorooMojavezMarakez,
+                        TarikhePayanMojavezMarakez=t.TarikhePayanMojavezMarakez,
+                        Vazeeyat= t.Vazeeyat
                     })
                     .FirstOrDefaultAsync();
 
