@@ -288,9 +288,15 @@ namespace PayamBack.Controllers.Schedule
                 if (faaliat == null)
                     return NotFound(new { success = false, message = "فعالیت یافت نشد" });
 
-                // بررسی استفاده شدن در Hamjavar1
-                var isUsed = await _context.Set<Hamjavar1>()
-                    .AnyAsync(h => h.FaaliatId == id);
+                // ============================================================
+                // 🔥 بررسی استفاده شدن با متد کمکی
+                // ============================================================
+                var allHamjavar1 = await _context.Set<Hamjavar1>()
+                    .Where(h => !string.IsNullOrEmpty(h.FaaliatIds))
+                    .ToListAsync();
+
+                var isUsed = allHamjavar1
+                    .Any(h => ConvertFaaliatIdsToList(h.FaaliatIds).Contains(id));
 
                 if (isUsed)
                     return BadRequest(new
@@ -318,6 +324,16 @@ namespace PayamBack.Controllers.Schedule
                 });
             }
         }
-        
+        private List<int> ConvertFaaliatIdsToList(string? faaliatIds)
+        {
+            if (string.IsNullOrEmpty(faaliatIds))
+                return new List<int>();
+
+            return faaliatIds
+                .Split('|', StringSplitOptions.RemoveEmptyEntries)
+                .Select(int.Parse)
+                .ToList();
+        }
+
     }
 }

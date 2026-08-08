@@ -335,29 +335,16 @@ namespace PayamBack.Data
                 entity.HasOne(e => e.UserSabtKonandeh)
                     .WithMany()
                     .HasForeignKey(e => e.UserIdSabtKonandeh)
-                    .OnDelete(DeleteBehavior.NoAction);
-
-                entity.HasOne(e => e.RoleSabtKonandeh)
-                    .WithMany()
-                    .HasForeignKey(e => e.RoleIdSabtKonandeh)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.NoAction);                
 
                 entity.HasOne(e => e.Markaz)
                     .WithMany()
                     .HasForeignKey(e => e.MarkazId)
-                    .OnDelete(DeleteBehavior.NoAction);
-
-                entity.HasOne(e => e.Faaliat)
-                    .WithMany()
-                    .HasForeignKey(e => e.FaaliatId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.NoAction);                
 
                 entity.HasIndex(e => e.HamjavarId)
                     .IsUnique()
-                    .HasDatabaseName("IX_Hamjavar1_HamjavarId");
-
-                entity.HasIndex(e => e.FaaliatId)
-                    .HasDatabaseName("IX_Hamjavar1_FaaliatId");
+                    .HasDatabaseName("IX_Hamjavar1_HamjavarId");                
             });
 
             // ======== Faaliat ========

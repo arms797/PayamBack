@@ -25,7 +25,7 @@ namespace PayamBack.Models.Schedule
         public int? UserIdSabtKonandeh { get; set; }
 
         /// <summary>شناسه نقش ثبت‌کننده</summary>
-        public int? RoleIdSabtKonandeh { get; set; }
+        public string? RoleMarkazSabtKonandeh { get; set; }
 
         /// <summary>شناسه مرکز</summary>
         public int? MarkazId { get; set; }
@@ -33,8 +33,12 @@ namespace PayamBack.Models.Schedule
         /// <summary>داخل/خارج استان (true = داخل استان)</summary>
         public bool? InOstan { get; set; }
 
-        /// <summary>شناسه فعالیت‌ها</summary>
-        public int? FaaliatId { get; set; }
+        /// <summary>
+        /// شناسه فعالیت‌ها با جداکننده '|' 
+        /// مثال: "1|3|5" یعنی فعالیت‌های با Id 1, 3, 5
+        /// </summary>
+        [MaxLength(50)]
+        public string? FaaliatIds { get; set; }
 
         // ============================================================
         // تعداد روزهای بررسی در هر مرحله
@@ -60,13 +64,7 @@ namespace PayamBack.Models.Schedule
         [ForeignKey(nameof(UserIdSabtKonandeh))]
         public virtual AppUser? UserSabtKonandeh { get; set; }
 
-        [ForeignKey(nameof(RoleIdSabtKonandeh))]
-        public virtual AppRole? RoleSabtKonandeh { get; set; }
-
         [ForeignKey(nameof(MarkazId))]
         public virtual Markaz? Markaz { get; set; }
-
-        [ForeignKey(nameof(FaaliatId))]
-        public virtual Faaliat? Faaliat { get; set; }
     }
 }

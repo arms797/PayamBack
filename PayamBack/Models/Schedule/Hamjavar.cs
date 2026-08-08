@@ -1,5 +1,7 @@
 ﻿using PayamBack.Models.Core;
 using PayamBack.Models.Edu;
+using PayamBack.Models.Identity;
+using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -15,8 +17,11 @@ namespace PayamBack.Models.Schedule
         // ============================================================
         public int OstadId { get; set; }            // کلید خارجی به Ostad
         public string? TermCode { get; set; }       //  ترم
+        public int? UserIdSabtKonandeh { get; set; }    //Id کاربر ایجاد کننده
+        public string? RoleMarkazSabtKonandeh {  get; set; }// نقش و مرکز کاربر ایجاد کننده
 
         // اطلاعات تدریس
+        public decimal? VahedMovazaf {  get; set; }     // تعداد واحد معادل موظف 
         public decimal? TedadVahedMahalKhedmat { get; set; }    // تعداد واحد در محل خدمت
         public decimal? TedadVahedHamjavar { get; set; }        // فعالیت حضوری در مراکز دیگر
         public decimal? TedadVahedMajazi { get; set; }          // فعالیت مجازی در مراکز دیگر
@@ -40,6 +45,8 @@ namespace PayamBack.Models.Schedule
         public int? AmaliatRaeis { get; set; }             // عملیات
         public string? NazarRaeis { get; set; }            // نظر
         public DateTime? TarikhErsalRaeis { get; set; }    // تاریخ ارسال به مرحله بعد
+        public int? UserIdRaeis { get; set; }    //Id رییس تایید کننده
+        public string? RoleMarkazRaeis { get; set; }// نقش و مرکز کاربر تایید کننده در مرکز
 
         // ============================================================
         // مرحله 3: مدیر خدمات آموزشی استان
@@ -50,6 +57,8 @@ namespace PayamBack.Models.Schedule
         public int? AmaliatKhadamat { get; set; }              // عملیات
         public string? NazarKhadamat { get; set; }             // نظر
         public DateTime? TarikhErsalKhadamat { get; set; }     // تاریخ ارسال به مرحله بعد
+        public int? UserIdKhadamatOstan { get; set; }    //Id خدمات آموزشی استان تایید کننده
+        public string? RoleMarkazKhadamatOstan { get; set; }// نقش و مرکز کاربر تایید کننده خدمات اموزشی
 
         // ============================================================
         // مرحله 4: معاونت آموزشی استان
@@ -60,7 +69,8 @@ namespace PayamBack.Models.Schedule
         public int? AmaliatMoaven { get; set; }                // عملیات
         public string? NazarMoaven { get; set; }               // نظر
         public DateTime? TarikhErsalMoaven { get; set; }       // تاریخ نظر نهایی
-
+        public int? UserIdApproved { get; set; }    //Id معاون آموزشی استان تایید کننده
+        public string? RoleMarkazApproved { get; set; }// نقش و مرکز کاربر تایید کننده معاون استان
         // ============================================================
         // وضعیت نهایی
         // ============================================================
@@ -75,5 +85,7 @@ namespace PayamBack.Models.Schedule
 
         [ForeignKey(nameof(TermCode))]
         public virtual Term? Term { get; set; }
+
+        public virtual Collection<Hamjavar1> Hamjavar1s {  get; set; }
     }
 }

@@ -2,9 +2,9 @@
 
 namespace PayamBack.DTOs.Schedule.Hamjavar
 {
-    public class HamjavarDeleteDto
+    public class HamjavarConfirmDto
     {
-        [Required]
-        public int Id { get; set; }
+        [MaxLength(100)]
+        public string? Nazar { get; set; }
     }
-}//
+}
