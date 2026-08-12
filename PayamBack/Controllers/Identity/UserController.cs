@@ -360,6 +360,7 @@ namespace PayamBack.Controllers.Identity
         // 4️⃣ دریافت اطلاعات یک کاربر با شناسه
         // ============================================================
         [HttpGet("{userId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetUserById(int userId)
         {
             try

@@ -37,6 +37,7 @@ namespace PayamBack.Controllers.Schedule
         // دریافت لیست کامل فعالیت‌ها (بدون فیلتر و صفحه‌بندی)
         // ============================================================
         [HttpGet("list")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetList()
         {
             try

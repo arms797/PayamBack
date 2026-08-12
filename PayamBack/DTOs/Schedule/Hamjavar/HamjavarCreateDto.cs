@@ -22,15 +22,12 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
         [MaxLength(200)]
         public string? ShahrZendegi { get; set; }
 
-        [MaxLength(500)]
-        public string? UploadElmi { get; set; }
+        public IFormFile? UploadElmi { get; set; }
 
-        /// <summary>نظر استاد هنگام تایید نهایی (اختیاری)</summary>
-        [MaxLength(1000)]
-        public string? NazarElmi { get; set; }
-
-        /// <summary>لیست جزئیات تکمیلی (چندین رکورد Hamjavar1)</summary>
-        public List<Hamjavar1CreateDto> Hamjavar1s { get; set; } = new();
+        /// <summary>
+        /// لیست جزئیات تکمیلی (به صورت JSON String)
+        /// </summary>
+        public string? Hamjavar1sJson { get; set; }
     }
 
     public class Hamjavar1CreateDto
@@ -40,10 +37,6 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
 
         public bool? InOstan { get; set; }
 
-        /// <summary>
-        /// لیست شناسه فعالیت‌ها (چندین فعالیت با جداکننده '|' ذخیره می‌شود)
-        /// </summary>
-        [Required(ErrorMessage = "حداقل یک فعالیت باید انتخاب شود")]
         public List<int> FaaliatIds { get; set; } = new();
 
         public int? TedadRoozElmi { get; set; }

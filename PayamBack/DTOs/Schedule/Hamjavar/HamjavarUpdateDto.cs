@@ -1,12 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// DTOs/Schedule/Hamjavar/HamjavarUpdateDto.cs
+using System.ComponentModel.DataAnnotations;
 
 namespace PayamBack.DTOs.Schedule.Hamjavar
 {
     public class HamjavarUpdateDto
     {
-        [Required]
-        public int Id { get; set; }
-
         public decimal? VahedMovazaf { get; set; }
         public decimal? TedadVahedMahalKhedmat { get; set; }
         public decimal? TedadVahedHamjavar { get; set; }
@@ -18,11 +16,7 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
         [MaxLength(200)]
         public string? ShahrZendegi { get; set; }
 
-        [MaxLength(500)]
-        public string? UploadElmi { get; set; }
-
-        [MaxLength(1000)]
-        public string? NazarElmi { get; set; }
+        public IFormFile? UploadElmi { get; set; }
 
         /// <summary>لیست جزئیات تکمیلی برای ویرایش</summary>
         public List<Hamjavar1UpdateDto>? Hamjavar1s { get; set; }
@@ -30,8 +24,7 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
 
     public class Hamjavar1UpdateDto
     {
-        [Required]
-        public int Id { get; set; }
+        public int Id { get; set; }  // 0 برای موارد جدید
 
         public int? MarkazId { get; set; }
         public bool? InOstan { get; set; }

@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
@@ -6,12 +8,12 @@ using PayamBack.DTOs.Core.Ostad;
 using PayamBack.Models.Core;
 using PayamBack.Models.Identity;
 using System.Security.Claims;
-using ClosedXML.Excel;  
 
 namespace PayamBack.Controllers.Core
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class OstadController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -276,6 +278,7 @@ namespace PayamBack.Controllers.Core
         // 2️⃣ دریافت یک استاد
         // ============================================================
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
         {
             try

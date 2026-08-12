@@ -12,18 +12,12 @@
         public decimal TedadVahedHamjavar { get; set; }
         public decimal TedadVahedMajazi { get; set; }
 
-        /// <summary>وضعیت نهایی (کد)</summary>
+        // وضعیت نهایی (محاسبه شده از Nazarها)
         public string AkharinTaghaza { get; set; } = string.Empty;
-
-        /// <summary>وضعیت نهایی (نمایشی)</summary>
         public string AkharinTaghazaDisplay { get; set; } = string.Empty;
+        public string AkharinBarrasi { get; set; } = string.Empty;
 
-        /// <summary>آخرین مرحله بررسی شده</summary>
-        public string KharinBarrasi { get; set; } = string.Empty;
-
-        /// <summary>آیا Hamjavar1 دارد؟</summary>
         public bool HasHamjavar1s { get; set; }
-
         public DateTime? CreatedAt { get; set; }
     }
 }

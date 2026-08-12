@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PayamBack.Data;
 
@@ -11,9 +12,11 @@ using PayamBack.Data;
 namespace PayamBack.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260810095600_FixHamjavar1Relation")]
+    partial class FixHamjavar1Relation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1444,20 +1447,38 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AKharinBarrasi")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AkharinTaghaza")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("AmaliatElmi")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("AmaliatKhadamat")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("AmaliatMoaven")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("AmaliatRaeis")
+                        .HasColumnType("int");
+
                     b.Property<string>("Dalil")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("NazarElmi")
-                        .HasColumnType("int");
+                    b.Property<string>("NazarElmi")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("NazarKhadamat")
-                        .HasColumnType("int");
+                    b.Property<string>("NazarKhadamat")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("NazarMoaven")
-                        .HasColumnType("int");
+                    b.Property<string>("NazarMoaven")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("NazarRaeis")
-                        .HasColumnType("int");
+                    b.Property<string>("NazarRaeis")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("OstadId")
                         .HasColumnType("int");
@@ -1547,6 +1568,9 @@ namespace PayamBack.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AkharinTaghaza")
+                        .HasDatabaseName("IX_Hamjavar_AkharinTaghaza");
 
                     b.HasIndex("OstadId")
                         .HasDatabaseName("IX_Hamjavar_OstadId");

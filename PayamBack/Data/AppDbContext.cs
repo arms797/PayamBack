@@ -318,8 +318,7 @@ namespace PayamBack.Data
                 entity.HasIndex(e => e.TermCode)
                     .HasDatabaseName("IX_Hamjavar_TermCode");
 
-                entity.HasIndex(e => e.AkharinTaghaza)
-                    .HasDatabaseName("IX_Hamjavar_AkharinTaghaza");
+                
             });
 
             // ======== Hamjavar1 ========
@@ -327,24 +326,30 @@ namespace PayamBack.Data
             {
                 entity.HasKey(e => e.Id);
 
+                // 🔥 اصلاح: One-to-Many (یک Hamjavar می‌تواند چندین Hamjavar1 داشته باشد)
                 entity.HasOne(e => e.Hamjavar)
-                    .WithOne()
-                    .HasForeignKey<Hamjavar1>(e => e.HamjavarId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .WithMany(e => e.Hamjavar1s)  // ← WithMany با اشاره به مجموعه Hamjavar1s
+                    .HasForeignKey(e => e.HamjavarId)
+                    .OnDelete(DeleteBehavior.Cascade);  // ← با حذف Hamjavar، Hamjavar1 ها هم حذف شوند
 
                 entity.HasOne(e => e.UserSabtKonandeh)
                     .WithMany()
                     .HasForeignKey(e => e.UserIdSabtKonandeh)
-                    .OnDelete(DeleteBehavior.NoAction);                
+                    .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(e => e.Markaz)
                     .WithMany()
                     .HasForeignKey(e => e.MarkazId)
-                    .OnDelete(DeleteBehavior.NoAction);                
+                    .OnDelete(DeleteBehavior.NoAction);
 
+                // 🔥 حذف ایندکس یکتا (چون دیگر یکتا نیست)
+                // entity.HasIndex(e => e.HamjavarId)
+                //     .IsUnique()
+                //     .HasDatabaseName("IX_Hamjavar1_HamjavarId");
+
+                // 🔥 ایندکس معمولی برای سرعت جستجو
                 entity.HasIndex(e => e.HamjavarId)
-                    .IsUnique()
-                    .HasDatabaseName("IX_Hamjavar1_HamjavarId");                
+                    .HasDatabaseName("IX_Hamjavar1_HamjavarId");
             });
 
             // ======== Faaliat ========

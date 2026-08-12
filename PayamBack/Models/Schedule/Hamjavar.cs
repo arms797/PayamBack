@@ -32,8 +32,14 @@ namespace PayamBack.Models.Schedule
         // مرحله 1: عضو علمی
         // ============================================================
         public string? UploadElmi { get; set; }            // بارگذاری مستندات
-        public int? AmaliatElmi { get; set; }              // عملیات (مثلاً 1=تایید، 0=رد)
-        public string? NazarElmi { get; set; }             // نظر
+        public int? NazarElmi { get; set; } 
+        /* 
+            0=هیچ
+            1=پیش نویس استاد
+            2=تایید
+            3=رد
+            4=اصلاح
+        */
         public DateTime? TarikhErsalElmi { get; set; }     // تاریخ ارسال به مرحله بعد
 
         // ============================================================
@@ -42,8 +48,14 @@ namespace PayamBack.Models.Schedule
         public DateTime? TarikhDaryaftRaeis { get; set; }  // تاریخ دریافت
         public string? TozihatRaeis { get; set; }          // توضیحات
         public string? UploadRaeis { get; set; }           // بارگذاری مستندات
-        public int? AmaliatRaeis { get; set; }             // عملیات
-        public string? NazarRaeis { get; set; }            // نظر
+        public int? NazarRaeis { get; set; }
+        /* 
+            0=هیچ
+            1=پیش نویس استاد
+            2=تایید
+            3=رد
+            4=اصلاح
+        */
         public DateTime? TarikhErsalRaeis { get; set; }    // تاریخ ارسال به مرحله بعد
         public int? UserIdRaeis { get; set; }    //Id رییس تایید کننده
         public string? RoleMarkazRaeis { get; set; }// نقش و مرکز کاربر تایید کننده در مرکز
@@ -54,8 +66,14 @@ namespace PayamBack.Models.Schedule
         public DateTime? TarikhDaryaftKhadamat { get; set; }   // تاریخ دریافت
         public string? TozihatKhadamat { get; set; }           // توضیحات
         public string? UploadKhadamat { get; set; }            // بارگذاری مستندات
-        public int? AmaliatKhadamat { get; set; }              // عملیات
-        public string? NazarKhadamat { get; set; }             // نظر
+        public int? NazarKhadamat { get; set; }
+        /* 
+            0=هیچ
+            1=پیش نویس استاد
+            2=تایید
+            3=رد
+            4=اصلاح
+        */
         public DateTime? TarikhErsalKhadamat { get; set; }     // تاریخ ارسال به مرحله بعد
         public int? UserIdKhadamatOstan { get; set; }    //Id خدمات آموزشی استان تایید کننده
         public string? RoleMarkazKhadamatOstan { get; set; }// نقش و مرکز کاربر تایید کننده خدمات اموزشی
@@ -66,16 +84,17 @@ namespace PayamBack.Models.Schedule
         public DateTime? TarikhDaryaftMoaven { get; set; }     // تاریخ دریافت
         public string? TozihatMoaven { get; set; }             // توضیحات
         public string? UploadMoaven { get; set; }              // بارگذاری مستندات
-        public int? AmaliatMoaven { get; set; }                // عملیات
-        public string? NazarMoaven { get; set; }               // نظر
+        public int? NazarMoaven { get; set; }
+        /* 
+            0=هیچ
+            1=پیش نویس استاد
+            2=تایید
+            3=رد
+            4=اصلاح
+        */
         public DateTime? TarikhErsalMoaven { get; set; }       // تاریخ نظر نهایی
         public int? UserIdApproved { get; set; }    //Id معاون آموزشی استان تایید کننده
-        public string? RoleMarkazApproved { get; set; }// نقش و مرکز کاربر تایید کننده معاون استان
-        // ============================================================
-        // وضعیت نهایی
-        // ============================================================
-        public string? AKharinBarrasi { get; set; }      // آخرین مرحله بررسی شده
-        public string? AkharinTaghaza { get; set; }     // آخرین وضعیت تقاضا
+        public string? RoleMarkazApproved { get; set; }// نقش و مرکز کاربر تایید کننده معاون استان        
 
         // ============================================================
         // Navigation Properties
