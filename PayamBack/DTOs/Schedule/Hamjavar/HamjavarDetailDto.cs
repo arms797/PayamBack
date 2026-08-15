@@ -40,18 +40,21 @@
         public string? TozihatRaeis { get; set; }
         public string? RoleMarkazRaeis { get; set; }
         public string? RaeisFullName { get; set; }
+        public string? UploadRaeis { get; set; }
         public DateTime? TarikhErsalRaeis { get; set; }
 
         public int? NazarKhadamat { get; set; }
         public string? TozihatKhadamat { get; set; }
         public string? RoleMarkazKhadamatOstan { get; set; }
         public string? KhadamatFullName { get; set; }
+        public string? UploadKhadamat { get; set; }
         public DateTime? TarikhErsalKhadamat { get; set; }
 
         public int? NazarMoaven { get; set; }
         public string? TozihatMoaven { get; set; }
         public string? RoleMarkazApproved { get; set; }
         public string? MoavenFullName { get; set; }
+        public string? UploadMoaven { get; set; }
         public DateTime? TarikhErsalMoaven { get; set; }
 
         // وضعیت نهایی (محاسبه شده)

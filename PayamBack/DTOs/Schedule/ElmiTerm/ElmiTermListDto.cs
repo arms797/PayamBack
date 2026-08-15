@@ -22,6 +22,7 @@
         public string? ApproveStatusDisplay { get; set; }
         public string? ApprovedBy { get; set; }
         public bool HasFile { get; set; }
+        public string? FilePath { get; set; }
         public DateTime? CreatedAt { get; set; }
     }
 }

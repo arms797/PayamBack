@@ -319,6 +319,7 @@ namespace PayamBack.Controllers.Schedule
                         ApproveStatus = x.ElmiTerm.ApproveStatus ?? 0,
                         ApproveStatusDisplay = GetApproveStatusDisplay(x.ElmiTerm.ApproveStatus),
                         ApprovedBy = x.ApprovedUser != null ? GetOstadName(x.ApprovedUser) : "",
+                        FilePath = x.ElmiTerm.FilePath ?? "",
                         HasFile = !string.IsNullOrEmpty(x.ElmiTerm.FilePath),
                         CreatedAt = DateTime.Now
                     })

@@ -550,6 +550,7 @@ namespace PayamBack.Controllers.Schedule
                     var raeisUser = await _userManager.Users
                         .Include(u => u.Karmand)
                         .Include(u => u.Ostad)
+                        .Include(u => u.MoshakhasatAdmin)
                         .FirstOrDefaultAsync(u => u.Id == hamjavar.UserIdRaeis.Value);
 
                     if (raeisUser != null)
@@ -562,6 +563,10 @@ namespace PayamBack.Controllers.Schedule
                         {
                             raeisFullName = $"{raeisUser.Ostad.Naam} {raeisUser.Ostad.NaamKhanevadegi}".Trim();
                         }
+                        else if (raeisUser.MoshakhasatAdmin != null)
+                        {
+                            moavenFullName = $"{raeisUser.MoshakhasatAdmin.Naam} {raeisUser.MoshakhasatAdmin.NaameKhanevadeghi}".Trim();
+                        }
                     }
                 }
 
@@ -570,6 +575,7 @@ namespace PayamBack.Controllers.Schedule
                     var khadamatUser = await _userManager.Users
                         .Include(u => u.Karmand)
                         .Include(u => u.Ostad)
+                        .Include(u => u.MoshakhasatAdmin)
                         .FirstOrDefaultAsync(u => u.Id == hamjavar.UserIdKhadamatOstan.Value);
 
                     if (khadamatUser != null)
@@ -582,6 +588,10 @@ namespace PayamBack.Controllers.Schedule
                         {
                             khadamatFullName = $"{khadamatUser.Ostad.Naam} {khadamatUser.Ostad.NaamKhanevadegi}".Trim();
                         }
+                        else if (khadamatUser.MoshakhasatAdmin != null)
+                        {
+                            moavenFullName = $"{khadamatUser.MoshakhasatAdmin.Naam} {khadamatUser.MoshakhasatAdmin.NaameKhanevadeghi}".Trim();
+                        }
                     }
                 }
 
@@ -590,6 +600,7 @@ namespace PayamBack.Controllers.Schedule
                     var moavenUser = await _userManager.Users
                         .Include(u => u.Karmand)
                         .Include(u => u.Ostad)
+                        .Include(u=>u.MoshakhasatAdmin)
                         .FirstOrDefaultAsync(u => u.Id == hamjavar.UserIdApproved.Value);
 
                     if (moavenUser != null)
@@ -601,6 +612,10 @@ namespace PayamBack.Controllers.Schedule
                         else if (moavenUser.Ostad != null)
                         {
                             moavenFullName = $"{moavenUser.Ostad.Naam} {moavenUser.Ostad.NaamKhanevadegi}".Trim();
+                        }
+                        else if (moavenUser.MoshakhasatAdmin != null)
+                        {
+                            moavenFullName = $"{moavenUser.MoshakhasatAdmin.Naam} {moavenUser.MoshakhasatAdmin.NaameKhanevadeghi}".Trim();
                         }
                     }
                 }
@@ -639,6 +654,7 @@ namespace PayamBack.Controllers.Schedule
                     RoleMarkazRaeis = hamjavar.RoleMarkazRaeis,
                     TarikhErsalRaeis = hamjavar.TarikhErsalRaeis,
                     RaeisFullName=raeisFullName,
+                    UploadRaeis=hamjavar.UploadRaeis,
                     
 
                     NazarKhadamat = hamjavar.NazarKhadamat,
@@ -646,12 +662,14 @@ namespace PayamBack.Controllers.Schedule
                     RoleMarkazKhadamatOstan = hamjavar.RoleMarkazKhadamatOstan,
                     TarikhErsalKhadamat = hamjavar.TarikhErsalKhadamat,
                     KhadamatFullName=khadamatFullName,
+                    UploadKhadamat=hamjavar.UploadKhadamat,
 
                     NazarMoaven = hamjavar.NazarMoaven,
                     TozihatMoaven = hamjavar.TozihatMoaven,
                     RoleMarkazApproved = hamjavar.RoleMarkazApproved,
                     TarikhErsalMoaven = hamjavar.TarikhErsalMoaven,
                     MoavenFullName=moavenFullName,
+                    UploadMoaven=hamjavar.UploadMoaven,
 
                     AkharinTaghaza = akharinTaghaza,
                     AkharinTaghazaDisplay = GetStatusDisplayStatic(akharinTaghaza),
@@ -1902,6 +1920,56 @@ namespace PayamBack.Controllers.Schedule
                     message = "خطا در دریافت جزئیات",
                     error = ex.Message
                 });
+            }
+        }
+
+        // ============================================================
+        // دانلود فایل‌های مستندات هم‌جاوری
+        // ============================================================
+        [HttpGet("download/{id}/{fileType}")]
+        [Authorize]
+        public async Task<IActionResult> GetDownloadFile(int id, string fileType)
+        {
+            try
+            {
+                var entity = await _context.Set<Hamjavar>()
+                    .FirstOrDefaultAsync(h => h.Id == id);
+
+                if (entity == null)
+                    return NotFound(new { message = "درخواست یافت نشد" });
+
+                // انتخاب فایل بر اساس نوع
+                string? filePath = fileType.ToLower() switch
+                {
+                    "elmi" => entity.UploadElmi,
+                    "raeis" => entity.UploadRaeis,
+                    "khadamat" => entity.UploadKhadamat,
+                    "moaven" => entity.UploadMoaven,
+                    _ => null
+                };
+
+                if (string.IsNullOrEmpty(filePath))
+                    return NotFound(new { message = "فایل مورد نظر یافت نشد" });
+
+                var physicalPath = Path.Combine(_webHostEnvironment.WebRootPath ?? "wwwroot", filePath.TrimStart('/'));
+                if (!System.IO.File.Exists(physicalPath))
+                    return NotFound(new { message = "فایل در سرور یافت نشد" });
+
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(physicalPath);
+                var fileName = Path.GetFileName(filePath);
+
+                // تشخیص نوع فایل
+                var contentType = "application/octet-stream";
+                var extension = Path.GetExtension(fileName).ToLower();
+                if (extension == ".pdf") contentType = "application/pdf";
+                else if (extension == ".jpg" || extension == ".jpeg") contentType = "image/jpeg";
+                else if (extension == ".png") contentType = "image/png";
+
+                return File(fileBytes, contentType, fileName);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "خطا در دانلود فایل", error = ex.Message });
             }
         }
     }

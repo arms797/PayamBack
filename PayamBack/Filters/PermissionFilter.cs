@@ -47,6 +47,16 @@ namespace PayamBack.Filters
             }
 
             // ============================================================
+            // 🔥  بررسی NoPermission (اگر وجود داشت، از مجوز صرف‌نظر کن)
+            // ============================================================
+            var noPermission = endpoint?.Metadata?.GetMetadata<NoPermissionAttribute>() != null;
+            if (noPermission)
+            {
+                await next();
+                return;
+            }
+
+            // ============================================================
             // 3️⃣ دریافت نقش فعال از JWT
             // ============================================================
             var roleClaims = context.HttpContext.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
