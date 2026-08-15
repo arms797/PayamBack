@@ -6,6 +6,7 @@ using PayamBack.Models.Core;
 using PayamBack.Models.Edu;
 using PayamBack.Models.Identity;
 using PayamBack.Models.Schedule;
+using System.Security.Cryptography.Xml;
 
 namespace PayamBack.Data
 {
@@ -47,6 +48,7 @@ namespace PayamBack.Data
         public DbSet<Hamjavar1> Hamjavar1s { get; set; }
         public DbSet<Faaliat> Faaliats { get; set; }
         public DbSet<ElmiTerm> ElmiTerms { get; set; }
+        public DbSet<UserSignature> UserSignatures { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -293,10 +295,6 @@ namespace PayamBack.Data
                 .HasForeignKey(m => m.ParentId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // ============================================================
-            // 🔥 تنظیمات مدل‌های جدید
-            // ============================================================
-
             // ======== Hamjavar ========
             builder.Entity<Hamjavar>(entity =>
             {
@@ -341,11 +339,6 @@ namespace PayamBack.Data
                     .WithMany()
                     .HasForeignKey(e => e.MarkazId)
                     .OnDelete(DeleteBehavior.NoAction);
-
-                // 🔥 حذف ایندکس یکتا (چون دیگر یکتا نیست)
-                // entity.HasIndex(e => e.HamjavarId)
-                //     .IsUnique()
-                //     .HasDatabaseName("IX_Hamjavar1_HamjavarId");
 
                 // 🔥 ایندکس معمولی برای سرعت جستجو
                 entity.HasIndex(e => e.HamjavarId)
@@ -401,6 +394,17 @@ namespace PayamBack.Data
 
                 entity.HasIndex(e => e.ApproveStatus)
                     .HasDatabaseName("IX_ElmiTerm_Approve");
+            });
+
+            builder.Entity<UserSignature>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // ✅ رابطه One-to-One
+                entity.HasOne(e => e.User)
+                    .WithOne()  // ← بدون Navigation Property در سمت User
+                    .HasForeignKey<UserSignature>(e => e.UserId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
         }
     }

@@ -6,6 +6,7 @@
         public int OstadId { get; set; }
         public string OstadName { get; set; } = string.Empty;
         public string OstadCode { get; set; } = string.Empty;
+        public string OstadMarkaz { get; set; }
         public string TermCode { get; set; } = string.Empty;
         public decimal VahedMovazaf { get; set; }
         public decimal TedadVahedMahalKhedmat { get; set; }

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ using PayamBack.DTOs.Schedule.Hamjavar;
 using PayamBack.Models.Core;
 using PayamBack.Models.Identity;
 using PayamBack.Models.Schedule;
+using PayamBack.Services.Interfaces;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -21,17 +23,20 @@ namespace PayamBack.Controllers.Schedule
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<AppRole> _roleManager;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly ISignatureService _signatureService;
 
         public HamjavarController(
             AppDbContext context,
             UserManager<AppUser> userManager,
             RoleManager<AppRole> roleManager,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            ISignatureService signatureService)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
             _webHostEnvironment = webHostEnvironment;
+            _signatureService = signatureService;
         }
 
         // ============================================================
@@ -409,6 +414,7 @@ namespace PayamBack.Controllers.Schedule
                         OstadId = x.Hamjavar.OstadId,
                         OstadName = $"{x.Ostad.Naam} {x.Ostad.NaamKhanevadegi}",
                         OstadCode = x.Ostad.CodeOstadi ?? "",
+                        OstadMarkaz=x.Ostad.Markaz.NaamMarkaz,
                         TermCode = x.Hamjavar.TermCode ?? "",
                         VahedMovazaf = x.Hamjavar.VahedMovazaf ?? 0,
                         TedadVahedMahalKhedmat = x.Hamjavar.TedadVahedMahalKhedmat ?? 0,
@@ -504,6 +510,100 @@ namespace PayamBack.Controllers.Schedule
                 var akharinTaghaza = CalculateAkharinTaghaza(hamjavar);
                 var akharinBarrasi = CalculateAkharinBarrasi(hamjavar);
 
+                // ============================================================
+                // 🔥 دریافت امضاها
+                // ============================================================
+                int? ostadUserId = null;
+                if (hamjavar.OstadId > 0)
+                {
+                    var ostadUser = await _userManager.Users
+                        .FirstOrDefaultAsync(u => u.OstadId == hamjavar.OstadId);
+                    ostadUserId = ostadUser?.Id;
+                }
+                bool isOstadTheCreator = ostadUserId.HasValue &&
+                         hamjavar.UserIdSabtKonandeh == ostadUserId.Value;
+                var userIds = new List<int>();
+
+                // استاد
+                if (isOstadTheCreator && ostadUserId.HasValue)
+                    userIds.Add(ostadUserId.Value);
+
+                // رئیس
+                if (hamjavar.UserIdRaeis.HasValue)
+                    userIds.Add(hamjavar.UserIdRaeis.Value);
+
+                // خدمات
+                if (hamjavar.UserIdKhadamatOstan.HasValue)
+                    userIds.Add(hamjavar.UserIdKhadamatOstan.Value);
+
+                // معاون
+                if (hamjavar.UserIdApproved.HasValue)
+                    userIds.Add(hamjavar.UserIdApproved.Value);
+                var signatures = await _signatureService.GetSignaturesByUserIdsAsync(userIds);
+
+                string? raeisFullName = null;
+                string? khadamatFullName = null;
+                string? moavenFullName = null;
+
+                if (hamjavar.UserIdRaeis.HasValue)
+                {
+                    var raeisUser = await _userManager.Users
+                        .Include(u => u.Karmand)
+                        .Include(u => u.Ostad)
+                        .FirstOrDefaultAsync(u => u.Id == hamjavar.UserIdRaeis.Value);
+
+                    if (raeisUser != null)
+                    {
+                        if (raeisUser.Karmand != null)
+                        {
+                            raeisFullName = $"{raeisUser.Karmand.Naam} {raeisUser.Karmand.NaameKhanevadeghi}".Trim();
+                        }
+                        else if (raeisUser.Ostad != null)
+                        {
+                            raeisFullName = $"{raeisUser.Ostad.Naam} {raeisUser.Ostad.NaamKhanevadegi}".Trim();
+                        }
+                    }
+                }
+
+                if (hamjavar.UserIdKhadamatOstan.HasValue)
+                {
+                    var khadamatUser = await _userManager.Users
+                        .Include(u => u.Karmand)
+                        .Include(u => u.Ostad)
+                        .FirstOrDefaultAsync(u => u.Id == hamjavar.UserIdKhadamatOstan.Value);
+
+                    if (khadamatUser != null)
+                    {
+                        if (khadamatUser.Karmand != null)
+                        {
+                            khadamatFullName = $"{khadamatUser.Karmand.Naam} {khadamatUser.Karmand.NaameKhanevadeghi}".Trim();
+                        }
+                        else if (khadamatUser.Ostad != null)
+                        {
+                            khadamatFullName = $"{khadamatUser.Ostad.Naam} {khadamatUser.Ostad.NaamKhanevadegi}".Trim();
+                        }
+                    }
+                }
+
+                if (hamjavar.UserIdApproved.HasValue)
+                {
+                    var moavenUser = await _userManager.Users
+                        .Include(u => u.Karmand)
+                        .Include(u => u.Ostad)
+                        .FirstOrDefaultAsync(u => u.Id == hamjavar.UserIdApproved.Value);
+
+                    if (moavenUser != null)
+                    {
+                        if (moavenUser.Karmand != null)
+                        {
+                            moavenFullName = $"{moavenUser.Karmand.Naam} {moavenUser.Karmand.NaameKhanevadeghi}".Trim();
+                        }
+                        else if (moavenUser.Ostad != null)
+                        {
+                            moavenFullName = $"{moavenUser.Ostad.Naam} {moavenUser.Ostad.NaamKhanevadegi}".Trim();
+                        }
+                    }
+                }
                 var dto = new HamjavarDetailDto
                 {
                     Id = hamjavar.Id,
@@ -538,20 +638,32 @@ namespace PayamBack.Controllers.Schedule
                     TozihatRaeis = hamjavar.TozihatRaeis,
                     RoleMarkazRaeis = hamjavar.RoleMarkazRaeis,
                     TarikhErsalRaeis = hamjavar.TarikhErsalRaeis,
+                    RaeisFullName=raeisFullName,
+                    
 
                     NazarKhadamat = hamjavar.NazarKhadamat,
                     TozihatKhadamat = hamjavar.TozihatKhadamat,
                     RoleMarkazKhadamatOstan = hamjavar.RoleMarkazKhadamatOstan,
                     TarikhErsalKhadamat = hamjavar.TarikhErsalKhadamat,
+                    KhadamatFullName=khadamatFullName,
 
                     NazarMoaven = hamjavar.NazarMoaven,
                     TozihatMoaven = hamjavar.TozihatMoaven,
                     RoleMarkazApproved = hamjavar.RoleMarkazApproved,
                     TarikhErsalMoaven = hamjavar.TarikhErsalMoaven,
+                    MoavenFullName=moavenFullName,
 
                     AkharinTaghaza = akharinTaghaza,
                     AkharinTaghazaDisplay = GetStatusDisplayStatic(akharinTaghaza),
                     AKharinBarrasi = akharinBarrasi,
+                    SignatureOstad= (isOstadTheCreator && ostadUserId.HasValue && signatures.TryGetValue(ostadUserId.Value, out var ostadSig))
+                        ? new SignatureDto { Data = ostadSig.Signature, Position = ostadSig.Position }: null,
+                    SignatureRaeis=(hamjavar.UserIdRaeis.HasValue && signatures.TryGetValue(hamjavar.UserIdRaeis.Value, out var raeisSig))
+                        ? new SignatureDto { Data = raeisSig.Signature, Position = raeisSig.Position } : null,
+                    SignatureKhadamat = (hamjavar.UserIdKhadamatOstan.HasValue && signatures.TryGetValue(hamjavar.UserIdKhadamatOstan.Value, out var khadamatSig))
+                        ? new SignatureDto { Data = khadamatSig.Signature, Position = khadamatSig.Position } : null,
+                    SignatureMoaven = (hamjavar.UserIdApproved.HasValue && signatures.TryGetValue(hamjavar.UserIdApproved.Value, out var approveSig))
+                        ? new SignatureDto { Data = approveSig.Signature, Position = approveSig.Position } : null,
 
                     Hamjavar1s = hamjavar.Hamjavar1s?.Select(d => new Hamjavar1DetailDto
                     {
@@ -1091,8 +1203,8 @@ namespace PayamBack.Controllers.Schedule
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                if (!await HasPermissionAsync(currentUser, "Hamjavar.ReviewRaeis"))
-                    return Forbid();
+                //if (!await HasPermissionAsync(currentUser, "Hamjavar.ReviewByRaeis"))
+                //    return Forbid();
 
                 var hamjavar = await _context.Set<Hamjavar>()
                     .Include(h => h.Hamjavar1s)
@@ -1270,8 +1382,8 @@ namespace PayamBack.Controllers.Schedule
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                if (!await HasPermissionAsync(currentUser, "Hamjavar.ReviewKhadamat"))
-                    return Forbid();
+                //if (!await HasPermissionAsync(currentUser, "Hamjavar.ReviewByKhadamat"))
+                //    return Forbid();
 
                 var hamjavar = await _context.Set<Hamjavar>()
                     .Include(h => h.Hamjavar1s)
@@ -1441,8 +1553,8 @@ namespace PayamBack.Controllers.Schedule
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                if (!await HasPermissionAsync(currentUser, "Hamjavar.ReviewMoaven"))
-                    return Forbid();
+                //if (!await HasPermissionAsync(currentUser, "Hamjavar.ReviewByMoaven"))
+                //    return Forbid();
 
                 var hamjavar = await _context.Set<Hamjavar>()
                     .Include(h => h.Hamjavar1s)

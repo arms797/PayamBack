@@ -39,16 +39,19 @@
         public int? NazarRaeis { get; set; }
         public string? TozihatRaeis { get; set; }
         public string? RoleMarkazRaeis { get; set; }
+        public string? RaeisFullName { get; set; }
         public DateTime? TarikhErsalRaeis { get; set; }
 
         public int? NazarKhadamat { get; set; }
         public string? TozihatKhadamat { get; set; }
         public string? RoleMarkazKhadamatOstan { get; set; }
+        public string? KhadamatFullName { get; set; }
         public DateTime? TarikhErsalKhadamat { get; set; }
 
         public int? NazarMoaven { get; set; }
         public string? TozihatMoaven { get; set; }
         public string? RoleMarkazApproved { get; set; }
+        public string? MoavenFullName { get; set; }
         public DateTime? TarikhErsalMoaven { get; set; }
 
         // وضعیت نهایی (محاسبه شده)
@@ -58,6 +61,10 @@
 
         // Hamjavar1 ها
         public List<Hamjavar1DetailDto> Hamjavar1s { get; set; } = new();
+        public SignatureDto? SignatureOstad { get; set; }
+        public SignatureDto? SignatureRaeis { get; set; }
+        public SignatureDto? SignatureKhadamat { get; set; }
+        public SignatureDto? SignatureMoaven { get; set; }
     }
 
     public class Hamjavar1DetailDto
@@ -72,5 +79,10 @@
         public int? TedadRoozRaeis { get; set; }
         public int? TedadRoozKhadamat { get; set; }
         public int? TedadRoozMoaven { get; set; }
+    }
+    public class SignatureDto
+    {
+        public string? Data { get; set; }   // Base64
+        public string? Position { get; set; }
     }
 }
