@@ -1,5 +1,6 @@
 ﻿using PayamBack.Models.Core;
 using PayamBack.Models.Edu;
+using PayamBack.Models.Identity;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -11,45 +12,40 @@ namespace PayamBack.Models.Schedule
         public int Id { get; set; }
 
         /// <summary>کلید خارجی به جدول استاد</summary>
-        public int? OstadId { get; set; }
-
-        /// <summary>کلید خارجی به جدول مرکز (Markaz)</summary>
-        public int? MarkazId { get; set; }
+        public int OstadId { get; set; }
 
         /// <summary>کد ترم</summary>
         [MaxLength(50)]
-        public string? CodeTerm { get; set; }
+        public string CodeTerm { get; set; }    
+        //0=ثبت اولیه
+        //1=تایید
+        //2=رد
+        public int? NararElmi { get; set; }
+        //تاریخ انجام
+        public DateTime? TarikhElmi {  get; set; }
 
-        /// <summary>روز هفته (شنبه، یکشنبه، ...)</summary>
-        [MaxLength(50)]
-        public string? RoozeHafteh { get; set; }
+        //آیدی مدیر گروه
+        public int? UserIdModirGrooh { get; set; }
+        //نقش و مرکز مدیرگروه
+        public string? RoleMarkazModirGrooh { get; set; }
+        //0=معادل بدون نظر
+        //1=تایید
+        //2=رد
+        public int? NazarModirGrooh { get; set; }
+        //تاریخ انجام
+        public DateTime? TarikhModirGrooh { get; set; }
 
-        /// <summary>ساعت A (کد وضعیت - 0 یعنی خالی/بدون وضعیت)</summary>
-        public int? A { get; set; }
+        //آیدی معاون
+        public int? UserIdMoaven { get; set; }
+        //نقش و مرکز معاون
+        public string? RoleMarkazMoaven { get; set; }
+        //0=معادل بدون نظر
+        //1=تایید
+        //2=رد
+        public int? NazarMoaven { get; set; }
+        //تاریخ انجام
+        public DateTime? TarikhMoaven { get; set; }
 
-        /// <summary>ساعت B</summary>
-        public int? B { get; set; }
-
-        /// <summary>ساعت C</summary>
-        public int? C { get; set; }
-
-        /// <summary>ساعت D</summary>
-        public int? D { get; set; }
-
-        /// <summary>ساعت E</summary>
-        public int? E { get; set; }
-
-        /// <summary>ساعت F</summary>
-        public int? F { get; set; }
-
-        /// <summary>ساعت G</summary>
-        public int? G { get; set; }
-
-        /// <summary>ساعت H</summary>
-        public int? H { get; set; }
-
-        /// <summary>جزئیات بیشتر</summary>
-        public bool? Jozeiat { get; set; }        
 
         // ======== Navigation Properties ========
 
@@ -60,9 +56,12 @@ namespace PayamBack.Models.Schedule
         /// <summary>ترم مرتبط</summary>
         [ForeignKey(nameof(CodeTerm))]
         public virtual Term? Term { get; set; }
+        [ForeignKey(nameof(UserIdModirGrooh))]
+        public virtual AppUser? AppUserModirGrooh { get; set; }
+        [ForeignKey(nameof(UserIdMoaven))]
+        public virtual AppUser? AppUserMoaven { get; set; }
 
-        /// <summary>مرکز مرتبط</summary>
-        [ForeignKey(nameof(MarkazId))]
-        public virtual Markaz? Markaz { get; set; }
+        // ======== Collection ========
+        public virtual ICollection<BarnamehHaftegiOstad1> BarnamehHaftegiOstad1s { get; set; }
     }
 }

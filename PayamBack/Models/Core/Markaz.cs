@@ -74,6 +74,9 @@ namespace PayamBack.Models.Core
         /// </summary>
         public int? Level { get; set; } = 4;  // ← فیلد جدید با مقدار پیش‌فرض 4
 
+        //نوع مرکز - 1حضوری یا 2مجازی یا 3ترکیبی
+        public int? NoeMarkaz { get; set; } = 1;
+
         // ======== Navigation Properties (ICollection) ========
 
         /// <summary>نقش‌های کاربری مرتبط با این مرکز</summary>

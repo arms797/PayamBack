@@ -7,6 +7,7 @@ using PayamBack.DTOs.Schedule.ElmiTerm;
 using PayamBack.Models.Core;
 using PayamBack.Models.Identity;
 using PayamBack.Models.Schedule;
+using PayamBack.Services.Interfaces;
 using System.Security.Claims;
 
 namespace PayamBack.Controllers.Schedule
@@ -20,129 +21,45 @@ namespace PayamBack.Controllers.Schedule
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<AppRole> _roleManager;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly ICurrentUserService _currentUserService;
+        private readonly IAccessService _accessService;
 
         public ElmiTermController(
             AppDbContext context,
             UserManager<AppUser> userManager,
             RoleManager<AppRole> roleManager,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            ICurrentUserService currentUserService,
+            IAccessService accessService)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
             _webHostEnvironment = webHostEnvironment;
+            _currentUserService = currentUserService;
+            _accessService = accessService;
         }
 
         // ============================================================
-        // 🔥 متدهای کمکی
+        // 🔥 متدهای کمکی (فقط موارد ضروری)
         // ============================================================
 
-        private async Task<(AppUser? user, AppRole? role, Markaz? markaz, int? codeRole)> GetCurrentUserInfoAsync()
+        private string GetRoleMarkazDisplay(AppRole? role, Markaz? markaz)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                return (null, null, null, null);
+            var roleName = role?.Name ?? "نقش نامشخص";
+            var markazName = "مرکز نامشخص";
 
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null)
-                return (null, null, null, null);
-
-            var roleName = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (string.IsNullOrEmpty(roleName))
-                return (user, null, null, null);
-
-            var role = await _roleManager.FindByNameAsync(roleName);
-            if (role == null)
-                return (user, null, null, null);
-
-            var activeRole = await _context.Set<AppUserRole>()
-                .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
-
-            Markaz? markaz = null;
-            if (activeRole?.MarkazId != null)
+            if (markaz != null)
             {
-                markaz = await _context.Markazes.FindAsync(activeRole.MarkazId.Value);
+                if (markaz.Level == 2)
+                    markazName = "سازمان مرکزی";
+                else if (markaz.Level == 3)
+                    markazName = $"استان {markaz.NaamOstan ?? ""}";
+                else
+                    markazName = markaz.NaamMarkaz ?? "مرکز";
             }
 
-            return (user, role, markaz, role.CodeRole);
-        }
-
-        private async Task<bool> IsOstadUserAsync(int userId)
-        {
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-            return user?.OstadId != null;
-        }
-
-        private async Task<bool> CanAccessTargetUserAsync(int targetUserId, int codeRole, int? currentMarkazId)
-        {
-            if (codeRole == 1) return true;
-
-            var targetUser = await _userManager.Users
-                .Include(u => u.Ostad)
-                .FirstOrDefaultAsync(u => u.Id == targetUserId);
-
-            if (targetUser == null) return false;
-
-            if (targetUserId == int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0"))
-            {
-                var isOstad = await IsOstadUserAsync(targetUserId);
-                if (isOstad) return true;
-            }
-
-            if (targetUser.Ostad?.MarkazId != null)
-            {
-                return await CanAccessTargetMarkazAsync(targetUser.Ostad.MarkazId.Value, codeRole, currentMarkazId);
-            }
-
-            return false;
-        }
-
-        private async Task<bool> CanAccessTargetMarkazAsync(int targetMarkazId, int codeRole, int? currentMarkazId)
-        {
-            if (codeRole == 1 || codeRole == 2) return true;
-
-            var targetMarkaz = await _context.Markazes.FindAsync(targetMarkazId);
-            if (targetMarkaz == null) return false;
-
-            var currentMarkaz = await _context.Markazes.FindAsync(currentMarkazId);
-            if (currentMarkaz == null) return false;
-
-            if (codeRole == 3)
-                return targetMarkaz.CodeOstan == currentMarkaz.CodeOstan;
-
-            if (codeRole == 4)
-                return targetMarkaz.Id == currentMarkaz.Id;
-
-            return false;
-        }
-
-        private async Task<List<int>> GetAccessibleMarkazIdsAsync(int codeRole, int? currentMarkazId)
-        {
-            if (codeRole == 1 || codeRole == 2)
-            {
-                return await _context.Markazes
-                    .Where(m => m.Vazeeyat == true)
-                    .Select(m => m.Id)
-                    .ToListAsync();
-            }
-
-            var currentMarkaz = await _context.Markazes.FindAsync(currentMarkazId);
-            if (currentMarkaz == null) return new List<int>();
-
-            if (codeRole == 3)
-            {
-                return await _context.Markazes
-                    .Where(m => m.Vazeeyat == true && m.CodeOstan == currentMarkaz.CodeOstan)
-                    .Select(m => m.Id)
-                    .ToListAsync();
-            }
-
-            if (codeRole == 4)
-            {
-                return new List<int> { currentMarkaz.Id };
-            }
-
-            return new List<int>();
+            return $"{roleName} - {markazName}";
         }
 
         private static string GetOstadName(AppUser? user)
@@ -170,6 +87,25 @@ namespace PayamBack.Controllers.Schedule
                 2 => "رد شده",
                 _ => "نامشخص"
             };
+        }
+
+        private string GetUserFullName(AppUser? user)
+        {
+            if (user == null) return "";
+
+            if (user.Ostad != null)
+                return $"{user.Ostad.Naam} {user.Ostad.NaamKhanevadegi}".Trim();
+
+            if (user.Karmand != null)
+                return $"{user.Karmand.Naam} {user.Karmand.NaameKhanevadeghi}".Trim();
+
+            if (user.MoshakhasatAdmin != null)
+                return $"{user.MoshakhasatAdmin.Naam} {user.MoshakhasatAdmin.NaameKhanevadeghi}".Trim();
+
+            if (user.Daneshjoo != null)
+                return $"{user.Daneshjoo.Naam} {user.Daneshjoo.NaamKhanevadegi}".Trim();
+
+            return user.UserName ?? "";
         }
 
         private async Task<string> SaveFileAsync(IFormFile file, int id)
@@ -209,23 +145,17 @@ namespace PayamBack.Controllers.Schedule
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20,
             [FromQuery] string? search = null,
-            [FromQuery] string? termCode = null,
             [FromQuery] int? approveStatus = null,
             [FromQuery] int? ostanId = null,
             [FromQuery] int? markazId = null)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                if (string.IsNullOrEmpty(termCode))
-                {
-                    return BadRequest(new { success = false, message = "کد ترم الزامی است" });
-                }
-
-                var accessibleMarkazIds = await GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
+                var accessibleMarkazIds = await _accessService.GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
 
                 var query = from e in _context.Set<ElmiTerm>()
                             join u in _context.Users on e.UserId equals u.Id into userJoin
@@ -236,9 +166,6 @@ namespace PayamBack.Controllers.Schedule
                             from au in approvedJoin.DefaultIfEmpty()
                             select new { ElmiTerm = e, User = u, Ostad = o, ApprovedUser = au };
 
-                query = query.Where(x => x.ElmiTerm.TermCode == termCode);
-
-                //var isOstad = currentUser.OstadId.HasValue;
                 var isOstad = currentRole?.Name == "استاد";
 
                 if (isOstad)
@@ -310,17 +237,18 @@ namespace PayamBack.Controllers.Schedule
                         OstadCode = x.Ostad != null ? x.Ostad.CodeOstadi ?? "" : "",
                         OstadMarkaz = x.Ostad != null && x.Ostad.MarkazId != null ?
                             _context.Markazes.Where(m => m.Id == x.Ostad.MarkazId).Select(m => m.NaamMarkaz ?? "").FirstOrDefault() ?? "" : "",
-                        TermCode = x.ElmiTerm.TermCode ?? "",
                         AkharinVazeeat = x.ElmiTerm.AkharinVazeeat ?? "",
                         IsEjeari = x.ElmiTerm.IsEjeari ?? false,
                         OnvanEjraei = x.ElmiTerm.OnvanEjraei ?? "",
                         FullTime = x.ElmiTerm.FullTime ?? false,
-                        TedadSaatMovazafi = x.ElmiTerm.TedadSaatMovazafi ?? "",
+                        TedadSaatMovazafi = x.ElmiTerm.TedadSaatMovazafi,
+                        TedadVahedMovazafi = x.ElmiTerm.TedadVahedMovazafi,
+                        Vazeeat = x.ElmiTerm.Vazeeat,
                         ApproveStatus = x.ElmiTerm.ApproveStatus ?? 0,
                         ApproveStatusDisplay = GetApproveStatusDisplay(x.ElmiTerm.ApproveStatus),
                         ApprovedBy = x.ApprovedUser != null ? GetOstadName(x.ApprovedUser) : "",
-                        FilePath = x.ElmiTerm.FilePath ?? "",
                         HasFile = !string.IsNullOrEmpty(x.ElmiTerm.FilePath),
+                        FilePath = x.ElmiTerm.FilePath ?? "",
                         CreatedAt = DateTime.Now
                     })
                     .ToListAsync();
@@ -365,13 +293,12 @@ namespace PayamBack.Controllers.Schedule
                     .Include(e => e.ApprovedByUser)
                         .ThenInclude(u => u.Ostad)
                     .Include(e => e.UserSabtKonandeh)
-                    .Include(e => e.RoleSabtKonandeh)
                     .FirstOrDefaultAsync(e => e.Id == id);
 
                 if (item == null)
                     return NotFound(new { success = false, message = "درخواست یافت نشد" });
 
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -381,7 +308,7 @@ namespace PayamBack.Controllers.Schedule
 
                 if (!isOstad && item.UserId.HasValue)
                 {
-                    if (!await CanAccessTargetUserAsync(item.UserId.Value, codeRole.Value, currentMarkaz?.Id))
+                    if (!await _accessService.CanAccessTargetUserAsync(item.UserId.Value, codeRole.Value, currentMarkaz?.Id))
                         return Forbid();
                 }
 
@@ -392,24 +319,22 @@ namespace PayamBack.Controllers.Schedule
                     OstadName = GetOstadName(item.User),
                     OstadCode = GetOstadCode(item.User),
                     OstadMarkaz = GetOstadMarkaz(item.User),
-                    TermCode = item.TermCode ?? "",
                     AkharinVazeeat = item.AkharinVazeeat ?? "",
                     IsEjeari = item.IsEjeari ?? false,
                     OnvanEjraei = item.OnvanEjraei ?? "",
                     FullTime = item.FullTime ?? false,
-                    TedadSaatMovazafi = item.TedadSaatMovazafi ?? "",
+                    TedadSaatMovazafi = item.TedadSaatMovazafi,
+                    TedadVahedMovazafi = item.TedadVahedMovazafi,
+                    Vazeeat = item.Vazeeat,
                     ApproveStatus = item.ApproveStatus ?? 0,
                     ApproveStatusDisplay = GetApproveStatusDisplay(item.ApproveStatus),
-                    ApprovedByUserName = item.ApprovedByUser != null
-                        ? GetUserFullName(item.ApprovedByUser) : "",
+                    ApprovedByUserName = item.ApprovedByUser != null ? GetUserFullName(item.ApprovedByUser) : "",
                     ApprovedByRoleMarkaz = item.ApprovedByRoleMarkaz ?? "",
                     ApprovedAt = item.ApprovedAt,
                     ApproveTozihat = item.ApproveTozihat,
                     FilePath = item.FilePath,
                     FileName = Path.GetFileName(item.FilePath),
-                    CreatedBy = item.UserSabtKonandeh != null
-                        ? GetUserFullName(item.UserSabtKonandeh)
-                        : "",
+                    CreatedBy = item.UserSabtKonandeh != null ? GetUserFullName(item.UserSabtKonandeh) : "",
                     CreatedAt = DateTime.Now
                 };
 
@@ -430,30 +355,7 @@ namespace PayamBack.Controllers.Schedule
                 });
             }
         }
-        // در ElmiTermController.cs
-        private string GetUserFullName(AppUser? user)
-        {
-            if (user == null) return "";
 
-            // اگر استاد است
-            if (user.Ostad != null)
-                return $"{user.Ostad.Naam} {user.Ostad.NaamKhanevadegi}".Trim();
-
-            // اگر کارمند است
-            if (user.Karmand != null)
-                return $"{user.Karmand.Naam} {user.Karmand.NaameKhanevadeghi}".Trim();
-
-            // اگر ادمین است
-            if (user.MoshakhasatAdmin != null)
-                return $"{user.MoshakhasatAdmin.Naam} {user.MoshakhasatAdmin.NaameKhanevadeghi}".Trim();
-
-            // اگر دانشجو است
-            if (user.Daneshjoo != null)
-                return $"{user.Daneshjoo.Naam} {user.Daneshjoo.NaamKhanevadegi}".Trim();
-
-            // در غیر این صورت، نام کاربری را برگردان
-            return user.UserName ?? "";
-        }
         // ============================================================
         // 3️⃣ ایجاد درخواست جدید
         // ============================================================
@@ -462,7 +364,7 @@ namespace PayamBack.Controllers.Schedule
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -473,86 +375,52 @@ namespace PayamBack.Controllers.Schedule
 
                 if (!isOstad)
                 {
-                    if (!await CanAccessTargetUserAsync(dto.UserId, codeRole.Value, currentMarkaz?.Id))
+                    if (!await _accessService.CanAccessTargetUserAsync(dto.UserId, codeRole.Value, currentMarkaz?.Id))
                         return Forbid();
                 }
 
-                var termExists = await _context.Terms.AnyAsync(t => t.CodeTerm == dto.TermCode);
-                if (!termExists)
-                    return BadRequest(new { success = false, message = "ترم وارد شده معتبر نیست" });
-
+                // ============================================================
+                // 🔥 بررسی تکراری نبودن
+                // ============================================================
                 var exists = await _context.Set<ElmiTerm>()
-                    .AnyAsync(e => e.UserId == dto.UserId && e.TermCode == dto.TermCode);
+                    .AnyAsync(e => e.UserId == dto.UserId);
 
                 if (exists)
-                    return BadRequest(new { success = false, message = "درخواستی برای این استاد در این ترم قبلاً ثبت شده است" });
-
-                // ============================================================
-                // کپی از ترم قبل
-                // ============================================================
-                if (dto.CopyFromId.HasValue)
                 {
-                    var source = await _context.Set<ElmiTerm>()
-                        .FirstOrDefaultAsync(e => e.Id == dto.CopyFromId.Value && e.UserId == dto.UserId);
+                    var activeExists = await _context.Set<ElmiTerm>()
+                        .AnyAsync(e => e.UserId == dto.UserId && e.Vazeeat == true);
 
-                    if (source != null)
-                    {
-                        var entity = new ElmiTerm
-                        {
-                            UserId = dto.UserId,
-                            TermCode = dto.TermCode,
-                            UserIdSabtKonandeh = currentUser.Id,
-                            RoleIdSabtKonandeh = currentRole.Id,
-                            AkharinVazeeat = source.AkharinVazeeat,
-                            IsEjeari = source.IsEjeari,
-                            OnvanEjraei = source.OnvanEjraei,
-                            FullTime = source.FullTime,
-                            TedadSaatMovazafi = source.TedadSaatMovazafi,
-                            ApproveStatus = 0
-                        };
-
-                        await _context.Set<ElmiTerm>().AddAsync(entity);
-                        await _context.SaveChangesAsync();
-
-                        if (!string.IsNullOrEmpty(source.FilePath))
-                        {
-                            var sourcePath = Path.Combine(_webHostEnvironment.WebRootPath ?? "wwwroot", source.FilePath.TrimStart('/'));
-                            if (System.IO.File.Exists(sourcePath))
-                            {
-                                var fileExtension = Path.GetExtension(sourcePath);
-                                var newFileName = $"{entity.Id}_{Guid.NewGuid()}{fileExtension}";
-                                var newFilePath = Path.Combine(_webHostEnvironment.WebRootPath ?? "wwwroot", "uploads", "elmi-term", newFileName);
-
-                                System.IO.File.Copy(sourcePath, newFilePath);
-                                entity.FilePath = $"/uploads/elmi-term/{newFileName}";
-                                await _context.SaveChangesAsync();
-                            }
-                        }
-
-                        return Ok(new
-                        {
-                            success = true,
-                            message = "درخواست با موفقیت از ترم قبل کپی شد",
-                            data = new { id = entity.Id }
-                        });
-                    }
+                    if (activeExists)
+                        return BadRequest(new { success = false, message = "این استاد قبلاً یک رکورد فعال دارد. ابتدا رکورد قبلی را غیرفعال کنید." });
                 }
 
                 // ============================================================
-                // ثبت درخواست جدید
+                // 🔥 غیرفعال کردن رکورد فعال قبلی این استاد
+                // ============================================================
+                var activeRecord = await _context.Set<ElmiTerm>()
+                    .FirstOrDefaultAsync(e => e.UserId == dto.UserId && e.Vazeeat == true);
+
+                if (activeRecord != null)
+                {
+                    activeRecord.Vazeeat = false;
+                }
+
+                // ============================================================
+                // 🔥 ثبت درخواست جدید
                 // ============================================================
                 var newEntity = new ElmiTerm
                 {
                     UserId = dto.UserId,
-                    TermCode = dto.TermCode,
                     UserIdSabtKonandeh = currentUser.Id,
-                    RoleIdSabtKonandeh = currentRole.Id,
+                    RoleMarkazSabtKonandeh = currentRole?.Id,
                     AkharinVazeeat = dto.AkharinVazeeat,
                     IsEjeari = dto.IsEjeari,
                     OnvanEjraei = dto.OnvanEjraei,
                     FullTime = dto.FullTime,
                     TedadSaatMovazafi = dto.TedadSaatMovazafi,
-                    ApproveStatus = 0
+                    TedadVahedMovazafi = dto.TedadVahedMovazafi,
+                    ApproveStatus = 0,
+                    Vazeeat = true
                 };
 
                 await _context.Set<ElmiTerm>().AddAsync(newEntity);
@@ -560,14 +428,6 @@ namespace PayamBack.Controllers.Schedule
 
                 if (dto.File != null)
                 {
-                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
-                    var fileExtension = Path.GetExtension(dto.File.FileName).ToLower();
-                    if (!allowedExtensions.Contains(fileExtension))
-                        return BadRequest(new { success = false, message = "فرمت فایل مجاز نیست. فقط JPG, PNG, PDF مجاز است" });
-
-                    if (dto.File.Length > 2 * 1024 * 1024)
-                        return BadRequest(new { success = false, message = "حجم فایل نباید بیشتر از ۲ مگابایت باشد" });
-
                     newEntity.FilePath = await SaveFileAsync(dto.File, newEntity.Id);
                     await _context.SaveChangesAsync();
                 }
@@ -581,14 +441,6 @@ namespace PayamBack.Controllers.Schedule
             }
             catch (Exception ex)
             {
-                // 🔥 لاگ کامل خطا
-                var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                Console.WriteLine($"=== DbUpdateException ===");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"Inner Exception: {innerMessage}");
-                Console.WriteLine($"Stack Trace: {innerStackTrace}");
                 return StatusCode(500, new
                 {
                     success = false,
@@ -599,102 +451,14 @@ namespace PayamBack.Controllers.Schedule
         }
 
         // ============================================================
-        // 4️⃣ کپی درخواست از ترم قبل (متد مجزا)
-        // ============================================================
-        [HttpPost("copy")]
-        public async Task<IActionResult> CopyFromPreviousTerm([FromBody] ElmiTermCopyDto dto)
-        {
-            try
-            {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
-                if (currentUser == null || codeRole == null)
-                    return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
-
-                var isOstad = currentUser.OstadId.HasValue;
-                if (isOstad && dto.UserId != currentUser.Id)
-                    return BadRequest(new { success = false, message = "شما فقط می‌توانید درخواست خود را کپی کنید" });
-
-                if (!isOstad)
-                {
-                    if (!await CanAccessTargetUserAsync(dto.UserId, codeRole.Value, currentMarkaz?.Id))
-                        return Forbid();
-                }
-
-                var termExists = await _context.Terms.AnyAsync(t => t.CodeTerm == dto.TargetTermCode);
-                if (!termExists)
-                    return BadRequest(new { success = false, message = "ترم مقصد معتبر نیست" });
-
-                var exists = await _context.Set<ElmiTerm>()
-                    .AnyAsync(e => e.UserId == dto.UserId && e.TermCode == dto.TargetTermCode);
-
-                if (exists)
-                    return BadRequest(new { success = false, message = "درخواستی برای این استاد در ترم مقصد قبلاً ثبت شده است" });
-
-                var source = await _context.Set<ElmiTerm>()
-                    .FirstOrDefaultAsync(e => e.UserId == dto.UserId && e.TermCode == dto.SourceTermCode);
-
-                if (source == null)
-                    return NotFound(new { success = false, message = "درخواستی در ترم منبع یافت نشد" });
-
-                var newEntity = new ElmiTerm
-                {
-                    UserId = dto.UserId,
-                    TermCode = dto.TargetTermCode,
-                    UserIdSabtKonandeh = currentUser.Id,
-                    RoleIdSabtKonandeh = currentRole.Id,
-                    AkharinVazeeat = source.AkharinVazeeat,
-                    IsEjeari = source.IsEjeari,
-                    OnvanEjraei = source.OnvanEjraei,
-                    FullTime = source.FullTime,
-                    TedadSaatMovazafi = source.TedadSaatMovazafi,
-                    ApproveStatus = 0
-                };
-
-                await _context.Set<ElmiTerm>().AddAsync(newEntity);
-                await _context.SaveChangesAsync();
-
-                if (!string.IsNullOrEmpty(source.FilePath))
-                {
-                    var sourcePath = Path.Combine(_webHostEnvironment.WebRootPath ?? "wwwroot", source.FilePath.TrimStart('/'));
-                    if (System.IO.File.Exists(sourcePath))
-                    {
-                        var fileExtension = Path.GetExtension(sourcePath);
-                        var newFileName = $"{newEntity.Id}_{Guid.NewGuid()}{fileExtension}";
-                        var newFilePath = Path.Combine(_webHostEnvironment.WebRootPath ?? "wwwroot", "uploads", "elmi-term", newFileName);
-
-                        System.IO.File.Copy(sourcePath, newFilePath);
-                        newEntity.FilePath = $"/uploads/elmi-term/{newFileName}";
-                        await _context.SaveChangesAsync();
-                    }
-                }
-
-                return Ok(new
-                {
-                    success = true,
-                    message = "درخواست با موفقیت از ترم قبل کپی شد",
-                    data = new { id = newEntity.Id }
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "خطا در کپی درخواست",
-                    error = ex.Message
-                });
-            }
-        }
-
-        // ============================================================
-        // 5️⃣ ویرایش درخواست
+        // 4️⃣ ویرایش درخواست
         // ============================================================
         [HttpPut("update")]
         public async Task<IActionResult> Update([FromForm] ElmiTermUpdateDto dto)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -710,7 +474,7 @@ namespace PayamBack.Controllers.Schedule
 
                 if (!isOstad && entity.UserId.HasValue)
                 {
-                    if (!await CanAccessTargetUserAsync(entity.UserId.Value, codeRole.Value, currentMarkaz?.Id))
+                    if (!await _accessService.CanAccessTargetUserAsync(entity.UserId.Value, codeRole.Value, currentMarkaz?.Id))
                         return Forbid();
                 }
 
@@ -721,22 +485,13 @@ namespace PayamBack.Controllers.Schedule
                 if (dto.IsEjeari.HasValue) entity.IsEjeari = dto.IsEjeari;
                 if (!string.IsNullOrEmpty(dto.OnvanEjraei)) entity.OnvanEjraei = dto.OnvanEjraei;
                 if (dto.FullTime.HasValue) entity.FullTime = dto.FullTime;
-                if (!string.IsNullOrEmpty(dto.TedadSaatMovazafi)) entity.TedadSaatMovazafi = dto.TedadSaatMovazafi;
+                if (dto.TedadSaatMovazafi.HasValue) entity.TedadSaatMovazafi = dto.TedadSaatMovazafi;
+                if (dto.TedadVahedMovazafi.HasValue) entity.TedadVahedMovazafi = dto.TedadVahedMovazafi;
 
                 if (dto.File != null)
                 {
-                    var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
-                    var fileExtension = Path.GetExtension(dto.File.FileName).ToLower();
-                    if (!allowedExtensions.Contains(fileExtension))
-                        return BadRequest(new { success = false, message = "فرمت فایل مجاز نیست. فقط JPG, PNG, PDF مجاز است" });
-
-                    if (dto.File.Length > 2 * 1024 * 1024)
-                        return BadRequest(new { success = false, message = "حجم فایل نباید بیشتر از ۲ مگابایت باشد" });
-
                     if (!string.IsNullOrEmpty(entity.FilePath))
-                    {
                         DeleteFile(entity.FilePath);
-                    }
 
                     entity.FilePath = await SaveFileAsync(dto.File, entity.Id);
                 }
@@ -761,14 +516,14 @@ namespace PayamBack.Controllers.Schedule
         }
 
         // ============================================================
-        // 6️⃣ تایید/رد درخواست
+        // 5️⃣ تایید/رد درخواست
         // ============================================================
         [HttpPatch("approve")]
         public async Task<IActionResult> Approve([FromBody] ElmiTermApproveDto dto)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -780,27 +535,14 @@ namespace PayamBack.Controllers.Schedule
 
                 if (entity.UserId.HasValue)
                 {
-                    if (!await CanAccessTargetUserAsync(entity.UserId.Value, codeRole.Value, currentMarkaz?.Id))
+                    if (!await _accessService.CanAccessTargetUserAsync(entity.UserId.Value, codeRole.Value, currentMarkaz?.Id))
                         return Forbid();
                 }
 
                 if (entity.ApproveStatus != 0)
                     return BadRequest(new { success = false, message = "این درخواست قبلاً بررسی شده است" });
-                
-                var roleName = currentRole?.Name ?? "نقش نامشخص";
-                var markazName = currentMarkaz?.NaamMarkaz ?? "مرکز نامشخص";
 
-                // اگر مرکز سطح 3 باشد (استان)، نام استان را نشان بده
-                if (currentMarkaz?.Level == 3)
-                {
-                    markazName = $"استان {currentMarkaz.NaamOstan ?? ""}";
-                }
-                else if (currentMarkaz?.Level == 2)
-                {
-                    markazName = "سازمان مرکزی";
-                }
-
-                var roleMarkaz = $"{roleName} - {markazName}";
+                var roleMarkaz = GetRoleMarkazDisplay(currentRole, currentMarkaz);
 
                 entity.ApproveStatus = dto.ApproveStatus;
                 entity.ApprovedByUserId = currentUser.Id;
@@ -811,7 +553,6 @@ namespace PayamBack.Controllers.Schedule
                 await _context.SaveChangesAsync();
 
                 var statusText = dto.ApproveStatus == 1 ? "تایید" : "رد";
-
                 return Ok(new
                 {
                     success = true,
@@ -830,14 +571,14 @@ namespace PayamBack.Controllers.Schedule
         }
 
         // ============================================================
-        // 7️⃣ حذف درخواست (همراه با حذف فایل)
+        // 6️⃣ حذف درخواست
         // ============================================================
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -854,9 +595,7 @@ namespace PayamBack.Controllers.Schedule
                 }
 
                 if (!string.IsNullOrEmpty(entity.FilePath))
-                {
                     DeleteFile(entity.FilePath);
-                }
 
                 _context.Set<ElmiTerm>().Remove(entity);
                 await _context.SaveChangesAsync();
@@ -879,116 +618,16 @@ namespace PayamBack.Controllers.Schedule
         }
 
         // ============================================================
-        // 8️⃣ دریافت درخواست بر اساس UserId و TermCode
-        // ============================================================
-        [HttpGet("by-user-term")]
-        public async Task<IActionResult> GetByUserAndTerm(
-            [FromQuery] int userId,
-            [FromQuery] string termCode)
-        {
-            try
-            {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
-                if (currentUser == null || codeRole == null)
-                    return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
-
-                if (!await CanAccessTargetUserAsync(userId, codeRole.Value, currentMarkaz?.Id))
-                    return Forbid();
-
-                var entity = await _context.Set<ElmiTerm>()
-                    .Include(e => e.User)
-                        .ThenInclude(u => u.Ostad)
-                            .ThenInclude(o => o.Markaz)
-                    .FirstOrDefaultAsync(e => e.UserId == userId && e.TermCode == termCode);
-
-                if (entity == null)
-                    return NotFound(new { success = false, message = "درخواستی برای این استاد در این ترم یافت نشد" });
-
-                var dto = new ElmiTermDetailDto
-                {
-                    Id = entity.Id,
-                    UserId = entity.UserId,
-                    OstadName = GetOstadName(entity.User),
-                    OstadCode = GetOstadCode(entity.User),
-                    OstadMarkaz = GetOstadMarkaz(entity.User),
-                    TermCode = entity.TermCode ?? "",
-                    AkharinVazeeat = entity.AkharinVazeeat ?? "",
-                    IsEjeari = entity.IsEjeari ?? false,
-                    OnvanEjraei = entity.OnvanEjraei ?? "",
-                    FullTime = entity.FullTime ?? false,
-                    TedadSaatMovazafi = entity.TedadSaatMovazafi ?? "",
-                    ApproveStatus = entity.ApproveStatus ?? 0,
-                    ApproveStatusDisplay = GetApproveStatusDisplay(entity.ApproveStatus),
-                    ApprovedByUserName = entity.ApprovedByUser != null ? GetOstadName(entity.ApprovedByUser) : "",
-                    ApprovedAt = entity.ApprovedAt,
-                    ApproveTozihat = entity.ApproveTozihat,
-                    FilePath = entity.FilePath,
-                    FileName = Path.GetFileName(entity.FilePath),
-                    CreatedAt = DateTime.Now
-                };
-
-                return Ok(new
-                {
-                    success = true,
-                    message = "اطلاعات درخواست دریافت شد",
-                    data = dto
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "خطا در دریافت اطلاعات",
-                    error = ex.Message
-                });
-            }
-        }
-        
-        [HttpGet("download/{id}")]
-        [Authorize]
-        public async Task<IActionResult> DownloadFile(int id)
-        {
-            var entity = await _context.Set<ElmiTerm>()
-                .FirstOrDefaultAsync(e => e.Id == id);
-
-            if (entity == null || string.IsNullOrEmpty(entity.FilePath))
-                return NotFound(new { message = "فایل یافت نشد" });
-
-            var filePath = Path.Combine(_webHostEnvironment.WebRootPath ?? "wwwroot", entity.FilePath.TrimStart('/'));
-            if (!System.IO.File.Exists(filePath))
-                return NotFound(new { message = "فایل در سرور یافت نشد" });
-
-            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
-            var fileName = Path.GetFileName(entity.FilePath);
-
-            // تشخیص نوع فایل
-            var contentType = "application/octet-stream";
-            var extension = Path.GetExtension(fileName).ToLower();
-            if (extension == ".pdf") contentType = "application/pdf";
-            else if (extension == ".jpg" || extension == ".jpeg") contentType = "image/jpeg";
-            else if (extension == ".png") contentType = "image/png";
-
-            return File(fileBytes, contentType, fileName);
-        }
-
-        // ============================================================
-        // بازگشت درخواست به حالت "در انتظار بررسی"
+        // 7️⃣ بازگشت درخواست به حالت "در انتظار بررسی"
         // ============================================================
         [HttpPatch("reset-pending/{id}")]
         public async Task<IActionResult> ResetToPending(int id)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
-
-                // ============================================================
-                // 🔥 بررسی مجوز (با PermissionFilter)
-                // ============================================================
-                // نیازی به بررسی CodeRole نیست، PermissionFilter خودش مدیریت می‌کند
-                // فقط مطمئن می‌شویم که کاربر به درخواست دسترسی دارد
 
                 var entity = await _context.Set<ElmiTerm>()
                     .FirstOrDefaultAsync(e => e.Id == id);
@@ -996,30 +635,15 @@ namespace PayamBack.Controllers.Schedule
                 if (entity == null)
                     return NotFound(new { success = false, message = "درخواست یافت نشد" });
 
-                // ============================================================
-                // 🔥 بررسی دسترسی به کاربر هدف (بر اساس مرکز)
-                // ============================================================
                 if (entity.UserId.HasValue)
                 {
-                    if (!await CanAccessTargetUserAsync(entity.UserId.Value, codeRole.Value, currentMarkaz?.Id))
+                    if (!await _accessService.CanAccessTargetUserAsync(entity.UserId.Value, codeRole.Value, currentMarkaz?.Id))
                         return Forbid();
                 }
 
-                // ============================================================
-                // 🔥 اگر قبلاً در حالت در انتظار است، نیازی به تغییر نیست
-                // ============================================================
                 if (entity.ApproveStatus == 0)
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "این درخواست در حال حاضر در حالت در انتظار بررسی است"
-                    });
-                }
+                    return BadRequest(new { success = false, message = "این درخواست در حال حاضر در حالت در انتظار بررسی است" });
 
-                // ============================================================
-                // 🔥 بازگشت به حالت در انتظار بررسی
-                // ============================================================
                 entity.ApproveStatus = 0;
                 entity.ApprovedByUserId = null;
                 entity.ApprovedByRoleMarkaz = null;
@@ -1043,6 +667,35 @@ namespace PayamBack.Controllers.Schedule
                     error = ex.Message
                 });
             }
+        }
+
+        // ============================================================
+        // 8️⃣ دانلود فایل
+        // ============================================================
+        [HttpGet("download/{id}")]
+        [Authorize]
+        public async Task<IActionResult> DownloadFile(int id)
+        {
+            var entity = await _context.Set<ElmiTerm>()
+                .FirstOrDefaultAsync(e => e.Id == id);
+
+            if (entity == null || string.IsNullOrEmpty(entity.FilePath))
+                return NotFound(new { message = "فایل یافت نشد" });
+
+            var filePath = Path.Combine(_webHostEnvironment.WebRootPath ?? "wwwroot", entity.FilePath.TrimStart('/'));
+            if (!System.IO.File.Exists(filePath))
+                return NotFound(new { message = "فایل در سرور یافت نشد" });
+
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            var fileName = Path.GetFileName(entity.FilePath);
+
+            var contentType = "application/octet-stream";
+            var extension = Path.GetExtension(fileName).ToLower();
+            if (extension == ".pdf") contentType = "application/pdf";
+            else if (extension == ".jpg" || extension == ".jpeg") contentType = "image/jpeg";
+            else if (extension == ".png") contentType = "image/png";
+
+            return File(fileBytes, contentType, fileName);
         }
     }
 }

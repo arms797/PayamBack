@@ -1,22 +1,30 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿// PayamBack/Filters/PermissionFilter.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using PayamBack.Data;
+using PayamBack.Services.Interfaces;
 using System.Security.Claims;
 
 namespace PayamBack.Filters
 {
     public class PermissionFilter : IAsyncActionFilter
     {
-        private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
+        private readonly ICurrentUserService _currentUserService;
+        private readonly IPermissionCacheService _permissionCacheService;
+        private readonly IAccessService _accessService;
 
-        public PermissionFilter(AppDbContext context, IMemoryCache cache)
+        public PermissionFilter(
+            IMemoryCache cache,
+            ICurrentUserService currentUserService,
+            IPermissionCacheService permissionCacheService,
+            IAccessService accessService)
         {
-            _context = context;
             _cache = cache;
+            _currentUserService = currentUserService;
+            _permissionCacheService = permissionCacheService;
+            _accessService = accessService;
         }
 
         public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -37,17 +45,17 @@ namespace PayamBack.Filters
             }
 
             // ============================================================
-            // 2️⃣ بررسی احراز هویت
+            // 2️⃣ بررسی احراز هویت (با استفاده از ICurrentUserService)
             // ============================================================
-            var userIdClaim = context.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            var (user, _, _, _) = await _currentUserService.GetCurrentUserInfoAsync();
+            if (user == null)
             {
-                await next();
+                context.Result = new UnauthorizedResult();
                 return;
             }
 
             // ============================================================
-            // 🔥  بررسی NoPermission (اگر وجود داشت، از مجوز صرف‌نظر کن)
+            // 3️⃣ بررسی NoPermission (نادیده گرفتن مجوز)
             // ============================================================
             var noPermission = endpoint?.Metadata?.GetMetadata<NoPermissionAttribute>() != null;
             if (noPermission)
@@ -57,12 +65,10 @@ namespace PayamBack.Filters
             }
 
             // ============================================================
-            // 3️⃣ دریافت نقش فعال از JWT
+            // 4️⃣ دریافت نقش فعال از JWT
             // ============================================================
             var roleClaims = context.HttpContext.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
             var activeRoleName = roleClaims.FirstOrDefault();
-            //Console.WriteLine($"🔍 [PermissionFilter] Role from JWT: {activeRoleName}");
-            //Console.WriteLine($"🔍 [PermissionFilter] User: {context.HttpContext.User.Identity?.Name}");
 
             if (string.IsNullOrEmpty(activeRoleName))
             {
@@ -71,71 +77,47 @@ namespace PayamBack.Filters
             }
 
             // ============================================================
-            // 4️⃣ دریافت RoleId از Cache
+            // 5️⃣ دریافت RoleId از Cache (با استفاده از IMemoryCache)
             // ============================================================
             var roleCacheKey = $"RoleId_{activeRoleName}";
             var activeRoleId = _cache.Get<int?>(roleCacheKey);
 
             if (!activeRoleId.HasValue)
             {
-                activeRoleId = await _context.Roles
-                    .Where(r => r.Name == activeRoleName)
-                    .Select(r => r.Id)
-                    .FirstOrDefaultAsync<int>();
-
-                if (activeRoleId == 0)
+                activeRoleId = await _accessService.GetRoleIdByNameAsync(activeRoleName);
+                if (!activeRoleId.HasValue)
                 {
                     context.Result = new ForbidResult();
                     return;
                 }
-
                 _cache.Set(roleCacheKey, activeRoleId.Value, TimeSpan.FromDays(1));
             }
 
             // ============================================================
-            // 5️⃣ دریافت نام کنترلر و اکشن
+            // 6️⃣ دریافت نام کنترلر و اکشن
             // ============================================================
             var controllerName = context.Controller.GetType().Name.Replace("Controller", "");
             var actionName = context.ActionDescriptor.RouteValues["action"] ?? "";
 
             // ============================================================
-            // 6️⃣ نرمال‌سازی actionName به View, Create, Update, Delete
+            // 7️⃣ نرمال‌سازی actionName به View, Create, Update, Delete
             // ============================================================
             var normalizedAction = NormalizeAction(actionName);
             var permissionName = $"{controllerName}.{normalizedAction}";
+            var wildcardPermissionName = $"{controllerName}.*";
 
             // ============================================================
-            // 7️⃣ بررسی مجوز از Cache
+            // 8️⃣ بررسی مجوز از کش با استفاده از PermissionCacheService
             // ============================================================
             var permissionCacheKey = $"Permission_{activeRoleId.Value}_{permissionName}";
             var hasPermission = _cache.Get<bool?>(permissionCacheKey);
 
             if (!hasPermission.HasValue)
             {
-                var wildcardPermissionName = $"{controllerName}.*";
-
-                var hasWildcardPermission = await _context.RolePermissions
-                    .Where(rp => rp.RoleId == activeRoleId.Value && rp.Vazeeat == true)
-                    .Join(_context.Permissions,
-                        rp => rp.PermissionId,
-                        p => p.Id,
-                        (rp, p) => p)
-                    .AnyAsync(p => p.Name == wildcardPermissionName);
-
-                if (hasWildcardPermission)
-                {
-                    hasPermission = true;
-                }
-                else
-                {
-                    hasPermission = await _context.RolePermissions
-                        .Where(rp => rp.RoleId == activeRoleId.Value && rp.Vazeeat == true)
-                        .Join(_context.Permissions,
-                            rp => rp.PermissionId,
-                            p => p.Id,
-                            (rp, p) => p)
-                        .AnyAsync(p => p.Name == permissionName);
-                }
+                // دریافت همه مجوزهای نقش از سرویس کش
+                var rolePermissions = await _permissionCacheService.GetRolePermissionsAsync(activeRoleId.Value);
+                hasPermission = rolePermissions.Contains(permissionName) ||
+                                rolePermissions.Contains(wildcardPermissionName);
 
                 _cache.Set(permissionCacheKey, hasPermission.Value, TimeSpan.FromMinutes(10));
             }

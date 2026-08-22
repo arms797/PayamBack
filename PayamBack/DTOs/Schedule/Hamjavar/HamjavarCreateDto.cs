@@ -34,7 +34,6 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
     {
         [Required(ErrorMessage = "شناسه مرکز الزامی است")]
         public int MarkazId { get; set; }
-
         public bool? InOstan { get; set; }
 
         public List<int> FaaliatIds { get; set; } = new();
@@ -42,6 +41,6 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
         public int? TedadRoozElmi { get; set; }
         public int? TedadRoozRaeis { get; set; }
         public int? TedadRoozKhadamat { get; set; }
-        public int? TedadRoozMoaven { get; set; }
+        public int? TedadRoozMoaven { get; set; }        
     }
 }

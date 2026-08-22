@@ -177,22 +177,81 @@ namespace PayamBack.Data
             });
 
             // ======== BarnamehHaftegiOstad ========
-            builder.Entity<BarnamehHaftegiOstad>()
-                .HasIndex(b => new { b.OstadId, b.CodeTerm, b.MarkazId, b.RoozeHafteh })
-                .IsUnique()
-                .HasDatabaseName("IX_BarnamehHaftegiOstad_CodeOstad_CodeTerm_MarkazId_RoozeHafteh");
+            builder.Entity<BarnamehHaftegiOstad>(entity =>
+            {
+                // کلید اصلی
+                entity.HasKey(b => b.Id);
 
-            builder.Entity<BarnamehHaftegiOstad>()
-                .HasOne(b => b.Ostad)
-                .WithMany(o => o.BarnamehHaftegiOstads)
-                .HasForeignKey(b => b.OstadId)
-                .OnDelete(DeleteBehavior.NoAction);
+                // ارتباط با استاد
+                entity.HasOne(b => b.Ostad)
+                    .WithMany(o => o.BarnamehHaftegiOstads)
+                    .HasForeignKey(b => b.OstadId)
+                    .OnDelete(DeleteBehavior.NoAction);
 
-            builder.Entity<BarnamehHaftegiOstad>()
-                .HasOne(b => b.Markaz)
-                .WithMany(m => m.BarnamehHaftegiOstads)
-                .HasForeignKey(b => b.MarkazId)
-                .OnDelete(DeleteBehavior.NoAction);
+                // ارتباط با ترم
+                entity.HasOne(b => b.Term)
+                    .WithMany()
+                    .HasForeignKey(b => b.CodeTerm)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                // ارتباط با کاربر مدیرگروه
+                entity.HasOne(b => b.AppUserModirGrooh)
+                    .WithMany()
+                    .HasForeignKey(b => b.UserIdModirGrooh)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                // ارتباط با کاربر معاون
+                entity.HasOne(b => b.AppUserMoaven)
+                    .WithMany()
+                    .HasForeignKey(b => b.UserIdMoaven)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                // حذف ایندکس قبلی (اگر وجود داشت) و تنظیم ایندکس جدید
+                // ایندکس منحصربه‌فرد برای استاد و ترم (هر استاد فقط یک برنامه هفتگی برای هر ترم)
+                entity.HasIndex(b => new { b.OstadId, b.CodeTerm })
+                    .IsUnique()
+                    .HasDatabaseName("IX_BarnamehHaftegiOstad_OstadId_CodeTerm");
+
+                // ایندکس برای جستجوی سریع‌تر بر اساس وضعیت‌ها
+                entity.HasIndex(b => b.NazarModirGrooh)
+                    .HasDatabaseName("IX_BarnamehHaftegiOstad_NazarModirGrooh");
+
+                entity.HasIndex(b => b.NazarMoaven)
+                    .HasDatabaseName("IX_BarnamehHaftegiOstad_NazarMoaven");
+            });
+
+            // ======== BarnamehHaftegiOstad1 ========
+            builder.Entity<BarnamehHaftegiOstad1>(entity =>
+            {
+                entity.HasKey(b1 => b1.Id);
+
+                // 🔥 ارتباط با برنامه هفتگی اصلی (یک به چند)
+                entity.HasOne(b1 => b1.BarnamehHaftegiOstad)
+                    .WithMany(b => b.BarnamehHaftegiOstad1s)  // ← Navigation Property در مدل اصلی
+                    .HasForeignKey(b1 => b1.BarnamehHaftegiOstadId)
+                    .OnDelete(DeleteBehavior.Cascade);  // با حذف برنامه اصلی، جزئیات نیز حذف شوند
+
+                // ❌ Navigation Properties مربوط به Markaz و Faaliat کامنت شده‌اند
+                // پس نیازی به تعریف FK برای آنها نیست
+
+                // ایندکس‌ها
+                entity.HasIndex(b1 => new { b1.BarnamehHaftegiOstadId, b1.RoozeHafteh })
+                    .HasDatabaseName("IX_BarnamehHaftegiOstad1_OstadId_RoozeHafteh");
+
+                entity.HasIndex(b1 => b1.MarkazId)
+                    .HasDatabaseName("IX_BarnamehHaftegiOstad1_MarkazId");
+
+                // ایندکس‌های جداگانه برای هر مرکز ساعت (اختیاری، برای سرعت جستجو)
+                entity.HasIndex(b1 => b1.MarkazIdA).HasDatabaseName("IX_BarnamehHaftegiOstad1_MarkazIdA");
+                entity.HasIndex(b1 => b1.MarkazIdB).HasDatabaseName("IX_BarnamehHaftegiOstad1_MarkazIdB");
+                entity.HasIndex(b1 => b1.MarkazIdC).HasDatabaseName("IX_BarnamehHaftegiOstad1_MarkazIdC");
+                entity.HasIndex(b1 => b1.MarkazIdD).HasDatabaseName("IX_BarnamehHaftegiOstad1_MarkazIdD");
+                entity.HasIndex(b1 => b1.MarkazIdE).HasDatabaseName("IX_BarnamehHaftegiOstad1_MarkazIdE");
+                entity.HasIndex(b1 => b1.MarkazIdF).HasDatabaseName("IX_BarnamehHaftegiOstad1_MarkazIdF");
+                entity.HasIndex(b1 => b1.MarkazIdG).HasDatabaseName("IX_BarnamehHaftegiOstad1_MarkazIdG");
+                entity.HasIndex(b1 => b1.MarkazIdH).HasDatabaseName("IX_BarnamehHaftegiOstad1_MarkazIdH");
+            });
+
 
             // ======== BarnamehTermiOstad ========
             builder.Entity<BarnamehTermiOstad>()
@@ -366,31 +425,17 @@ namespace PayamBack.Data
                 entity.HasOne(e => e.User)
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
-                    .OnDelete(DeleteBehavior.NoAction);
-
-                entity.HasOne(e => e.Term)
-                    .WithMany()
-                    .HasForeignKey(e => e.TermCode)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.NoAction);              
 
                 entity.HasOne(e => e.UserSabtKonandeh)
                     .WithMany()
                     .HasForeignKey(e => e.UserIdSabtKonandeh)
-                    .OnDelete(DeleteBehavior.NoAction);
-
-                entity.HasOne(e => e.RoleSabtKonandeh)
-                    .WithMany()
-                    .HasForeignKey(e => e.RoleIdSabtKonandeh)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.NoAction);               
 
                 entity.HasOne(e => e.ApprovedByUser)
                     .WithMany()
                     .HasForeignKey(e => e.ApprovedByUserId)
-                    .OnDelete(DeleteBehavior.NoAction);
-
-                entity.HasIndex(e => new { e.UserId, e.TermCode })
-                    .IsUnique()
-                    .HasDatabaseName("IX_ElmiTerm_UserId_TermCode");
+                    .OnDelete(DeleteBehavior.NoAction);                
 
                 entity.HasIndex(e => e.ApproveStatus)
                     .HasDatabaseName("IX_ElmiTerm_Approve");

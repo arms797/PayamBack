@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿// PayamBack/Services/Implementations/PermissionService.cs
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.DTOs.Identity;
@@ -7,55 +7,41 @@ using PayamBack.Services.Interfaces;
 
 namespace PayamBack.Services.Implementations
 {
-    /// <summary>
-    /// پیاده‌سازی سرویس مدیریت دسترسی‌ها و مجوزها
-    /// مجوزها و منوها فقط در زمان لاگین و تغییر نقش از دیتابیس خوانده می‌شوند
-    /// </summary>
     public class PermissionService : IPermissionService
     {
         private readonly AppDbContext _context;
+        private readonly IPermissionCacheService _permissionCacheService;
 
-        public PermissionService(AppDbContext context)
+        public PermissionService(AppDbContext context, IPermissionCacheService permissionCacheService)
         {
             _context = context;
+            _permissionCacheService = permissionCacheService;
         }
 
         // ============================================================
-        // 1️⃣ دریافت همه مجوزهای یک نقش (فقط در لاگین و تغییر نقش)
+        // 1️⃣ دریافت مجوزهای یک نقش (با استفاده از کش)
         // ============================================================
         public async Task<List<string>> GetRolePermissionsAsync(int roleId)
         {
-            var permissions = await _context.RolePermissions
-                .Where(rp => rp.RoleId == roleId && rp.Vazeeat == true)
-                .Join(_context.Permissions,
-                    rp => rp.PermissionId,
-                    p => p.Id,
-                    (rp, p) => p.Name ?? "")
-                .ToListAsync();
-
-            return permissions;
+            return await _permissionCacheService.GetRolePermissionsAsync(roleId);
         }
 
         // ============================================================
-        // 2️⃣ بررسی دسترسی با لیست مجوزها (بدون کوئری)
-        // این متد در PermissionFilter استفاده می‌شود
+        // 2️⃣ بررسی دسترسی با لیست مجوزها
         // ============================================================
         public bool HasPermission(List<string> permissions, string resource, string action)
         {
-            // نرمال‌سازی action به View, Create, Update, Delete
             var normalizedAction = NormalizeAction(action);
             var permissionName = $"{resource}.{normalizedAction}";
 
-            // بررسی دسترسی "*" (همه عملیات‌ها)
             if (permissions.Any(p => p == $"{resource}.*"))
                 return true;
 
-            // بررسی دسترسی دقیق
             return permissions.Contains(permissionName);
         }
 
         // ============================================================
-        // 3️⃣ گرفتن منوهای کاربر (فقط در لاگین و تغییر نقش)
+        // 3️⃣ گرفتن منوهای کاربر
         // ============================================================
         public async Task<List<MenuDto>> GetUserMenusAsync(int userId, int roleId, List<string> permissions)
         {
@@ -75,34 +61,33 @@ namespace PayamBack.Services.Implementations
         }
 
         // ============================================================
-        // 4️⃣ گرفتن همه نقش‌های کاربر (فقط در لاگین)
+        // 4️⃣ گرفتن همه نقش‌های کاربر
         // ============================================================
         public async Task<List<RoleDto>> GetUserRolesAsync(int userId)
         {
             return await _context.Set<AppUserRole>()
-        .Where(ur => ur.UserId == userId)
-        .Join(_context.Roles.Where(r => r.Vazeeyat == true),
-            ur => ur.RoleId,
-            r => r.Id,
-            (ur, r) => new { ur, r })
-        .Join(_context.Markazes.Where(m => m.Vazeeyat == true),
-            ur => ur.ur.MarkazId,
-            m => m.Id,
-            (ur, m) => new RoleDto
-            {
-                Id = ur.r.Id,
-                Name = ur.r.Name ?? "",
-                IsDefault = ur.ur.RolePishFarz ?? false,
-                MarkazId = ur.ur.MarkazId ?? 0,
-                CodeRole = ur.r.CodeRole ?? 4,
-                IsAdmin = ur.r.IsAdmin ?? false
-                //IsUniquePerMarkazId = ur.r.IsUniquePerMarkaz ?? false
-            })
-        .ToListAsync();
+                .Where(ur => ur.UserId == userId)
+                .Join(_context.Roles.Where(r => r.Vazeeyat == true),
+                    ur => ur.RoleId,
+                    r => r.Id,
+                    (ur, r) => new { ur, r })
+                .Join(_context.Markazes.Where(m => m.Vazeeyat == true),
+                    ur => ur.ur.MarkazId,
+                    m => m.Id,
+                    (ur, m) => new RoleDto
+                    {
+                        Id = ur.r.Id,
+                        Name = ur.r.Name ?? "",
+                        IsDefault = ur.ur.RolePishFarz ?? false,
+                        MarkazId = ur.ur.MarkazId ?? 0,
+                        CodeRole = ur.r.CodeRole ?? 4,
+                        IsAdmin = ur.r.IsAdmin ?? false
+                    })
+                .ToListAsync();
         }
 
         // ============================================================
-        // 5️⃣ گرفتن نقش پیش‌فرض کاربر (فقط در لاگین)
+        // 5️⃣ گرفتن نقش پیش‌فرض کاربر
         // ============================================================
         public async Task<int?> GetDefaultRoleIdAsync(int userId)
         {
@@ -111,41 +96,33 @@ namespace PayamBack.Services.Implementations
         }
 
         // ============================================================
-        // متد کمکی برای تبدیل اکشن‌ها به چهار نوع اصلی
+        // متدهای کمکی
         // ============================================================
         private string NormalizeAction(string action)
         {
-            // 1️⃣ خواندن → View
             if (action.StartsWith("Get") ||
                 action == "List" || action == "All" || action == "Active" ||
                 action == "Inactive" || action == "Search" || action == "Filter" ||
                 action == "Index" || action == "Details")
                 return "View";
 
-            // 2️⃣ ایجاد → Create
             if (action == "Create" || action == "Add" || action == "Insert" || action == "Register")
                 return "Create";
 
-            // 3️⃣ ویرایش → Update
             if (action == "Update" || action == "Edit" || action == "Modify" ||
                 action == "Change" || action == "Toggle" || action == "Active" ||
                 action == "Deactive" || action == "Activate" || action == "Deactivate")
                 return "Update";
 
-            // 4️⃣ حذف → Delete
             if (action == "Delete" || action == "Remove" || action == "Deactivate" || action == "Archive")
                 return "Delete";
 
-            // 5️⃣ BulkUpload → مجوز خاص (فقط ادمین)
             if (action == "BulkUpload")
                 return "BulkUpload";
 
             return action;
         }
 
-        // ============================================================
-        // متد کمکی برای ساخت منوی درختی
-        // ============================================================
         private MenuDto MapToMenuDto(Menu menu, List<Menu> allMenus)
         {
             return new MenuDto

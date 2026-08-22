@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,54 +23,30 @@ namespace PayamBack.Controllers.Schedule
         private readonly RoleManager<AppRole> _roleManager;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ISignatureService _signatureService;
+        private readonly ICurrentUserService _currentUserService;
+        private readonly IAccessService _accessService;
 
         public HamjavarController(
             AppDbContext context,
             UserManager<AppUser> userManager,
             RoleManager<AppRole> roleManager,
             IWebHostEnvironment webHostEnvironment,
-            ISignatureService signatureService)
+            ISignatureService signatureService,
+            ICurrentUserService currentUserService,
+            IAccessService accessService)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
             _webHostEnvironment = webHostEnvironment;
             _signatureService = signatureService;
+            _currentUserService = currentUserService;
+            _accessService = accessService;
         }
 
         // ============================================================
-        // 🔥 متدهای کمکی
+        // 🔥 متدهای کمکی (فقط موارد خاص)
         // ============================================================
-
-        private async Task<(AppUser? user, AppRole? role, Markaz? markaz, int? codeRole)> GetCurrentUserInfoAsync()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                return (null, null, null, null);
-
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null)
-                return (null, null, null, null);
-
-            var roleName = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (string.IsNullOrEmpty(roleName))
-                return (user, null, null, null);
-
-            var role = await _roleManager.FindByNameAsync(roleName);
-            if (role == null)
-                return (user, null, null, null);
-
-            var activeRole = await _context.Set<AppUserRole>()
-                .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
-
-            Markaz? markaz = null;
-            if (activeRole?.MarkazId != null)
-            {
-                markaz = await _context.Markazes.FindAsync(activeRole.MarkazId.Value);
-            }
-
-            return (user, role, markaz, role.CodeRole);
-        }
 
         private async Task<List<string>> GetUserPermissionsAsync(AppUser user)
         {
@@ -86,47 +61,6 @@ namespace PayamBack.Controllers.Schedule
         {
             var permissions = await GetUserPermissionsAsync(user);
             return permissions.Contains(permission);
-        }
-
-        private async Task<bool> CanAccessTargetOstadAsync(int ostadId, int codeRole, int? currentMarkazId)
-        {
-            if (codeRole == 1 || codeRole == 2) return true;
-
-            var ostad = await _context.Ostads
-                .Include(o => o.Markaz)
-                .FirstOrDefaultAsync(o => o.Id == ostadId);
-
-            if (ostad == null || ostad.MarkazId == null) return false;
-
-            var targetMarkaz = await _context.Markazes.FindAsync(ostad.MarkazId.Value);
-            var currentMarkaz = await _context.Markazes.FindAsync(currentMarkazId);
-            if (targetMarkaz == null || currentMarkaz == null) return false;
-
-            if (codeRole == 3)
-                return targetMarkaz.CodeOstan == currentMarkaz.CodeOstan;
-
-            if (codeRole == 4)
-                return targetMarkaz.Id == currentMarkaz.Id;
-
-            return false;
-        }
-
-        private string GetRoleMarkazDisplay(AppRole? role, Markaz? markaz)
-        {
-            var roleName = role?.Name ?? "نقش نامشخص";
-            var markazName = "مرکز نامشخص";
-
-            if (markaz != null)
-            {
-                if (markaz.Level == 2)
-                    markazName = "سازمان مرکزی";
-                else if (markaz.Level == 3)
-                    markazName = $"استان {markaz.NaamOstan ?? ""}";
-                else
-                    markazName = markaz.NaamMarkaz ?? "مرکز";
-            }
-
-            return $"{roleName} - {markazName}";
         }
 
         private bool CanUserCreateForOstad(AppUser currentUser, int targetAppUserId, int codeRole, int? currentMarkazId)
@@ -158,6 +92,24 @@ namespace PayamBack.Controllers.Schedule
             }
 
             return false;
+        }
+
+        private string GetRoleMarkazDisplay(AppRole? role, Markaz? markaz)
+        {
+            var roleName = role?.Name ?? "نقش نامشخص";
+            var markazName = "مرکز نامشخص";
+
+            if (markaz != null)
+            {
+                if (markaz.Level == 2)
+                    markazName = "سازمان مرکزی";
+                else if (markaz.Level == 3)
+                    markazName = $"استان {markaz.NaamOstan ?? ""}";
+                else
+                    markazName = markaz.NaamMarkaz ?? "مرکز";
+            }
+
+            return $"{roleName} - {markazName}";
         }
 
         private string ConvertFaaliatIdsToString(List<int> faaliatIds)
@@ -211,9 +163,6 @@ namespace PayamBack.Controllers.Schedule
 
         private static string CalculateAkharinTaghaza(Hamjavar hamjavar)
         {
-            // ============================================================
-            // 1️⃣ نظر معاون (بالاترین سطح)
-            // ============================================================
             if (hamjavar.NazarMoaven != null && hamjavar.NazarMoaven >= 2)
             {
                 if (hamjavar.NazarMoaven == 2) return "Taeed";
@@ -221,9 +170,6 @@ namespace PayamBack.Controllers.Schedule
                 if (hamjavar.NazarMoaven == 4) return "Eslah";
             }
 
-            // ============================================================
-            // 2️⃣ نظر خدمات
-            // ============================================================
             if (hamjavar.NazarKhadamat != null && hamjavar.NazarKhadamat >= 2)
             {
                 if (hamjavar.NazarKhadamat == 2) return "Taeed";
@@ -231,9 +177,6 @@ namespace PayamBack.Controllers.Schedule
                 if (hamjavar.NazarKhadamat == 4) return "Eslah";
             }
 
-            // ============================================================
-            // 3️⃣ نظر رئیس
-            // ============================================================
             if (hamjavar.NazarRaeis != null && hamjavar.NazarRaeis >= 2)
             {
                 if (hamjavar.NazarRaeis == 2) return "Taeed";
@@ -241,9 +184,6 @@ namespace PayamBack.Controllers.Schedule
                 if (hamjavar.NazarRaeis == 4) return "Eslah";
             }
 
-            // ============================================================
-            // 4️⃣ نظر استاد
-            // ============================================================
             if (hamjavar.NazarElmi != null && hamjavar.NazarElmi == 2)
             {
                 return "Taeed";
@@ -283,17 +223,17 @@ namespace PayamBack.Controllers.Schedule
         // ============================================================
         [HttpGet("list")]
         public async Task<IActionResult> GetList(
-    [FromQuery] int page = 1,
-    [FromQuery] int pageSize = 20,
-    [FromQuery] string? search = null,
-    [FromQuery] string? termCode = null,
-    [FromQuery] string? status = null,
-    [FromQuery] int? ostanId = null,
-    [FromQuery] int? markazId = null)
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? search = null,
+            [FromQuery] string? termCode = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int? ostanId = null,
+            [FromQuery] int? markazId = null)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -303,21 +243,12 @@ namespace PayamBack.Controllers.Schedule
                             join o in _context.Ostads on h.OstadId equals o.Id
                             select new { Hamjavar = h, Ostad = o };
 
-                // ============================================================
-                // 1️⃣ فیلتر بر اساس ترم
-                // ============================================================
                 if (!string.IsNullOrEmpty(termCode))
                     query = query.Where(x => x.Hamjavar.TermCode == termCode);
 
-                // ============================================================
-                // 2️⃣ فیلتر بر اساس وضعیت
-                // ============================================================
                 if (!string.IsNullOrEmpty(status))
                     query = query.Where(x => CalculateAkharinTaghaza(x.Hamjavar) == status);
 
-                // ============================================================
-                // 3️⃣ فیلتر جستجو
-                // ============================================================
                 if (!string.IsNullOrEmpty(search))
                 {
                     query = query.Where(x =>
@@ -327,26 +258,14 @@ namespace PayamBack.Controllers.Schedule
                 }
 
                 // ============================================================
-                // 4️⃣ 🔥 محدودیت دسترسی بر اساس نقش
+                // 🔥 محدودیت دسترسی بر اساس نقش
                 // ============================================================
                 if (isOstad)
                 {
-                    // استاد: فقط درخواست‌های خودش
                     query = query.Where(x => x.Hamjavar.OstadId == currentUser.OstadId);
-                }
-                else if (codeRole == 1)
-                {
-                    // ادمین سامانه: همه درخواست‌ها (با فیلتر استان/مرکز)
-                    // بدون محدودیت اضافی
-                }
-                else if (codeRole == 2)
-                {
-                    // سازمان مرکزی: همه درخواست‌ها (با فیلتر استان/مرکز)
-                    // بدون محدودیت اضافی
                 }
                 else if (codeRole == 3 && currentMarkaz != null)
                 {
-                    // مدیر استان: فقط درخواست‌های اساتید استان خودش
                     var markazIdsInOstan = await _context.Markazes
                         .Where(m => m.CodeOstan == currentMarkaz.CodeOstan)
                         .Select(m => m.Id)
@@ -358,19 +277,17 @@ namespace PayamBack.Controllers.Schedule
                 }
                 else if (codeRole == 4 && currentMarkaz != null)
                 {
-                    // مدیر مرکز: فقط درخواست‌های اساتید مرکز خودش
                     query = query.Where(x => x.Ostad.MarkazId == currentMarkaz.Id);
                 }
-                else
+                else if (codeRole != 1 && codeRole != 2)
                 {
-                    // دسترسی پیش‌فرض: فقط درخواست‌هایی که حداقل تایید استاد شده باشند
                     query = query.Where(x =>
                         x.Hamjavar.NazarElmi != null &&
                         x.Hamjavar.NazarElmi >= 2);
                 }
 
                 // ============================================================
-                // 5️⃣ 🔥 فیلتر بر اساس استان و مرکز (برای ادمین‌ها)
+                // 🔥 فیلتر بر اساس استان و مرکز (برای ادمین‌ها)
                 // ============================================================
                 if (ostanId.HasValue && !markazId.HasValue && (codeRole == 1 || codeRole == 2))
                 {
@@ -388,20 +305,6 @@ namespace PayamBack.Controllers.Schedule
                     query = query.Where(x => x.Ostad.MarkazId == markazId.Value);
                 }
 
-                // ============================================================
-                // 6️⃣ 🔥 فیلتر پیش‌فرض برای غیر استاد: فقط درخواست‌های تاییدشده
-                // ============================================================
-                if (!isOstad && codeRole != 1 && codeRole != 2)
-                {
-                    // فقط درخواست‌هایی که حداقل توسط استاد تایید شده‌اند
-                    query = query.Where(x =>
-                        x.Hamjavar.NazarElmi != null &&
-                        x.Hamjavar.NazarElmi >= 2);
-                }
-
-                // ============================================================
-                // 7️⃣ صفحه‌بندی
-                // ============================================================
                 var totalCount = await query.CountAsync();
 
                 var items = await query
@@ -414,7 +317,7 @@ namespace PayamBack.Controllers.Schedule
                         OstadId = x.Hamjavar.OstadId,
                         OstadName = $"{x.Ostad.Naam} {x.Ostad.NaamKhanevadegi}",
                         OstadCode = x.Ostad.CodeOstadi ?? "",
-                        OstadMarkaz=x.Ostad.Markaz.NaamMarkaz,
+                        OstadMarkaz = x.Ostad.Markaz.NaamMarkaz,
                         TermCode = x.Hamjavar.TermCode ?? "",
                         VahedMovazaf = x.Hamjavar.VahedMovazaf ?? 0,
                         TedadVahedMahalKhedmat = x.Hamjavar.TedadVahedMahalKhedmat ?? 0,
@@ -444,20 +347,11 @@ namespace PayamBack.Controllers.Schedule
             }
             catch (Exception ex)
             {
-                var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                Console.WriteLine($"=== GetList Error ===");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"Inner Exception: {innerMessage}");
-                Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                 return StatusCode(500, new
                 {
                     success = false,
                     message = "خطا در دریافت لیست",
-                    error = ex.Message,
-                    innerError = innerMessage
+                    error = ex.Message
                 });
             }
         }
@@ -499,7 +393,7 @@ namespace PayamBack.Controllers.Schedule
                     if (user != null)
                     {
                         elmiTerm = await _context.Set<ElmiTerm>()
-                            .FirstOrDefaultAsync(e => e.UserId == user.Id && e.TermCode == hamjavar.TermCode);
+                            .FirstOrDefaultAsync(e => e.UserId == user.Id && e.Vazeeat == true);
                     }
                 }
 
@@ -520,25 +414,24 @@ namespace PayamBack.Controllers.Schedule
                         .FirstOrDefaultAsync(u => u.OstadId == hamjavar.OstadId);
                     ostadUserId = ostadUser?.Id;
                 }
+
                 bool isOstadTheCreator = ostadUserId.HasValue &&
                          hamjavar.UserIdSabtKonandeh == ostadUserId.Value;
+
                 var userIds = new List<int>();
 
-                // استاد
                 if (isOstadTheCreator && ostadUserId.HasValue)
                     userIds.Add(ostadUserId.Value);
 
-                // رئیس
                 if (hamjavar.UserIdRaeis.HasValue)
                     userIds.Add(hamjavar.UserIdRaeis.Value);
 
-                // خدمات
                 if (hamjavar.UserIdKhadamatOstan.HasValue)
                     userIds.Add(hamjavar.UserIdKhadamatOstan.Value);
 
-                // معاون
                 if (hamjavar.UserIdApproved.HasValue)
                     userIds.Add(hamjavar.UserIdApproved.Value);
+
                 var signatures = await _signatureService.GetSignaturesByUserIdsAsync(userIds);
 
                 string? raeisFullName = null;
@@ -556,17 +449,11 @@ namespace PayamBack.Controllers.Schedule
                     if (raeisUser != null)
                     {
                         if (raeisUser.Karmand != null)
-                        {
                             raeisFullName = $"{raeisUser.Karmand.Naam} {raeisUser.Karmand.NaameKhanevadeghi}".Trim();
-                        }
                         else if (raeisUser.Ostad != null)
-                        {
                             raeisFullName = $"{raeisUser.Ostad.Naam} {raeisUser.Ostad.NaamKhanevadegi}".Trim();
-                        }
                         else if (raeisUser.MoshakhasatAdmin != null)
-                        {
-                            moavenFullName = $"{raeisUser.MoshakhasatAdmin.Naam} {raeisUser.MoshakhasatAdmin.NaameKhanevadeghi}".Trim();
-                        }
+                            raeisFullName = $"{raeisUser.MoshakhasatAdmin.Naam} {raeisUser.MoshakhasatAdmin.NaameKhanevadeghi}".Trim();
                     }
                 }
 
@@ -581,17 +468,11 @@ namespace PayamBack.Controllers.Schedule
                     if (khadamatUser != null)
                     {
                         if (khadamatUser.Karmand != null)
-                        {
                             khadamatFullName = $"{khadamatUser.Karmand.Naam} {khadamatUser.Karmand.NaameKhanevadeghi}".Trim();
-                        }
                         else if (khadamatUser.Ostad != null)
-                        {
                             khadamatFullName = $"{khadamatUser.Ostad.Naam} {khadamatUser.Ostad.NaamKhanevadegi}".Trim();
-                        }
                         else if (khadamatUser.MoshakhasatAdmin != null)
-                        {
-                            moavenFullName = $"{khadamatUser.MoshakhasatAdmin.Naam} {khadamatUser.MoshakhasatAdmin.NaameKhanevadeghi}".Trim();
-                        }
+                            khadamatFullName = $"{khadamatUser.MoshakhasatAdmin.Naam} {khadamatUser.MoshakhasatAdmin.NaameKhanevadeghi}".Trim();
                     }
                 }
 
@@ -600,25 +481,20 @@ namespace PayamBack.Controllers.Schedule
                     var moavenUser = await _userManager.Users
                         .Include(u => u.Karmand)
                         .Include(u => u.Ostad)
-                        .Include(u=>u.MoshakhasatAdmin)
+                        .Include(u => u.MoshakhasatAdmin)
                         .FirstOrDefaultAsync(u => u.Id == hamjavar.UserIdApproved.Value);
 
                     if (moavenUser != null)
                     {
                         if (moavenUser.Karmand != null)
-                        {
                             moavenFullName = $"{moavenUser.Karmand.Naam} {moavenUser.Karmand.NaameKhanevadeghi}".Trim();
-                        }
                         else if (moavenUser.Ostad != null)
-                        {
                             moavenFullName = $"{moavenUser.Ostad.Naam} {moavenUser.Ostad.NaamKhanevadegi}".Trim();
-                        }
                         else if (moavenUser.MoshakhasatAdmin != null)
-                        {
                             moavenFullName = $"{moavenUser.MoshakhasatAdmin.Naam} {moavenUser.MoshakhasatAdmin.NaameKhanevadeghi}".Trim();
-                        }
                     }
                 }
+
                 var dto = new HamjavarDetailDto
                 {
                     Id = hamjavar.Id,
@@ -653,30 +529,30 @@ namespace PayamBack.Controllers.Schedule
                     TozihatRaeis = hamjavar.TozihatRaeis,
                     RoleMarkazRaeis = hamjavar.RoleMarkazRaeis,
                     TarikhErsalRaeis = hamjavar.TarikhErsalRaeis,
-                    RaeisFullName=raeisFullName,
-                    UploadRaeis=hamjavar.UploadRaeis,
-                    
+                    RaeisFullName = raeisFullName,
+                    UploadRaeis = hamjavar.UploadRaeis,
 
                     NazarKhadamat = hamjavar.NazarKhadamat,
                     TozihatKhadamat = hamjavar.TozihatKhadamat,
                     RoleMarkazKhadamatOstan = hamjavar.RoleMarkazKhadamatOstan,
                     TarikhErsalKhadamat = hamjavar.TarikhErsalKhadamat,
-                    KhadamatFullName=khadamatFullName,
-                    UploadKhadamat=hamjavar.UploadKhadamat,
+                    KhadamatFullName = khadamatFullName,
+                    UploadKhadamat = hamjavar.UploadKhadamat,
 
                     NazarMoaven = hamjavar.NazarMoaven,
                     TozihatMoaven = hamjavar.TozihatMoaven,
                     RoleMarkazApproved = hamjavar.RoleMarkazApproved,
                     TarikhErsalMoaven = hamjavar.TarikhErsalMoaven,
-                    MoavenFullName=moavenFullName,
-                    UploadMoaven=hamjavar.UploadMoaven,
+                    MoavenFullName = moavenFullName,
+                    UploadMoaven = hamjavar.UploadMoaven,
 
                     AkharinTaghaza = akharinTaghaza,
                     AkharinTaghazaDisplay = GetStatusDisplayStatic(akharinTaghaza),
                     AKharinBarrasi = akharinBarrasi,
-                    SignatureOstad= (isOstadTheCreator && ostadUserId.HasValue && signatures.TryGetValue(ostadUserId.Value, out var ostadSig))
-                        ? new SignatureDto { Data = ostadSig.Signature, Position = ostadSig.Position }: null,
-                    SignatureRaeis=(hamjavar.UserIdRaeis.HasValue && signatures.TryGetValue(hamjavar.UserIdRaeis.Value, out var raeisSig))
+
+                    SignatureOstad = (isOstadTheCreator && ostadUserId.HasValue && signatures.TryGetValue(ostadUserId.Value, out var ostadSig))
+                        ? new SignatureDto { Data = ostadSig.Signature, Position = ostadSig.Position } : null,
+                    SignatureRaeis = (hamjavar.UserIdRaeis.HasValue && signatures.TryGetValue(hamjavar.UserIdRaeis.Value, out var raeisSig))
                         ? new SignatureDto { Data = raeisSig.Signature, Position = raeisSig.Position } : null,
                     SignatureKhadamat = (hamjavar.UserIdKhadamatOstan.HasValue && signatures.TryGetValue(hamjavar.UserIdKhadamatOstan.Value, out var khadamatSig))
                         ? new SignatureDto { Data = khadamatSig.Signature, Position = khadamatSig.Position } : null,
@@ -727,7 +603,7 @@ namespace PayamBack.Controllers.Schedule
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -758,7 +634,6 @@ namespace PayamBack.Controllers.Schedule
                     return BadRequest(new { success = false, message = "درخواستی برای این استاد در این ترم قبلاً ثبت شده است" });
 
                 List<Hamjavar1CreateDto>? hamjavar1s = null;
-
                 if (!string.IsNullOrEmpty(dto.Hamjavar1sJson))
                 {
                     try
@@ -767,7 +642,6 @@ namespace PayamBack.Controllers.Schedule
                         {
                             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                         };
-
                         hamjavar1s = JsonSerializer.Deserialize<List<Hamjavar1CreateDto>>(dto.Hamjavar1sJson, options);
                     }
                     catch (Exception ex)
@@ -780,20 +654,6 @@ namespace PayamBack.Controllers.Schedule
                 if (hamjavar1s == null || !hamjavar1s.Any())
                 {
                     return BadRequest(new { success = false, message = "حداقل یک مورد تقاضا باید ثبت شود" });
-                }
-
-                foreach (var h1Dto in hamjavar1s)
-                {
-                    if (h1Dto.MarkazId <= 0)
-                    {
-                        return BadRequest(new { success = false, message = "شناسه مرکز نامعتبر است" });
-                    }
-
-                    var markazExists = await _context.Markazes.AnyAsync(m => m.Id == h1Dto.MarkazId);
-                    if (!markazExists)
-                    {
-                        return BadRequest(new { success = false, message = $"مرکز با شناسه {h1Dto.MarkazId} یافت نشد" });
-                    }
                 }
 
                 var roleMarkaz = GetRoleMarkazDisplay(currentRole, currentMarkaz);
@@ -817,7 +677,7 @@ namespace PayamBack.Controllers.Schedule
                         Dalil = dto.Dalil,
                         ShahrZendegi = dto.ShahrZendegi,
                         UploadElmi = null,
-                        NazarElmi = 1  // پیش‌نویس استاد
+                        NazarElmi = 1
                     };
 
                     await _context.Set<Hamjavar>().AddAsync(entity);
@@ -883,58 +743,37 @@ namespace PayamBack.Controllers.Schedule
                         DeleteFile(uploadElmiPath);
                     }
 
-                    var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                    var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                    Console.WriteLine($"=== DbUpdateException ===");
-                    Console.WriteLine($"Message: {ex.Message}");
-                    Console.WriteLine($"Inner Exception: {innerMessage}");
-                    Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                     return StatusCode(500, new
                     {
                         success = false,
                         message = "خطا در ثبت درخواست",
-                        error = ex.Message,
-                        innerError = innerMessage
+                        error = ex.Message
                     });
                 }
             }
             catch (Exception ex)
             {
-                var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                Console.WriteLine($"=== DbUpdateException ===");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"Inner Exception: {innerMessage}");
-                Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                 return StatusCode(500, new
                 {
                     success = false,
                     message = "خطا در ثبت درخواست",
-                    error = ex.Message,
-                    innerError = innerMessage
+                    error = ex.Message
                 });
             }
         }
 
         // ============================================================
-        // 3️⃣ ویرایش درخواست هم‌جاوری
+        // 4️⃣ ویرایش درخواست هم‌جاوری
         // ============================================================
         [HttpPut("update/{id}")]
         public async Task<IActionResult> Update(int id, [FromForm] HamjavarUpdateDto dto)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                // ============================================================
-                // 1️⃣ پیدا کردن درخواست
-                // ============================================================
                 var entity = await _context.Set<Hamjavar>()
                     .Include(h => h.Hamjavar1s)
                     .FirstOrDefaultAsync(h => h.Id == id);
@@ -942,40 +781,28 @@ namespace PayamBack.Controllers.Schedule
                 if (entity == null)
                     return NotFound(new { success = false, message = "درخواست یافت نشد" });
 
-                // ============================================================
-                // 2️⃣ بررسی دسترسی برای ویرایش
-                // ============================================================
                 var isOstad = currentRole?.Name == "استاد";
                 var currentStatus = CalculateAkharinTaghaza(entity);
 
-                // فقط استاد (در حالت پیش‌نویس) یا ادمین سامانه می‌تواند ویرایش کند
                 if (isOstad)
                 {
-                    // استاد فقط درخواست خودش را می‌تواند ویرایش کند
                     if (entity.OstadId != currentUser.OstadId)
                         return Forbid();
 
-                    // استاد فقط در حالت پیش‌نویس می‌تواند ویرایش کند
                     if (currentStatus != "PishNevis")
                         return BadRequest(new { success = false, message = "این درخواست قبلاً تایید شده و قابل ویرایش نیست" });
                 }
-                else if (codeRole != 1) // فقط ادمین سامانه یا خود استاد
+                else if (codeRole != 1)
                 {
                     return Forbid();
                 }
 
-                // ============================================================
-                // 3️⃣ شروع تراکنش
-                // ============================================================
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
                 string? uploadElmiPath = null;
 
                 try
                 {
-                    // ============================================================
-                    // 4️⃣ به‌روزرسانی فیلدهای اصلی
-                    // ============================================================
                     if (dto.VahedMovazaf.HasValue)
                         entity.VahedMovazaf = dto.VahedMovazaf;
 
@@ -994,9 +821,6 @@ namespace PayamBack.Controllers.Schedule
                     if (!string.IsNullOrEmpty(dto.ShahrZendegi))
                         entity.ShahrZendegi = dto.ShahrZendegi;
 
-                    // ============================================================
-                    // 5️⃣ به‌روزرسانی فایل (اگر فایل جدید آپلود شده)
-                    // ============================================================
                     if (dto.UploadElmi != null)
                     {
                         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
@@ -1013,7 +837,6 @@ namespace PayamBack.Controllers.Schedule
 
                         uploadElmiPath = await SaveFileAsync(dto.UploadElmi, "hamjavar");
 
-                        // حذف فایل قبلی اگر وجود داشت
                         if (!string.IsNullOrEmpty(entity.UploadElmi))
                         {
                             DeleteFile(entity.UploadElmi);
@@ -1021,16 +844,29 @@ namespace PayamBack.Controllers.Schedule
                         entity.UploadElmi = uploadElmiPath;
                     }
 
-                    // ============================================================
-                    // 6️⃣ به‌روزرسانی Hamjavar1 ها
-                    // ============================================================
-                    if (dto.Hamjavar1s != null && dto.Hamjavar1s.Any())
+                    List<Hamjavar1UpdateDto>? hamjavar1s = null;
+                    if (!string.IsNullOrEmpty(dto.Hamjavar1sJson))
                     {
-                        // لیست Idهای موجود
-                        var existingIds = entity.Hamjavar1s.Select(d => d.Id).ToList();
-                        var updatedIds = dto.Hamjavar1s.Where(d => d.Id > 0).Select(d => d.Id).ToList();
+                        try
+                        {
+                            var options = new JsonSerializerOptions
+                            {
+                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                            };
+                            hamjavar1s = JsonSerializer.Deserialize<List<Hamjavar1UpdateDto>>(dto.Hamjavar1sJson, options);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"❌ خطا در دسریالایز Hamjavar1s: {ex.Message}");
+                            return BadRequest(new { success = false, message = "خطا در پردازش اطلاعات موارد تقاضا" });
+                        }
+                    }
 
-                        // حذف مواردی که در درخواست جدید نیستند
+                    if (hamjavar1s != null && hamjavar1s.Any())
+                    {
+                        var existingIds = entity.Hamjavar1s.Select(d => d.Id).ToList();
+                        var updatedIds = hamjavar1s.Where(d => d.Id > 0).Select(d => d.Id).ToList();
+
                         var idsToDelete = existingIds.Except(updatedIds).ToList();
                         if (idsToDelete.Any())
                         {
@@ -1038,12 +874,10 @@ namespace PayamBack.Controllers.Schedule
                             _context.Set<Hamjavar1>().RemoveRange(itemsToDelete);
                         }
 
-                        // به‌روزرسانی یا افزودن موارد جدید
-                        foreach (var h1Dto in dto.Hamjavar1s)
+                        foreach (var h1Dto in hamjavar1s)
                         {
                             if (h1Dto.Id > 0)
                             {
-                                // ویرایش مورد موجود
                                 var existing = entity.Hamjavar1s.FirstOrDefault(d => d.Id == h1Dto.Id);
                                 if (existing != null)
                                 {
@@ -1075,7 +909,6 @@ namespace PayamBack.Controllers.Schedule
                             }
                             else
                             {
-                                // افزودن مورد جدید
                                 var faaliatIdsString = h1Dto.FaaliatIds != null && h1Dto.FaaliatIds.Any()
                                     ? string.Join("|", h1Dto.FaaliatIds)
                                     : null;
@@ -1099,9 +932,6 @@ namespace PayamBack.Controllers.Schedule
                         }
                     }
 
-                    // ============================================================
-                    // 7️⃣ ذخیره تغییرات
-                    // ============================================================
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
@@ -1116,58 +946,39 @@ namespace PayamBack.Controllers.Schedule
                 {
                     await transaction.RollbackAsync();
 
-                    // اگر فایل جدید ذخیره شده بود، آن را حذف کن
                     if (!string.IsNullOrEmpty(uploadElmiPath))
                     {
                         DeleteFile(uploadElmiPath);
                     }
 
-                    var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                    var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                    Console.WriteLine($"=== Update Error ===");
-                    Console.WriteLine($"Message: {ex.Message}");
-                    Console.WriteLine($"Inner Exception: {innerMessage}");
-                    Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                     return StatusCode(500, new
                     {
                         success = false,
                         message = "خطا در ویرایش درخواست",
-                        error = ex.Message,
-                        innerError = innerMessage
+                        error = ex.Message
                     });
                 }
             }
             catch (Exception ex)
             {
-                var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                Console.WriteLine($"=== Update Error ===");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"Inner Exception: {innerMessage}");
-                Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                 return StatusCode(500, new
                 {
                     success = false,
                     message = "خطا در ویرایش درخواست",
-                    error = ex.Message,
-                    innerError = innerMessage
+                    error = ex.Message
                 });
             }
         }
 
         // ============================================================
-        // 4️⃣ تایید نهایی توسط استاد
+        // 5️⃣ تایید نهایی توسط استاد
         // ============================================================
         [HttpPatch("confirm-submit-by-ostad/{id}")]
         public async Task<IActionResult> ConfirmSubmitByOstad(int id, [FromBody] HamjavarConfirmDto dto)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -1208,21 +1019,17 @@ namespace PayamBack.Controllers.Schedule
             }
         }
 
-        
         // ============================================================
-        // 5️⃣ بررسی توسط رئیس مرکز
+        // 6️⃣ بررسی توسط رئیس مرکز
         // ============================================================
         [HttpPatch("review-raeis")]
         public async Task<IActionResult> ReviewByRaeis([FromForm] HamjavarReviewDto dto)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
-
-                //if (!await HasPermissionAsync(currentUser, "Hamjavar.ReviewByRaeis"))
-                //    return Forbid();
 
                 var hamjavar = await _context.Set<Hamjavar>()
                     .Include(h => h.Hamjavar1s)
@@ -1231,53 +1038,35 @@ namespace PayamBack.Controllers.Schedule
                 if (hamjavar == null)
                     return NotFound(new { success = false, message = "درخواست یافت نشد" });
 
-                if (!await CanAccessTargetOstadAsync(hamjavar.OstadId, codeRole.Value, currentMarkaz?.Id))
+                if (!await _accessService.CanAccessTargetOstadAsync(hamjavar.OstadId, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
 
-                // ============================================================
-                // 🔥 شرط 1: نظر علمی باید برابر 2 باشد
-                // ============================================================
                 if (hamjavar.NazarElmi == null || hamjavar.NazarElmi != 2)
                 {
                     return BadRequest(new { success = false, message = "این درخواست باید ابتدا توسط استاد تایید شود (NazarElmi=2)" });
                 }
 
-                // ============================================================
-                // 🔥 شرط 2: نظر رئیس باید کمتر از 2 باشد (ثبت نشده باشد)
-                // ============================================================
                 if (hamjavar.NazarRaeis != null && hamjavar.NazarRaeis >= 2)
                 {
                     return BadRequest(new { success = false, message = "نظر رئیس مرکز قبلاً ثبت شده است" });
                 }
 
-                // ============================================================
-                // 🔥 شرط 3: نظر خدمات باید کمتر از 2 باشد
-                // ============================================================
                 if (hamjavar.NazarKhadamat != null && hamjavar.NazarKhadamat >= 2)
                 {
                     return BadRequest(new { success = false, message = "نظر خدمات آموزشی قبلاً ثبت شده است" });
                 }
 
-                // ============================================================
-                // 🔥 شرط 4: نظر معاون باید کمتر از 2 باشد
-                // ============================================================
                 if (hamjavar.NazarMoaven != null && hamjavar.NazarMoaven >= 2)
                 {
                     return BadRequest(new { success = false, message = "نظر معاونت آموزشی قبلاً ثبت شده است" });
                 }
 
-                // ============================================================
-                // 🔥 شروع تراکنش
-                // ============================================================
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
                 string? uploadRaeisPath = null;
 
                 try
                 {
-                    // ============================================================
-                    // 🔥 ذخیره فایل آپلود شده توسط رئیس (در صورت وجود)
-                    // ============================================================
                     if (dto.UploadFile != null)
                     {
                         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
@@ -1295,9 +1084,6 @@ namespace PayamBack.Controllers.Schedule
                         uploadRaeisPath = await SaveFileAsync(dto.UploadFile, "hamjavar");
                     }
 
-                    // ============================================================
-                    // 🔥 به‌روزرسانی Hamjavar1 ها
-                    // ============================================================
                     if (dto.TedadRoozList != null && dto.TedadRoozList.Any())
                     {
                         foreach (var item in dto.TedadRoozList)
@@ -1310,16 +1096,12 @@ namespace PayamBack.Controllers.Schedule
                         }
                     }
 
-                    // ============================================================
-                    // 🔥 به‌روزرسانی فیلدهای رئیس
-                    // ============================================================
                     hamjavar.NazarRaeis = dto.Nazar;
                     hamjavar.TozihatRaeis = dto.Tozihat;
                     hamjavar.TarikhErsalRaeis = DateTime.Now;
                     hamjavar.UserIdRaeis = currentUser.Id;
                     hamjavar.RoleMarkazRaeis = GetRoleMarkazDisplay(currentRole, currentMarkaz);
 
-                    // اگر فایل جدید آپلود شده، فایل قبلی را حذف کن
                     if (!string.IsNullOrEmpty(uploadRaeisPath))
                     {
                         if (!string.IsNullOrEmpty(hamjavar.UploadRaeis))
@@ -1340,9 +1122,6 @@ namespace PayamBack.Controllers.Schedule
                 }
                 catch (Exception ex)
                 {
-                    // ============================================================
-                    // 🔥 در صورت خطا، فایل ذخیره شده را حذف کن و تراکنش را برگردان
-                    // ============================================================
                     await transaction.RollbackAsync();
 
                     if (!string.IsNullOrEmpty(uploadRaeisPath))
@@ -1350,58 +1129,36 @@ namespace PayamBack.Controllers.Schedule
                         DeleteFile(uploadRaeisPath);
                     }
 
-                    var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                    var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                    Console.WriteLine($"=== ReviewByRaeis Error ===");
-                    Console.WriteLine($"Message: {ex.Message}");
-                    Console.WriteLine($"Inner Exception: {innerMessage}");
-                    Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                     return StatusCode(500, new
                     {
                         success = false,
                         message = "خطا در ثبت نظر رئیس مرکز",
-                        error = ex.Message,
-                        innerError = innerMessage
+                        error = ex.Message
                     });
                 }
             }
             catch (Exception ex)
             {
-                var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                Console.WriteLine($"=== ReviewByRaeis Error ===");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"Inner Exception: {innerMessage}");
-                Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                 return StatusCode(500, new
                 {
                     success = false,
                     message = "خطا در بررسی رئیس مرکز",
-                    error = ex.Message,
-                    innerError = innerMessage
+                    error = ex.Message
                 });
             }
         }
 
-        
         // ============================================================
-        // 6️⃣ بررسی توسط خدمات آموزشی استان
+        // 7️⃣ بررسی توسط خدمات آموزشی استان
         // ============================================================
         [HttpPatch("review-khadamat")]
         public async Task<IActionResult> ReviewByKhadamat([FromForm] HamjavarReviewDto dto)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
-
-                //if (!await HasPermissionAsync(currentUser, "Hamjavar.ReviewByKhadamat"))
-                //    return Forbid();
 
                 var hamjavar = await _context.Set<Hamjavar>()
                     .Include(h => h.Hamjavar1s)
@@ -1410,45 +1167,30 @@ namespace PayamBack.Controllers.Schedule
                 if (hamjavar == null)
                     return NotFound(new { success = false, message = "درخواست یافت نشد" });
 
-                if (!await CanAccessTargetOstadAsync(hamjavar.OstadId, codeRole.Value, currentMarkaz?.Id))
+                if (!await _accessService.CanAccessTargetOstadAsync(hamjavar.OstadId, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
 
-                // ============================================================
-                // 🔥 شرط 1: نظر علمی باید برابر 2 باشد (استاد تایید کرده)
-                // ============================================================
                 if (hamjavar.NazarElmi == null || hamjavar.NazarElmi != 2)
                 {
                     return BadRequest(new { success = false, message = "این درخواست باید ابتدا توسط استاد تایید شود (NazarElmi=2)" });
                 }
 
-                // ============================================================
-                // 🔥 شرط 2: نظر خدمات باید کمتر از 2 باشد (ثبت نشده باشد)
-                // ============================================================
                 if (hamjavar.NazarKhadamat != null && hamjavar.NazarKhadamat >= 2)
                 {
                     return BadRequest(new { success = false, message = "نظر خدمات آموزشی قبلاً ثبت شده است" });
                 }
 
-                // ============================================================
-                // 🔥 شرط 3: نظر معاون باید کمتر از 2 باشد
-                // ============================================================
                 if (hamjavar.NazarMoaven != null && hamjavar.NazarMoaven >= 2)
                 {
                     return BadRequest(new { success = false, message = "نظر معاونت آموزشی قبلاً ثبت شده است" });
                 }
 
-                // ============================================================
-                // 🔥 شروع تراکنش
-                // ============================================================
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
                 string? uploadKhadamatPath = null;
 
                 try
                 {
-                    // ============================================================
-                    // 🔥 ذخیره فایل آپلود شده توسط خدمات (در صورت وجود)
-                    // ============================================================
                     if (dto.UploadFile != null)
                     {
                         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
@@ -1466,9 +1208,6 @@ namespace PayamBack.Controllers.Schedule
                         uploadKhadamatPath = await SaveFileAsync(dto.UploadFile, "hamjavar");
                     }
 
-                    // ============================================================
-                    // 🔥 به‌روزرسانی Hamjavar1 ها
-                    // ============================================================
                     if (dto.TedadRoozList != null && dto.TedadRoozList.Any())
                     {
                         foreach (var item in dto.TedadRoozList)
@@ -1481,16 +1220,12 @@ namespace PayamBack.Controllers.Schedule
                         }
                     }
 
-                    // ============================================================
-                    // 🔥 به‌روزرسانی فیلدهای خدمات
-                    // ============================================================
                     hamjavar.NazarKhadamat = dto.Nazar;
                     hamjavar.TozihatKhadamat = dto.Tozihat;
                     hamjavar.TarikhErsalKhadamat = DateTime.Now;
                     hamjavar.UserIdKhadamatOstan = currentUser.Id;
                     hamjavar.RoleMarkazKhadamatOstan = GetRoleMarkazDisplay(currentRole, currentMarkaz);
 
-                    // اگر فایل جدید آپلود شده، فایل قبلی را حذف کن
                     if (!string.IsNullOrEmpty(uploadKhadamatPath))
                     {
                         if (!string.IsNullOrEmpty(hamjavar.UploadKhadamat))
@@ -1511,9 +1246,6 @@ namespace PayamBack.Controllers.Schedule
                 }
                 catch (Exception ex)
                 {
-                    // ============================================================
-                    // 🔥 در صورت خطا، فایل ذخیره شده را حذف کن و تراکنش را برگردان
-                    // ============================================================
                     await transaction.RollbackAsync();
 
                     if (!string.IsNullOrEmpty(uploadKhadamatPath))
@@ -1521,58 +1253,36 @@ namespace PayamBack.Controllers.Schedule
                         DeleteFile(uploadKhadamatPath);
                     }
 
-                    var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                    var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                    Console.WriteLine($"=== ReviewByKhadamat Error ===");
-                    Console.WriteLine($"Message: {ex.Message}");
-                    Console.WriteLine($"Inner Exception: {innerMessage}");
-                    Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                     return StatusCode(500, new
                     {
                         success = false,
                         message = "خطا در ثبت نظر خدمات آموزشی",
-                        error = ex.Message,
-                        innerError = innerMessage
+                        error = ex.Message
                     });
                 }
             }
             catch (Exception ex)
             {
-                var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                Console.WriteLine($"=== ReviewByKhadamat Error ===");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"Inner Exception: {innerMessage}");
-                Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                 return StatusCode(500, new
                 {
                     success = false,
                     message = "خطا در بررسی خدمات آموزشی استان",
-                    error = ex.Message,
-                    innerError = innerMessage
+                    error = ex.Message
                 });
             }
         }
 
-        
         // ============================================================
-        // 7️⃣ بررسی نهایی توسط معاونت آموزشی استان
+        // 8️⃣ بررسی نهایی توسط معاونت آموزشی استان
         // ============================================================
         [HttpPatch("review-moaven")]
         public async Task<IActionResult> ReviewByMoaven([FromForm] HamjavarReviewDto dto)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
-
-                //if (!await HasPermissionAsync(currentUser, "Hamjavar.ReviewByMoaven"))
-                //    return Forbid();
 
                 var hamjavar = await _context.Set<Hamjavar>()
                     .Include(h => h.Hamjavar1s)
@@ -1581,29 +1291,20 @@ namespace PayamBack.Controllers.Schedule
                 if (hamjavar == null)
                     return NotFound(new { success = false, message = "درخواست یافت نشد" });
 
-                if (!await CanAccessTargetOstadAsync(hamjavar.OstadId, codeRole.Value, currentMarkaz?.Id))
+                if (!await _accessService.CanAccessTargetOstadAsync(hamjavar.OstadId, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
 
-                // ============================================================
-                // 🔥 شرط: نظر علمی باید برابر 2 باشد (استاد تایید کرده)
-                // ============================================================
                 if (hamjavar.NazarElmi == null || hamjavar.NazarElmi != 2)
                 {
                     return BadRequest(new { success = false, message = "این درخواست باید ابتدا توسط استاد تایید شود (NazarElmi=2)" });
                 }
 
-                // ============================================================
-                // 🔥 شروع تراکنش
-                // ============================================================
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
                 string? uploadMoavenPath = null;
 
                 try
                 {
-                    // ============================================================
-                    // 🔥 ذخیره فایل آپلود شده توسط معاون (در صورت وجود)
-                    // ============================================================
                     if (dto.UploadFile != null)
                     {
                         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
@@ -1621,9 +1322,6 @@ namespace PayamBack.Controllers.Schedule
                         uploadMoavenPath = await SaveFileAsync(dto.UploadFile, "hamjavar");
                     }
 
-                    // ============================================================
-                    // 🔥 به‌روزرسانی Hamjavar1 ها
-                    // ============================================================
                     if (dto.TedadRoozList != null && dto.TedadRoozList.Any())
                     {
                         foreach (var item in dto.TedadRoozList)
@@ -1636,16 +1334,12 @@ namespace PayamBack.Controllers.Schedule
                         }
                     }
 
-                    // ============================================================
-                    // 🔥 به‌روزرسانی فیلدهای معاون (حتی اگر قبلاً نظر داده باشد، بازنویسی می‌شود)
-                    // ============================================================
                     hamjavar.NazarMoaven = dto.Nazar;
                     hamjavar.TozihatMoaven = dto.Tozihat;
                     hamjavar.TarikhErsalMoaven = DateTime.Now;
                     hamjavar.UserIdApproved = currentUser.Id;
                     hamjavar.RoleMarkazApproved = GetRoleMarkazDisplay(currentRole, currentMarkaz);
 
-                    // اگر فایل جدید آپلود شده، فایل قبلی را حذف کن
                     if (!string.IsNullOrEmpty(uploadMoavenPath))
                     {
                         if (!string.IsNullOrEmpty(hamjavar.UploadMoaven))
@@ -1666,9 +1360,6 @@ namespace PayamBack.Controllers.Schedule
                 }
                 catch (Exception ex)
                 {
-                    // ============================================================
-                    // 🔥 در صورت خطا، فایل ذخیره شده را حذف کن و تراکنش را برگردان
-                    // ============================================================
                     await transaction.RollbackAsync();
 
                     if (!string.IsNullOrEmpty(uploadMoavenPath))
@@ -1676,58 +1367,37 @@ namespace PayamBack.Controllers.Schedule
                         DeleteFile(uploadMoavenPath);
                     }
 
-                    var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                    var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                    Console.WriteLine($"=== ReviewByMoaven Error ===");
-                    Console.WriteLine($"Message: {ex.Message}");
-                    Console.WriteLine($"Inner Exception: {innerMessage}");
-                    Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                     return StatusCode(500, new
                     {
                         success = false,
                         message = "خطا در ثبت نظر معاونت آموزشی",
-                        error = ex.Message,
-                        innerError = innerMessage
+                        error = ex.Message
                     });
                 }
             }
             catch (Exception ex)
             {
-                var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                Console.WriteLine($"=== ReviewByMoaven Error ===");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"Inner Exception: {innerMessage}");
-                Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                 return StatusCode(500, new
                 {
                     success = false,
                     message = "خطا در بررسی معاونت آموزشی استان",
-                    error = ex.Message,
-                    innerError = innerMessage
+                    error = ex.Message
                 });
             }
         }
 
         // ============================================================
-        // 8️⃣ حذف کامل درخواست هم‌جاوری با تمام زیرمجموعه‌ها و فایل‌ها
+        // 9️⃣ حذف کامل درخواست هم‌جاوری
         // ============================================================
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                // ============================================================
-                // 1️⃣ پیدا کردن درخواست با تمام زیرمجموعه‌ها
-                // ============================================================
                 var entity = await _context.Set<Hamjavar>()
                     .Include(h => h.Hamjavar1s)
                     .FirstOrDefaultAsync(h => h.Id == id);
@@ -1735,18 +1405,13 @@ namespace PayamBack.Controllers.Schedule
                 if (entity == null)
                     return NotFound(new { success = false, message = "درخواست یافت نشد" });
 
-                // ============================================================
-                // 2️⃣ بررسی دسترسی برای حذف
-                // ============================================================
                 var isOstad = currentRole?.Name == "استاد";
 
                 if (isOstad)
                 {
-                    // استاد فقط در حالت 0 یا 1 می‌تواند حذف کند
                     if (entity.OstadId != currentUser.OstadId)
                         return Forbid();
 
-                    // 🔥 شرط حذف برای استاد: NazarElmi == 0 یا NazarElmi == 1
                     if (entity.NazarElmi != null && entity.NazarElmi > 1)
                     {
                         return BadRequest(new
@@ -1756,62 +1421,34 @@ namespace PayamBack.Controllers.Schedule
                         });
                     }
                 }
-                else if (codeRole != 1) // فقط ادمین سامانه یا خود استاد
+                else if (codeRole != 1)
                 {
                     return Forbid();
                 }
 
-                // ============================================================
-                // 3️⃣ شروع تراکنش برای حذف همه چیز
-                // ============================================================
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
                 try
                 {
-                    // ============================================================
-                    // 🔥 حذف فایل‌های آپلود شده
-                    // ============================================================
-
-                    // فایل استاد (UploadElmi)
                     if (!string.IsNullOrEmpty(entity.UploadElmi))
-                    {
                         DeleteFile(entity.UploadElmi);
-                    }
 
-                    // فایل رئیس (UploadRaeis)
                     if (!string.IsNullOrEmpty(entity.UploadRaeis))
-                    {
                         DeleteFile(entity.UploadRaeis);
-                    }
 
-                    // فایل خدمات (UploadKhadamat)
                     if (!string.IsNullOrEmpty(entity.UploadKhadamat))
-                    {
                         DeleteFile(entity.UploadKhadamat);
-                    }
 
-                    // فایل معاون (UploadMoaven)
                     if (!string.IsNullOrEmpty(entity.UploadMoaven))
-                    {
                         DeleteFile(entity.UploadMoaven);
-                    }
 
-                    // ============================================================
-                    // 🔥 حذف Hamjavar1 ها (زیرمجموعه‌ها)
-                    // ============================================================
                     if (entity.Hamjavar1s != null && entity.Hamjavar1s.Any())
                     {
                         _context.Set<Hamjavar1>().RemoveRange(entity.Hamjavar1s);
                     }
 
-                    // ============================================================
-                    // 🔥 حذف خود Hamjavar
-                    // ============================================================
                     _context.Set<Hamjavar>().Remove(entity);
 
-                    // ============================================================
-                    // 🔥 ذخیره تغییرات در دیتابیس
-                    // ============================================================
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
@@ -1824,53 +1461,34 @@ namespace PayamBack.Controllers.Schedule
                 catch (Exception ex)
                 {
                     await transaction.RollbackAsync();
-
-                    var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                    var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                    Console.WriteLine($"=== Delete Error ===");
-                    Console.WriteLine($"Message: {ex.Message}");
-                    Console.WriteLine($"Inner Exception: {innerMessage}");
-                    Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                     return StatusCode(500, new
                     {
                         success = false,
                         message = "خطا در حذف درخواست",
-                        error = ex.Message,
-                        innerError = innerMessage
+                        error = ex.Message
                     });
                 }
             }
             catch (Exception ex)
             {
-                var innerMessage = ex.InnerException?.Message ?? "No inner exception";
-                var innerStackTrace = ex.InnerException?.StackTrace ?? "No stack trace";
-
-                Console.WriteLine($"=== Delete Error ===");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"Inner Exception: {innerMessage}");
-                Console.WriteLine($"Stack Trace: {innerStackTrace}");
-
                 return StatusCode(500, new
                 {
                     success = false,
                     message = "خطا در حذف درخواست",
-                    error = ex.Message,
-                    innerError = innerMessage
+                    error = ex.Message
                 });
             }
         }
 
         // ============================================================
-        // 9️⃣ دریافت Hamjavar1 های یک درخواست
+        // 🔟 دریافت Hamjavar1 های یک درخواست
         // ============================================================
         [HttpGet("{id}/details")]
         public async Task<IActionResult> GetDetailsByHamjavarId(int id)
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -1885,7 +1503,7 @@ namespace PayamBack.Controllers.Schedule
                 if (isOstad && hamjavar.OstadId != currentUser.OstadId)
                     return Forbid();
 
-                if (!isOstad && !await CanAccessTargetOstadAsync(hamjavar.OstadId, codeRole.Value, currentMarkaz?.Id))
+                if (!isOstad && !await _accessService.CanAccessTargetOstadAsync(hamjavar.OstadId, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
 
                 var details = await _context.Set<Hamjavar1>()
@@ -1924,7 +1542,7 @@ namespace PayamBack.Controllers.Schedule
         }
 
         // ============================================================
-        // دانلود فایل‌های مستندات هم‌جاوری
+        // 1️⃣1️⃣ دانلود فایل‌های مستندات هم‌جاوری
         // ============================================================
         [HttpGet("download/{id}/{fileType}")]
         [Authorize]
@@ -1938,7 +1556,6 @@ namespace PayamBack.Controllers.Schedule
                 if (entity == null)
                     return NotFound(new { message = "درخواست یافت نشد" });
 
-                // انتخاب فایل بر اساس نوع
                 string? filePath = fileType.ToLower() switch
                 {
                     "elmi" => entity.UploadElmi,
@@ -1958,7 +1575,6 @@ namespace PayamBack.Controllers.Schedule
                 var fileBytes = await System.IO.File.ReadAllBytesAsync(physicalPath);
                 var fileName = Path.GetFileName(filePath);
 
-                // تشخیص نوع فایل
                 var contentType = "application/octet-stream";
                 var extension = Path.GetExtension(fileName).ToLower();
                 if (extension == ".pdf") contentType = "application/pdf";

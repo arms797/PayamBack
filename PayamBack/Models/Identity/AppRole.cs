@@ -16,21 +16,12 @@ namespace PayamBack.Models.Identity
 
         /// <summary>آیا این نقش یک نقش ادمین است؟</summary>
         public bool? IsAdmin { get; set; } = false;
-
         /// <summary>
         /// آیا این نقش در هر مرکز فقط به یک کاربر قابل تخصیص است؟
         /// اگر true باشد: فقط یک کاربر در هر مرکز می‌تواند این نقش را داشته باشد.
         /// اگر false باشد: چند کاربر در یک مرکز می‌توانند این نقش را داشته باشند.
         /// </summary>
-        public bool? IsUniquePerMarkaz { get; set; } = false;
-
-        //فیلدهای ساخته شده توسط Identity
-        //public int Id { get; set; }
-        //public string Name { get; set; }
-        //public string NormalizedName { get; set; }
-        //public string ConcurrencyStamp { get; set; }
-
+        public bool? IsUniquePerMarkaz { get; set; } = false; 
         public virtual ICollection<AppUserRole>? AppUserRoles { get; set; }
-
     }
 }

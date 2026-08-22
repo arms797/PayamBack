@@ -91,7 +91,16 @@ builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICaptchaService, CaptchaService>();
 builder.Services.AddScoped<ISignatureService, SignatureService>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IMarkazCacheService, MarkazCacheService>(); 
+builder.Services.AddScoped<IAccessService, AccessService>();
+builder.Services.AddScoped<ICacheManager,CacheManager>();
+builder.Services.AddScoped<IPermissionCacheService, PermissionCacheService>();
 
+
+
+
+builder.Services.AddHttpContextAccessor();
 
 // ============================================================
 // 7️⃣ CORS برای React

@@ -14,5 +14,7 @@ namespace PayamBack.DTOs.Identity.Role
         public bool? Vazeeyat { get; set; }
         public bool? Emza { get; set; }
         public bool? IsAdmin { get; set; }  // ← اضافه شد
+        public bool? IsUniquePerMarkaz { get; set; } // ← اضافه شد
+
     }
 }

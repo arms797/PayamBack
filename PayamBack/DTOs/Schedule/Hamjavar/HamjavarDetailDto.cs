@@ -28,7 +28,7 @@
         public bool? IsEjeari { get; set; }
         public string? OnvanEjraei { get; set; }
         public bool? FullTime { get; set; }
-        public string? TedadSaatMovazafi { get; set; }
+        public int? TedadSaatMovazafi { get; set; }
 
         // ============================================================
         // نظرات (عددی) - مطابق مدل

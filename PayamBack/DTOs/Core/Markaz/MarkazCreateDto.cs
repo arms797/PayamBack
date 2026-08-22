@@ -15,6 +15,7 @@
         public string Telefon { get; set; } = string.Empty;
         public bool? Vazeeyat { get; set; }
         public bool? Dakheli { get; set; }
-        public int? Level { get; set; }  // ← اضافه شد
+        public int? Level { get; set; }  // ← اضافه شد3
+        public int? NoeMarkaz { get; set; }
     }
 }

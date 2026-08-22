@@ -6,150 +6,34 @@ using PayamBack.Data;
 using PayamBack.DTOs.Core.Karmand;
 using PayamBack.Models.Core;
 using PayamBack.Models.Identity;
+using PayamBack.Services.Interfaces;
 using System.Security.Claims;
 
 namespace PayamBack.Controllers.Core
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class KarmandController : ControllerBase
     {
         private readonly AppDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<AppRole> _roleManager;
+        private readonly ICurrentUserService _currentUserService;
+        private readonly IAccessService _accessService;
 
-        public KarmandController(AppDbContext context, UserManager<AppUser> userManager, RoleManager<AppRole> roleManager)
+        public KarmandController(
+            AppDbContext context,
+            UserManager<AppUser> userManager,
+            RoleManager<AppRole> roleManager,
+            ICurrentUserService currentUserService,
+            IAccessService accessService)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
-        }
-
-        // ============================================================
-        // 🔥 متد کمکی برای دریافت اطلاعات کاربر فعلی و نقش فعال
-        // ============================================================
-        private async Task<(AppUser? user, AppRole? role, Markaz? markaz, int? codeRole)> GetCurrentUserInfoAsync()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                return (null, null, null, null);
-
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null)
-                return (null, null, null, null);
-
-            // دریافت نقش فعال از JWT
-            var roleName = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (string.IsNullOrEmpty(roleName))
-                return (user, null, null, null);
-
-            var role = await _roleManager.FindByNameAsync(roleName);
-            if (role == null)
-                return (user, null, null, null);
-
-            // دریافت مرکز نقش فعال
-            //var activeRole = await _context.Set<AppUserRole>()
-            //    .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id &&);
-            var activeRole = await _context.Set<AppUserRole>()
-                .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id &&
-                ur.RolePishFarz == true);
-            if (activeRole == null)
-            {
-                activeRole = await _context.Set<AppUserRole>()
-                    .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
-            }
-            Markaz? markaz = null;
-            if (activeRole?.MarkazId != null)
-            {
-                markaz = await _context.Markazes.FindAsync(activeRole.MarkazId.Value);
-            }
-
-            return (user, role, markaz, role.CodeRole);
-        }
-
-        // ============================================================
-        // 🔥 متد کمکی برای بررسی دسترسی به مرکز هدف
-        // ============================================================
-        private async Task<bool> CanAccessTargetMarkazAsync(int targetMarkazId, int codeRole, int? currentMarkazId)
-        {
-            // ادمین سامانه (کد 1) → همه مراکز
-            if (codeRole == 1)
-                return true;
-
-            var targetMarkaz = await _context.Markazes.FindAsync(targetMarkazId);
-            if (targetMarkaz == null)
-                return false;
-
-            var currentMarkaz = await _context.Markazes.FindAsync(currentMarkazId);
-            if (currentMarkaz == null)
-                return false;
-
-            // ادمین سازمان (کد 2) → فقط سازمان خود (Level 2) و استان‌ها (Level 3)
-            if (codeRole == 2)
-            {
-                return targetMarkaz.Level == 2 || targetMarkaz.Level == 3;
-            }
-
-            // ادمین استان (کد 3) → فقط استان خود (Level 3) و مراکز آن استان (Level 4)
-            if (codeRole == 3)
-            {
-                return targetMarkaz.Level == 3 || (targetMarkaz.Level == 4 && targetMarkaz.CodeOstan == currentMarkaz.CodeOstan);
-            }
-
-            // ادمین مرکز (کد 4) → فقط مرکز خود (Level 4)
-            if (codeRole == 4)
-            {
-                return targetMarkaz.Id == currentMarkaz.Id;
-            }
-
-            return false;
-        }
-
-        // ============================================================
-        // 🔥 متد کمکی برای گرفتن مراکز قابل دسترس
-        // ============================================================
-        private async Task<List<int>> GetAccessibleMarkazIdsAsync(int codeRole, int? currentMarkazId)
-        {
-            if (codeRole == 1)
-            {
-                // ادمین سامانه: همه مراکز فعال
-                return await _context.Markazes
-                    .Where(m => m.Vazeeyat == true)
-                    .Select(m => m.Id)
-                    .ToListAsync();
-            }
-
-            var currentMarkaz = await _context.Markazes.FindAsync(currentMarkazId);
-            if (currentMarkaz == null)
-                return new List<int>();
-
-            if (codeRole == 2)
-            {
-                // ادمین سازمان: فقط مراکز با Level 2 و 3
-                return await _context.Markazes
-                    .Where(m => m.Vazeeyat == true && (m.Level == 2 || m.Level == 3))
-                    .Select(m => m.Id)
-                    .ToListAsync();
-            }
-
-            if (codeRole == 3)
-            {
-                // ادمین استان: استان خود و مراکز آن استان
-                return await _context.Markazes
-                    .Where(m => m.Vazeeyat == true &&
-                        (m.Level == 3 && m.CodeOstan == currentMarkaz.CodeOstan) ||
-                        (m.Level == 4 && m.CodeOstan == currentMarkaz.CodeOstan))
-                    .Select(m => m.Id)
-                    .ToListAsync();
-            }
-
-            if (codeRole == 4)
-            {
-                // ادمین مرکز: فقط مرکز خود
-                return new List<int> { currentMarkaz.Id };
-            }
-
-            return new List<int>();
+            _currentUserService = currentUserService;
+            _accessService = accessService;
         }
 
         // ============================================================
@@ -167,24 +51,27 @@ namespace PayamBack.Controllers.Core
             try
             {
                 // ============================================================
-                // 🔥 دریافت اطلاعات کاربر فعلی و مراکز قابل دسترس
+                // 🔥 دریافت اطلاعات کاربر فعلی از سرویس کش
                 // ============================================================
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                var accessibleMarkazIds = await GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
+                // ============================================================
+                // 🔥 دریافت مراکز قابل دسترس از سرویس Access
+                // ============================================================
+                var accessibleMarkazIds = await _accessService.GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
 
                 if (!accessibleMarkazIds.Any())
                     return Ok(new { success = true, message = "شما دسترسی به هیچ مرکزی ندارید", data = new List<object>(), pagination = new { page, pageSize, totalCount = 0, totalPages = 0 } });
 
                 // ============================================================
-                // 1️⃣ ساخت کوئری پایه با Join به AppUser برای دریافت UserId و وضعیت
+                // 1️⃣ ساخت کوئری پایه با Join به AppUser
                 // ============================================================
                 var query = from k in _context.Karmands
                             join u in _context.Users on k.Id equals u.KarmandId into userJoin
                             from u in userJoin.DefaultIfEmpty()
-                            where k.MarkazId.HasValue //&& accessibleMarkazIds.Contains(k.MarkazId.Value)
+                            where k.MarkazId.HasValue
                             select new { Karmand = k, User = u };
 
                 // ============================================================
@@ -220,37 +107,26 @@ namespace PayamBack.Controllers.Core
                 // ============================================================
                 // 4️⃣ فیلتر بر اساس وضعیت
                 // ============================================================
-                //if (vazeeat.HasValue)
-                //{
-                    if (vazeeat == 1)
-                    {
-                        query = query.Where(x => x.User != null &&
-                            (x.User.Vazeeyat == true && x.User.VazeeyatMovaghat == true));
-                    }
-                    else if(vazeeat==2)
-                    {
-                        query = query.Where(x => x.User != null &&
-                            (x.User.Vazeeyat == false || x.User.VazeeyatMovaghat == false));
-                    }
+                if (vazeeat == 1)
+                {
+                    query = query.Where(x => x.User != null &&
+                        (x.User.Vazeeyat == true && x.User.VazeeyatMovaghat == true));
+                }
+                else if (vazeeat == 2)
+                {
+                    query = query.Where(x => x.User != null &&
+                        (x.User.Vazeeyat == false || x.User.VazeeyatMovaghat == false));
+                }
                 else
                 {
                     query = query.Where(x => x.User != null);
                 }
 
-                //}
-                //else
-                //{
-                //query = query.Where(x => x.User == null || x.User.Vazeeyat == true);
-                //}
-
                 // ============================================================
-                // 5️⃣ محاسبه تعداد کل
+                // 5️⃣ محاسبه تعداد کل و صفحه‌بندی
                 // ============================================================
                 var totalCount = await query.CountAsync();
 
-                // ============================================================
-                // 6️⃣ صفحه‌بندی
-                // ============================================================
                 var karmands = await query
                     .OrderBy(x => x.Karmand.NaameKhanevadeghi)
                     .ThenBy(x => x.Karmand.Naam)
@@ -259,9 +135,6 @@ namespace PayamBack.Controllers.Core
                     .Select(x => new KarmandListDto
                     {
                         Id = x.Karmand.Id,
-                        // ============================================================
-                        // 🔥 اضافه کردن UserId
-                        // ============================================================
                         UserId = x.User != null ? x.User.Id : (int?)null,
                         CodeMelli = x.Karmand.CodeMelli ?? "",
                         Naam = x.Karmand.Naam ?? "",
@@ -278,9 +151,6 @@ namespace PayamBack.Controllers.Core
                     })
                     .ToListAsync();
 
-                // ============================================================
-                // 7️⃣ برگرداندن پاسخ
-                // ============================================================
                 return Ok(new
                 {
                     success = true,
@@ -358,29 +228,25 @@ namespace PayamBack.Controllers.Core
             try
             {
                 // ============================================================
-                // 🔥 دریافت اطلاعات کاربر فعلی و بررسی دسترسی
+                // 🔥 دریافت اطلاعات کاربر فعلی از سرویس کش
                 // ============================================================
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                // بررسی دسترسی به مرکز هدف
-                if (!await CanAccessTargetMarkazAsync(dto.MarkazId, codeRole.Value, currentMarkaz?.Id))
-                {
+                // ============================================================
+                // 🔥 بررسی دسترسی به مرکز هدف با IAccessService
+                // ============================================================
+                if (!await _accessService.CanAccessTargetMarkazAsync(dto.MarkazId, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
-                }
 
                 // ============================================================
                 // 1️⃣ اعتبارسنجی ورودی
                 // ============================================================
-                // بررسی کد ملی تکراری
-                var exists = await _context.Karmands
-                    .AnyAsync(k => k.CodeMelli == dto.CodeMelli);
-
+                var exists = await _context.Karmands.AnyAsync(k => k.CodeMelli == dto.CodeMelli);
                 if (exists)
                     return BadRequest(new { success = false, message = "کد ملی قبلاً ثبت شده است" });
 
-                // بررسی تکراری بودن نام کاربری
                 var existingUser = await _userManager.FindByNameAsync(dto.UserName);
                 if (existingUser != null)
                     return BadRequest(new { success = false, message = "نام کاربری قبلاً ثبت شده است" });
@@ -419,7 +285,7 @@ namespace PayamBack.Controllers.Core
                     VazeeyatMovaghat = true
                 };
 
-                var password = dto.CodeMelli+"aA";
+                var password = dto.CodeMelli + "aA";
                 var result = await _userManager.CreateAsync(user, password);
 
                 if (!result.Succeeded)
@@ -434,25 +300,6 @@ namespace PayamBack.Controllers.Core
                         errors = result.Errors.Select(e => e.Description)
                     });
                 }
-
-                // ============================================================
-                // 4️⃣ اضافه کردن نقش (در صورت وجود)
-                // ============================================================
-               /* if (!string.IsNullOrEmpty(dto.RoleName))
-                {
-                    await _userManager.AddToRoleAsync(user, dto.RoleName);
-
-                    // ثبت در AppUserRole
-                    var appUserRole = new AppUserRole
-                    {
-                        UserId = user.Id,
-                        RoleId = (await _roleManager.FindByNameAsync(dto.RoleName))?.Id ?? 0,
-                        MarkazId = dto.MarkazId,
-                        RolePishFarz = true
-                    };
-                    await _context.Set<AppUserRole>().AddAsync(appUserRole);
-                    await _context.SaveChangesAsync();
-                }*/
 
                 return Ok(new
                 {
@@ -476,9 +323,9 @@ namespace PayamBack.Controllers.Core
             try
             {
                 // ============================================================
-                // 🔥 دریافت اطلاعات کاربر فعلی و بررسی دسترسی
+                // 🔥 دریافت اطلاعات کاربر فعلی از سرویس کش
                 // ============================================================
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -489,11 +336,11 @@ namespace PayamBack.Controllers.Core
                 if (karmand == null)
                     return NotFound(new { success = false, message = "کارمند یافت نشد" });
 
-                // بررسی دسترسی به مرکز هدف
-                if (!await CanAccessTargetMarkazAsync(karmand.MarkazId ?? 0, codeRole.Value, currentMarkaz?.Id))
-                {
+                // ============================================================
+                // 🔥 بررسی دسترسی به مرکز هدف با IAccessService
+                // ============================================================
+                if (!await _accessService.CanAccessTargetMarkazAsync(karmand.MarkazId ?? 0, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
-                }
 
                 // ============================================================
                 // 2️⃣ به‌روزرسانی اطلاعات کارمند
@@ -538,7 +385,7 @@ namespace PayamBack.Controllers.Core
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -556,7 +403,6 @@ namespace PayamBack.Controllers.Core
 
                 try
                 {
-                    // حذف نقش‌های کاربر
                     if (user != null)
                     {
                         var userRoles = await _context.Set<AppUserRole>()
@@ -592,29 +438,20 @@ namespace PayamBack.Controllers.Core
         }
 
         // ============================================================
-        // 6️⃣ تغییر وضعیت گروهی کاربران (فعال/غیرفعال) - فقط ادمین سامانه
+        // 6️⃣ تغییر وضعیت گروهی کاربران (فقط ادمین سامانه)
         // ============================================================
         [HttpPatch("toggle")]
         public async Task<IActionResult> Toggle([FromBody] List<ToggleUserStatusItemDto> items)
         {
             try
             {
-                // ============================================================
-                // 🔥 دریافت اطلاعات کاربر فعلی و بررسی دسترسی
-                // ============================================================
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                // ============================================================
-                // 🔥 فقط ادمین سامانه (CodeRole == 1) اجازه دارد
-                // ============================================================
                 if (codeRole != 1)
                     return Forbid();
 
-                // ============================================================
-                // 1️⃣ اعتبارسنجی ورودی
-                // ============================================================
                 if (items == null || !items.Any())
                     return BadRequest(new { success = false, message = "لیست کاربران خالی است" });
 
@@ -651,9 +488,7 @@ namespace PayamBack.Controllers.Core
                     });
                 }
 
-                // ============================================================
-                // 2️⃣ دریافت کاربران هدف همراه با اطلاعات کارمند و مرکز
-                // ============================================================
+                // دریافت کاربران هدف
                 var userIds = items.Select(x => x.UserId).Distinct().ToList();
 
                 var targetUsers = await _userManager.Users
@@ -665,10 +500,6 @@ namespace PayamBack.Controllers.Core
                 if (!targetUsers.Any())
                     return NotFound(new { success = false, message = "هیچ کاربری یافت نشد" });
 
-                // ============================================================
-                // 3️⃣ چون ادمین سامانه است، نیازی به بررسی دسترسی مرکز ندارد
-                //     ولی کاربرانی که کارمند نیستند را جدا می‌کنیم
-                // ============================================================
                 var validItems = new List<(ToggleUserStatusItemDto item, AppUser user)>();
                 var notFoundUsers = new List<int>();
                 var notEmployeeUsers = new List<int>();
@@ -682,7 +513,6 @@ namespace PayamBack.Controllers.Core
                         continue;
                     }
 
-                    // اگر کاربر کارمند نیست، از لیست خارج می‌شود
                     if (user.KarmandId == null)
                     {
                         notEmployeeUsers.Add(item.UserId);
@@ -703,9 +533,6 @@ namespace PayamBack.Controllers.Core
                     });
                 }
 
-                // ============================================================
-                // 4️⃣ تغییر وضعیت کاربران مجاز
-                // ============================================================
                 var updatedUsers = new List<object>();
                 var failedUsers = new List<object>();
 
@@ -714,14 +541,10 @@ namespace PayamBack.Controllers.Core
                     try
                     {
                         if (item.Vazeeyat.HasValue)
-                        {
                             user.Vazeeyat = item.Vazeeyat.Value;
-                        }
 
                         if (item.VazeeyatMovaghat.HasValue)
-                        {
                             user.VazeeyatMovaghat = item.VazeeyatMovaghat.Value;
-                        }
 
                         var result = await _userManager.UpdateAsync(user);
 
@@ -757,10 +580,7 @@ namespace PayamBack.Controllers.Core
                     }
                 }
 
-                // ============================================================
-                // 5️⃣ پاسخ نهایی
-                // ============================================================
-                var response = new
+                return Ok(new
                 {
                     success = true,
                     message = $"تعداد {updatedUsers.Count} کاربر با موفقیت به‌روزرسانی شدند",
@@ -771,9 +591,7 @@ namespace PayamBack.Controllers.Core
                         notFound = notFoundUsers.Any() ? notFoundUsers : null,
                         notEmployee = notEmployeeUsers.Any() ? notEmployeeUsers : null
                     }
-                };
-
-                return Ok(response);
+                });
             }
             catch (Exception ex)
             {
@@ -785,94 +603,5 @@ namespace PayamBack.Controllers.Core
                 });
             }
         }
-
-        // در KarmandController.cs
-
-        // ============================================================
-        // دریافت UserId متناظر با KarmandId
-        // ============================================================
-        /*[HttpGet("user-by-karmand/{karmandId}")]
-        public async Task<IActionResult> GetUserByKarmandId(int karmandId)
-        {
-            try
-            {
-                var user = await _userManager.Users
-                    .FirstOrDefaultAsync(u => u.KarmandId == karmandId);
-
-                if (user == null)
-                    return NotFound(new { success = false, message = "کاربری برای این کارمند یافت نشد" });
-
-                return Ok(new
-                {
-                    success = true,
-                    message = "اطلاعات کاربر دریافت شد",
-                    data = new
-                    {
-                        id = user.Id,
-                        userName = user.UserName,
-                        email = user.Email,
-                        vazeeyat = user.Vazeeyat,
-                        vazeeyatMovaghat = user.VazeeyatMovaghat
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "خطا در دریافت اطلاعات کاربر",
-                    error = ex.Message
-                });
-            }
-        }
-        // در UserController.cs یا هر کنترلر مناسب
-
-        [HttpPost("reset-password/{userId}")]
-        //[Authorize(Roles = "ادمین سامانه,ادمین سازمان,ادمین استان,ادمین مرکز")]
-        public async Task<IActionResult> ResetPassword(int userId, [FromBody] ResetPasswordDto dto)
-        {
-            try
-            {
-                var user = await _userManager.FindByIdAsync(userId.ToString());
-                if (user == null)
-                    return NotFound(new { success = false, message = "کاربر یافت نشد" });
-
-                // حذف رمز فعلی
-                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var result = await _userManager.ResetPasswordAsync(user, token, dto.NewPassword);
-
-                if (!result.Succeeded)
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = "خطا در ریست رمز عبور",
-                        errors = result.Errors.Select(e => e.Description)
-                    });
-                }
-
-                // غیرفعال کردن نیاز به تغییر رمز در لاگین بعدی (اختیاری)
-                // user.RequirePasswordChange = false;
-                // await _userManager.UpdateAsync(user);
-
-                return Ok(new
-                {
-                    success = true,
-                    message = "رمز عبور با موفقیت ریست شد"
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { success = false, message = "خطا در ریست رمز عبور", error = ex.Message });
-            }
-        }
-
-        // DTO
-        public class ResetPasswordDto
-        {
-            public string NewPassword { get; set; } = string.Empty;
-        }
-        */
     }
 }

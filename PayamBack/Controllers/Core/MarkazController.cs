@@ -38,7 +38,8 @@ namespace PayamBack.Controllers.Core
                         CodeOstan = m.CodeOstan ?? "",
                         NaamOstan = m.NaamOstan ?? "",
                         Vazeeyat = m.Vazeeyat ?? false,
-                        Level = m.Level ?? 4  // ← اضافه شد
+                        Level = m.Level ?? 4, // ← اضافه شد
+                        NoeMarkaz=m.NoeMarkaz ?? 1 //1=حضوری
                     })
                     .ToListAsync();
 
@@ -85,7 +86,8 @@ namespace PayamBack.Controllers.Core
                         WebSite = m.WebSite ?? "",
                         Telefon = m.Telefon ?? "",
                         Vazeeyat = m.Vazeeyat ?? false,
-                        Level = m.Level ?? 4  // ← اضافه شد
+                        Level = m.Level ?? 4,  
+                        NoeMarkaz=m.NoeMarkaz ?? 1
                     })
                     .FirstOrDefaultAsync();
 
@@ -153,7 +155,8 @@ namespace PayamBack.Controllers.Core
                     Telefon = dto.Telefon,
                     Vazeeyat = dto.Vazeeyat ?? true,
                     Dakheli = dto.Dakheli ?? true,
-                    Level = dto.Level ?? 4  // ← اضافه شد
+                    Level = dto.Level ?? 4,
+                    NoeMarkaz=dto.NoeMarkaz ?? 1
                 };
 
                 await _context.Markazes.AddAsync(markaz);
@@ -209,7 +212,8 @@ namespace PayamBack.Controllers.Core
                 markaz.Telefon = dto.Telefon ?? markaz.Telefon;
                 markaz.Vazeeyat = dto.Vazeeyat ?? markaz.Vazeeyat;
                 markaz.Dakheli = dto.Dakheli ?? markaz.Dakheli;
-                markaz.Level = dto.Level ?? markaz.Level;  // ← اضافه شد
+                markaz.Level = dto.Level ?? markaz.Level;
+                markaz.NoeMarkaz = dto.NoeMarkaz ?? 1;
 
                 await _context.SaveChangesAsync();
 
@@ -303,7 +307,8 @@ namespace PayamBack.Controllers.Core
                         CodeOstan = m.CodeOstan ?? "",
                         NaamOstan = m.NaamOstan ?? "",
                         Vazeeyat = m.Vazeeyat ?? false,
-                        Level = m.Level ?? 4
+                        Level = m.Level ?? 4,
+                        NoeMarkaz=m.NoeMarkaz ?? 1
                     })
                     .ToListAsync();
 

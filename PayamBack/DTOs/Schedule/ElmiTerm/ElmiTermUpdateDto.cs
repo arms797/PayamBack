@@ -8,7 +8,6 @@ namespace PayamBack.DTOs.Schedule.ElmiTerm
         [Required]
         public int Id { get; set; }
 
-        [MaxLength(100)]
         public string? AkharinVazeeat { get; set; }
 
         public bool? IsEjeari { get; set; }
@@ -18,8 +17,9 @@ namespace PayamBack.DTOs.Schedule.ElmiTerm
 
         public bool? FullTime { get; set; }
 
-        [MaxLength(50)]
-        public string? TedadSaatMovazafi { get; set; }
+        public int? TedadSaatMovazafi { get; set; }
+
+        public decimal? TedadVahedMovazafi { get; set; }
 
         public IFormFile? File { get; set; }
     }

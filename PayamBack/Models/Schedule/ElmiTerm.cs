@@ -21,10 +21,6 @@ namespace PayamBack.Models.Schedule
         /// <summary>شناسه کاربر (استاد)</summary>
         public int? UserId { get; set; }
 
-        /// <summary>کد ترم</summary>
-        [MaxLength(50)]
-        public string? TermCode { get; set; }
-
         // ============================================================
         // اطلاعات ثبت‌کننده
         // ============================================================
@@ -33,14 +29,13 @@ namespace PayamBack.Models.Schedule
         public int? UserIdSabtKonandeh { get; set; }
 
         /// <summary>شناسه نقش ثبت‌کننده</summary>
-        public int? RoleIdSabtKonandeh { get; set; }
+        public int? RoleMarkazSabtKonandeh { get; set; }
 
         // ============================================================
         // وضعیت و اطلاعات شغلی
         // ============================================================
 
-        /// <summary>آخرین وضعیت</summary>
-        [MaxLength(100)]
+        /// <summary>آخرین وضعیت علمی مثل مامور به تحصیل یا فرصت مطالعاتی و ...</summary>
         public string? AkharinVazeeat { get; set; }
 
         /// <summary>دارای سمت اجرایی (true = بله)</summary>
@@ -54,8 +49,11 @@ namespace PayamBack.Models.Schedule
         public bool? FullTime { get; set; }
 
         /// <summary>تعداد ساعت معادل موظف</summary>
-        [MaxLength(50)]
-        public string? TedadSaatMovazafi { get; set; }
+        public int? TedadSaatMovazafi { get; set; }
+
+        //تعداد واحد موظفی
+        public decimal? TedadVahedMovazafi { get; set; }
+
 
         // ============================================================
         // اطلاعات تایید (3 حالت)
@@ -73,7 +71,7 @@ namespace PayamBack.Models.Schedule
         public int? ApprovedByUserId { get; set; }
 
         /// <summary>نقش و مرکز کاربر تاییدکننده</summary>
-        /// مثلا - معاونت آموزشی استان فارس
+        /// مثلا - معاونت آموزشی-استان فارس
         public string? ApprovedByRoleMarkaz { get; set; }
 
         /// <summary>تاریخ تایید/رد</summary>
@@ -85,22 +83,18 @@ namespace PayamBack.Models.Schedule
 
         /// <summary>فایل مستندات </summary>
         public string? FilePath { get; set; }
+        //وضعیت قابلیت اجرا
+        public bool Vazeeat { get; set; } = true;
 
         // ============================================================
         // Navigation Properties
         // ============================================================
 
         [ForeignKey(nameof(UserId))]
-        public virtual AppUser? User { get; set; }
-
-        [ForeignKey(nameof(TermCode))]
-        public virtual Term? Term { get; set; }
+        public virtual AppUser? User { get; set; }        
 
         [ForeignKey(nameof(UserIdSabtKonandeh))]
         public virtual AppUser? UserSabtKonandeh { get; set; }
-
-        [ForeignKey(nameof(RoleIdSabtKonandeh))]
-        public virtual AppRole? RoleSabtKonandeh { get; set; }
 
         [ForeignKey(nameof(ApprovedByUserId))]
         public virtual AppUser? ApprovedByUser { get; set; }

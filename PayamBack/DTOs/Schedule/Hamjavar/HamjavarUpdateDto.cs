@@ -19,7 +19,7 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
         public IFormFile? UploadElmi { get; set; }
 
         /// <summary>لیست جزئیات تکمیلی برای ویرایش</summary>
-        public List<Hamjavar1UpdateDto>? Hamjavar1s { get; set; }
+        public string? Hamjavar1sJson { get; set; }
     }
 
     public class Hamjavar1UpdateDto

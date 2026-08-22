@@ -6,6 +6,7 @@ using PayamBack.Data;
 using PayamBack.DTOs.Core.OstadMadrak;
 using PayamBack.Models.Core;
 using PayamBack.Models.Identity;
+using PayamBack.Services.Interfaces;
 using System.Security.Claims;
 
 namespace PayamBack.Controllers.Core
@@ -18,21 +19,24 @@ namespace PayamBack.Controllers.Core
         private readonly AppDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<AppRole> _roleManager;
+        private readonly ICurrentUserService _currentUserService;
 
         public OstadMadrakController(
             AppDbContext context,
             UserManager<AppUser> userManager,
-            RoleManager<AppRole> roleManager)
+            RoleManager<AppRole> roleManager,
+            ICurrentUserService currentUserService)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
+            _currentUserService=currentUserService;
         }
 
         // ============================================================
         // 🔥 متد کمکی برای دریافت اطلاعات کاربر فعلی
         // ============================================================
-        private async Task<(AppUser? user, AppRole? role, Markaz? markaz, int? codeRole, string? roleInfo)> GetCurrentUserInfoAsync()
+       /* private async Task<(AppUser? user, AppRole? role, Markaz? markaz, int? codeRole, string? roleInfo)> GetCurrentUserInfoAsync()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
@@ -74,6 +78,8 @@ namespace PayamBack.Controllers.Core
 
             return (user, role, markaz, role.CodeRole, roleInfo);
         }
+
+        */
 
         // ============================================================
         // 1️⃣ دریافت مدارک یک استاد
@@ -187,7 +193,7 @@ namespace PayamBack.Controllers.Core
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole, roleInfo) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -202,7 +208,7 @@ namespace PayamBack.Controllers.Core
                     TasvirMadrak = dto.TasvirMadrak,
                     GrooheAmoozeshiId = dto.GrooheAmoozeshiId,
                     CreatedByUserId = currentUser.Id,
-                    CreatedByRoleInfo = roleInfo,
+                    CreatedByRoleInfo = currentRole.Name,
                     CreatedAt = DateTime.UtcNow,
                     IsApproved = false,
                     ApprovedByUserId = null,
@@ -241,7 +247,7 @@ namespace PayamBack.Controllers.Core
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole, roleInfo) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -254,7 +260,7 @@ namespace PayamBack.Controllers.Core
 
                 madrak.IsApproved = true;
                 madrak.ApprovedByUserId = currentUser.Id;
-                madrak.ApprovedByRoleInfo = roleInfo;
+                madrak.ApprovedByRoleInfo = currentRole.Name;
                 madrak.ApprovedAt = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
@@ -287,7 +293,7 @@ namespace PayamBack.Controllers.Core
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole, roleInfo) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -330,7 +336,7 @@ namespace PayamBack.Controllers.Core
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole, roleInfo) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -387,7 +393,7 @@ namespace PayamBack.Controllers.Core
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole, roleInfo) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -422,7 +428,7 @@ namespace PayamBack.Controllers.Core
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole, roleInfo) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 

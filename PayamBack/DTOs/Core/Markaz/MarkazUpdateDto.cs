@@ -15,5 +15,6 @@
         public bool? Vazeeyat { get; set; }
         public bool? Dakheli { get; set; }
         public int? Level { get; set; }  // ← اضافه شد
+        public int? NoeMarkaz {  get; set; }
     }
 }

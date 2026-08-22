@@ -37,7 +37,8 @@ namespace PayamBack.Controllers.Identity
                         CodeRole = r.CodeRole ?? 0,
                         Vazeeyat = r.Vazeeyat ?? true,
                         Emza = r.Emza ?? false,
-                        IsAdmin = r.IsAdmin ?? false  // ← اضافه شد
+                        IsAdmin = r.IsAdmin ?? false,
+                        IsUniquePerMarkaz = r.IsUniquePerMarkaz ?? false // ← اضافه شد
                     })
                     .OrderBy(r => r.CodeRole)
                     .ToListAsync();
@@ -77,7 +78,8 @@ namespace PayamBack.Controllers.Identity
                         CodeRole = r.CodeRole ?? 0,
                         Vazeeyat = r.Vazeeyat ?? true,
                         Emza = r.Emza ?? false,
-                        IsAdmin = r.IsAdmin ?? false  // ← اضافه شد
+                        IsAdmin = r.IsAdmin ?? false,
+                        IsUniquePerMarkaz = r.IsUniquePerMarkaz ?? false // ← اضافه شد
                     })
                     .FirstOrDefaultAsync();
 
@@ -126,25 +128,14 @@ namespace PayamBack.Controllers.Identity
                     });
                 }
 
-                //var codeExists = await _roleManager.Roles
-                //    .AnyAsync(r => r.CodeRole == dto.CodeRole);
-
-                //if (codeExists)
-                //{
-                //    return BadRequest(new
-                //    {
-                //        success = false,
-                //        message = "کد نقش تکراری است"
-                //    });
-                //}
-
                 var role = new AppRole
                 {
                     Name = dto.Name,
                     CodeRole = dto.CodeRole,
                     Vazeeyat = dto.Vazeeyat ?? true,
                     Emza = dto.Emza ?? false,
-                    IsAdmin = dto.IsAdmin ?? false  // ← اضافه شد
+                    IsAdmin = dto.IsAdmin ?? false,
+                    IsUniquePerMarkaz = dto.IsUniquePerMarkaz ?? false // ← اضافه شد
                 };
 
                 var result = await _roleManager.CreateAsync(role);
@@ -207,26 +198,12 @@ namespace PayamBack.Controllers.Identity
                     }
                 }
 
-                //if (dto.CodeRole.HasValue && dto.CodeRole.Value != role.CodeRole)
-                //{
-                //    var codeExists = await _roleManager.Roles
-                //        .AnyAsync(r => r.Id != id && r.CodeRole == dto.CodeRole.Value);
-
-                //    if (codeExists)
-                //    {
-                //        return BadRequest(new
-                //        {
-                //            success = false,
-                //            message = "کد نقش تکراری است"
-                //        });
-                //    }
-                //}
-
                 role.Name = dto.Name ?? role.Name;
                 role.CodeRole = dto.CodeRole ?? role.CodeRole;
                 role.Vazeeyat = dto.Vazeeyat ?? role.Vazeeyat;
                 role.Emza = dto.Emza ?? role.Emza;
-                role.IsAdmin = dto.IsAdmin ?? role.IsAdmin;  // ← اضافه شد
+                role.IsAdmin = dto.IsAdmin ?? role.IsAdmin;
+                role.IsUniquePerMarkaz = dto.IsUniquePerMarkaz ?? role.IsUniquePerMarkaz; // ← اضافه شد
 
                 var result = await _roleManager.UpdateAsync(role);
                 if (!result.Succeeded)
@@ -326,4 +303,4 @@ namespace PayamBack.Controllers.Identity
             }
         }
     }
-}
+} 

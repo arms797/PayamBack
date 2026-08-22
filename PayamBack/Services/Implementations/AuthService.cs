@@ -19,7 +19,9 @@ namespace PayamBack.Services.Implementations
         private readonly IConfiguration _configuration;
         private readonly AppDbContext _context;
         private readonly ICaptchaService _captchaService;
-        private readonly IMemoryCache _cache;  
+        private readonly IMemoryCache _cache;
+        private readonly ICacheManager _cacheManager;
+
 
         public AuthService(
             UserManager<AppUser> userManager,
@@ -29,7 +31,8 @@ namespace PayamBack.Services.Implementations
             IConfiguration configuration,
             AppDbContext context,
             ICaptchaService captchaService,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            ICacheManager cacheManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -39,6 +42,8 @@ namespace PayamBack.Services.Implementations
             _context = context;
             _captchaService = captchaService;
             _cache = cache;
+            _cacheManager = cacheManager;
+
         }
 
         // ============================================================
@@ -244,6 +249,11 @@ namespace PayamBack.Services.Implementations
                 return false;
 
             await _tokenService.RevokeRefreshToken(user);
+            // ============================================================
+            // 🔥 پاک کردن کش اطلاعات کاربر
+            // ============================================================
+            _cacheManager.ClearUserCache(userId);
+
             return true;
         }
 
@@ -257,21 +267,12 @@ namespace PayamBack.Services.Implementations
                 throw new Exception("کاربر یافت نشد");
 
             // ============================================================
-            // 🔥 دریافت نقش قبلی برای پاک کردن کش
+            // 🔥 دریافت نقش قبلی (فقط برای لاگ)
             // ============================================================
             var oldUserRole = await _context.Set<AppUserRole>()
                 .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RolePishFarz == true);
 
-            string? oldRoleName = null;
-            int? oldRoleId = null;
-            if (oldUserRole != null)
-            {
-                oldRoleId = oldUserRole.RoleId;
-                oldRoleName = await _context.Roles
-                    .Where(r => r.Id == oldUserRole.RoleId)
-                    .Select(r => r.Name)
-                    .FirstOrDefaultAsync();
-            }
+            int? oldRoleId = oldUserRole?.RoleId;
 
             // ============================================================
             // 🔥 دریافت نقش‌های کاربر با مرکز
@@ -313,14 +314,6 @@ namespace PayamBack.Services.Implementations
             }
 
             // ============================================================
-            // 🔥 بعد از ذخیره، دوباره از دیتابیس بخوان تا مطمئن شوی
-            // ============================================================
-            var checkRole = await _context.Set<AppUserRole>()
-                .FirstOrDefaultAsync(ur => ur.UserId == userId && ur.RolePishFarz == true);
-
-            Console.WriteLine($"✅ AFTER SAVE - UserId: {userId}, RoleId: {checkRole?.RoleId}, MarkazId: {checkRole?.MarkazId}");
-
-            // ============================================================
             // 🔥 roles را با MarkazId درست بگیر
             // ============================================================
             var roles = await _permissionService.GetUserRolesAsync(userId);
@@ -334,33 +327,32 @@ namespace PayamBack.Services.Implementations
                 newRole = roles.FirstOrDefault(r => r.Id == newRoleId && r.MarkazId == markazId.Value);
             }
 
-            // اگر با MarkazId پیدا نشد، فقط با RoleId پیدا کن
             if (newRole == null)
             {
                 newRole = roles.FirstOrDefault(r => r.Id == newRoleId);
             }
 
-            Console.WriteLine($"🔍 newRole - Id: {newRole?.Id}, Name: {newRole?.Name}, MarkazId: {newRole?.MarkazId}");
+            // ============================================================
+            // 🔥 پاک کردن کش‌ها با استفاده از CacheManager
+            // ============================================================
 
-            // ============================================================
-            // 🔥 پاک کردن کش نقش قدیمی
-            // ============================================================
-            if (!string.IsNullOrEmpty(oldRoleName))
+            // 1️⃣ پاک کردن کش کاربر (اطلاعات، مجوزها و منوهای قبلی)
+            _cacheManager.ClearUserCache(userId);
+
+            // 2️⃣ پاک کردن کش مجوزهای نقش جدید (برای دریافت به‌روز)
+            if (newRole != null)
             {
-                var oldRoleCacheKey = $"RoleId_{oldRoleName}";
-                _cache.Remove(oldRoleCacheKey);
-                Console.WriteLine($"🗑️ Cache removed for old role: {oldRoleName}");
+                _cacheManager.ClearPermissionCache(newRole.Id);
             }
 
-            // ============================================================
-            // 🔥 پاک کردن کش نقش جدید (اجبار به خواندن مجدد از دیتابیس)
-            // ============================================================
-            if (newRole != null && !string.IsNullOrEmpty(newRole.Name))
-            {
-                var newRoleCacheKey = $"RoleId_{newRole.Name}";
-                _cache.Remove(newRoleCacheKey);
-                Console.WriteLine($"🗑️ Cache removed for new role: {newRole.Name}");
-            }
+            // 3️⃣ (اختیاری) اگر نقش قدیمی هم نیاز به پاک کردن دارد
+            // اما معمولاً نیازی نیست چون مجوزهای نقش قدیمی تغییری نکرده است
+            // if (oldRoleId.HasValue)
+            // {
+            //     _cacheManager.ClearPermissionCache(oldRoleId.Value);
+            // }
+
+            // ❌ نیازی به پاک کردن کش RoleId_ نیست (نقش‌ها تغییر نمی‌کنند)
 
             // ============================================================
             // 🔥 دریافت مجوزهای نقش جدید
@@ -379,6 +371,9 @@ namespace PayamBack.Services.Implementations
                 ? await _permissionService.GetUserMenusAsync(userId, newRole.Id, permissions)
                 : new List<MenuDto>();
 
+            // ============================================================
+            // 🔥 تولید توکن‌ها
+            // ============================================================
             var accessToken = await _tokenService.GenerateAccessToken(user);
             var refreshToken = await _tokenService.GenerateRefreshToken(user);
 
@@ -427,7 +422,7 @@ namespace PayamBack.Services.Implementations
             }
 
             // ============================================================
-            // 🔥 در پاسخ، MarkazId را از newRole بگیر
+            // 🔥 پاسخ نهایی
             // ============================================================
             return new LoginResponseDto
             {
@@ -435,11 +430,11 @@ namespace PayamBack.Services.Implementations
                 RefreshToken = refreshToken,
                 Username = user.UserName ?? "",
                 Email = user.Email ?? "",
-                FirstName = firstName,   
-                LastName = lastName,     
+                FirstName = firstName,
+                LastName = lastName,
                 CurrentRoleId = newRole?.Id,
                 CurrentRoleName = newRole?.Name ?? "",
-                MarkazId = newRole?.MarkazId ?? markazId,  // ← اگر null بود، از ورودی بگیر
+                MarkazId = newRole?.MarkazId ?? markazId,
                 Roles = roles,
                 Menus = menus,
                 Permissions = permissions,
