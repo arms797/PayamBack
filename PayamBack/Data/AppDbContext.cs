@@ -31,6 +31,7 @@ namespace PayamBack.Data
         public DbSet<GrooheAmoozeshi> GrooheAmoozeshis { get; set; }
         public DbSet<Reshteh> Reshtehs { get; set; }
         public DbSet<BarnamehHaftegiOstad> BarnamehHaftegiOstads { get; set; }
+        public DbSet<BarnamehHaftegiOstad1> BarnamehHaftegiOstad1s { get; set; }
         public DbSet<BarnamehTermiOstad> BarnamehTermiOstads { get; set; }
         public DbSet<SaatBargozariKelasha> SaatBargozariKelashas { get; set; }
         public DbSet<TaghvimTermi> TaghvimTermis { get; set; }
@@ -49,6 +50,7 @@ namespace PayamBack.Data
         public DbSet<Faaliat> Faaliats { get; set; }
         public DbSet<ElmiTerm> ElmiTerms { get; set; }
         public DbSet<UserSignature> UserSignatures { get; set; }
+        public DbSet<ModirGrooh> ModirGroohs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -441,6 +443,7 @@ namespace PayamBack.Data
                     .HasDatabaseName("IX_ElmiTerm_Approve");
             });
 
+            // ======== UserSignature ========
             builder.Entity<UserSignature>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -449,6 +452,32 @@ namespace PayamBack.Data
                 entity.HasOne(e => e.User)
                     .WithOne()  // ← بدون Navigation Property در سمت User
                     .HasForeignKey<UserSignature>(e => e.UserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            // ======== ModirGrooh ========
+            builder.Entity<ModirGrooh>(entity =>
+            {
+                entity.ToTable("ModirGrooh");
+
+                entity.HasIndex(mg => new { mg.AppUserRoleId, mg.GrooheAmoozeshiId })
+                    .IsUnique()
+                    .HasDatabaseName("IX_ModirGrooh_AppUserRole_Groohe");
+
+                entity.HasIndex(mg => mg.GrooheAmoozeshiId)
+                    .HasDatabaseName("IX_ModirGrooh_GrooheId");
+
+                entity.HasIndex(mg => mg.Vazeeat)
+                    .HasDatabaseName("IX_ModirGrooh_Vazeeat");
+
+                entity.HasOne(mg => mg.AppUserRole)
+                    .WithMany()
+                    .HasForeignKey(mg => mg.AppUserRoleId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(mg => mg.GrooheAmoozeshi)
+                    .WithMany()
+                    .HasForeignKey(mg => mg.GrooheAmoozeshiId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
         }

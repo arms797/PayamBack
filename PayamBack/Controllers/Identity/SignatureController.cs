@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.Models.Core;
 using PayamBack.Models.Identity;
+using PayamBack.Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
@@ -18,13 +19,19 @@ namespace PayamBack.Controllers.Identity
         private readonly AppDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<AppRole> _roleManager;
+        private readonly ICurrentUserService _currentUserService;
+        private readonly IAccessService _accessService;
         public SignatureController(AppDbContext context, 
             UserManager<AppUser> userManager,
-            RoleManager<AppRole> roleManager)
+            RoleManager<AppRole> roleManager,
+            ICurrentUserService currentUserService,
+            IAccessService accessService)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
+            _currentUserService = currentUserService;
+            _accessService = accessService;
         }
 
         // ============================================================
@@ -475,23 +482,17 @@ namespace PayamBack.Controllers.Identity
         // ============================================================
         [HttpGet("users")]
         public async Task<IActionResult> ManageSignatureForReset(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20,
-            [FromQuery] string? search = null)
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20,
+    [FromQuery] string? search = null)
         {
             try
             {
-                // ============================================================
-                // 1️⃣ دریافت اطلاعات کاربر فعلی و نقش فعال
-                // ============================================================
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                // ============================================================
-                // 2️⃣ دریافت مراکز قابل دسترس بر اساس CodeRole
-                // ============================================================
-                var accessibleMarkazIds = await GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
+                var accessibleMarkazIds = await _accessService.GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
                 if (!accessibleMarkazIds.Any())
                     return Ok(new
                     {
@@ -501,18 +502,12 @@ namespace PayamBack.Controllers.Identity
                         pagination = new { page, pageSize, totalCount = 0, totalPages = 0 }
                     });
 
-                // ============================================================
-                // 3️⃣ 🔥 کوئری بهینه (بدون Include اضافی)
-                // ============================================================
                 var query = _userManager.Users
                     .Where(u => _context.UserSignatures
                         .Any(s => s.UserId == u.Id && !string.IsNullOrEmpty(s.Signature))
                     )
                     .AsQueryable();
 
-                // ============================================================
-                // 4️⃣ فیلتر بر اساس مراکز قابل دسترس
-                // ============================================================
                 if (codeRole != 1 && codeRole != 2)
                 {
                     query = query.Where(u =>
@@ -523,9 +518,6 @@ namespace PayamBack.Controllers.Identity
                     );
                 }
 
-                // ============================================================
-                // 5️⃣ جستجو
-                // ============================================================
                 if (!string.IsNullOrEmpty(search))
                 {
                     search = search.Trim();
@@ -542,9 +534,6 @@ namespace PayamBack.Controllers.Identity
                     );
                 }
 
-                // ============================================================
-                // 6️⃣ صفحه‌بندی
-                // ============================================================
                 var totalCount = await query.CountAsync();
 
                 var users = await query
@@ -570,9 +559,6 @@ namespace PayamBack.Controllers.Identity
                     })
                     .ToListAsync();
 
-                // ============================================================
-                // 7️⃣ ساخت نتیجه نهایی
-                // ============================================================
                 var result = users.Select(u => new
                 {
                     u.Id,
@@ -580,7 +566,7 @@ namespace PayamBack.Controllers.Identity
                     u.FirstName,
                     u.LastName,
                     u.MarkazName,
-                    HasSignature = true // چون فقط کاربران با امضا در لیست هستند
+                    HasSignature = true
                 }).ToList();
 
                 return Ok(new
@@ -606,86 +592,6 @@ namespace PayamBack.Controllers.Identity
                     error = ex.Message
                 });
             }
-        }
-
-        // ============================================================
-        // متد کمکی: دریافت اطلاعات کاربر فعلی
-        // ============================================================
-        private async Task<(AppUser? user, AppRole? role, Markaz? markaz, int? codeRole)> GetCurrentUserInfoAsync()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                return (null, null, null, null);
-
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null)
-                return (null, null, null, null);
-
-            var roleName = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (string.IsNullOrEmpty(roleName))
-                return (user, null, null, null);
-
-            var role = await _roleManager.FindByNameAsync(roleName);
-            if (role == null)
-                return (user, null, null, null);
-
-            var activeRole = await _context.Set<AppUserRole>()
-                .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
-
-            Markaz? markaz = null;
-            if (activeRole?.MarkazId != null)
-            {
-                markaz = await _context.Markazes.FindAsync(activeRole.MarkazId.Value);
-            }
-
-            return (user, role, markaz, role.CodeRole);
-        }
-
-        // ============================================================
-        // متد کمکی: دریافت مراکز قابل دسترس
-        // ============================================================
-        private async Task<List<int>> GetAccessibleMarkazIdsAsync(int codeRole, int? currentMarkazId)
-        {
-            if (codeRole == 1)
-            {
-                // ادمین سامانه: همه مراکز
-                return await _context.Markazes
-                    .Where(m => m.Vazeeyat == true)
-                    .Select(m => m.Id)
-                    .ToListAsync();
-            }
-
-            if (codeRole == 2)
-            {
-                // ادمین سازمان: مراکز سطح 2 و 3
-                return await _context.Markazes
-                    .Where(m => m.Vazeeyat == true && (m.Level == 2 || m.Level == 3))
-                    .Select(m => m.Id)
-                    .ToListAsync();
-            }
-
-            var currentMarkaz = await _context.Markazes.FindAsync(currentMarkazId);
-            if (currentMarkaz == null)
-                return new List<int>();
-
-            if (codeRole == 3)
-            {
-                // ادمین استان: استان خودش و مراکز آن استان
-                return await _context.Markazes
-                    .Where(m => m.Vazeeyat == true &&
-                        (m.Level == 3 && m.CodeOstan == currentMarkaz.CodeOstan) ||
-                        (m.Level == 4 && m.CodeOstan == currentMarkaz.CodeOstan))
-                    .Select(m => m.Id)
-                    .ToListAsync();
-            }
-
-            if (codeRole == 4)
-            {
-                // ادمین مرکز: فقط مرکز خودش
-                return new List<int> { currentMarkaz.Id };
-            }
-
-            return new List<int>();
         }
     }
 

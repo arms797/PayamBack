@@ -96,7 +96,8 @@ builder.Services.AddScoped<IMarkazCacheService, MarkazCacheService>();
 builder.Services.AddScoped<IAccessService, AccessService>();
 builder.Services.AddScoped<ICacheManager,CacheManager>();
 builder.Services.AddScoped<IPermissionCacheService, PermissionCacheService>();
-
+builder.Services.AddScoped<IFaaliatCacheService, FaaliatCacheService>();
+builder.Services.AddScoped<ISaatBargozariCacheService, SaatBargozariCacheService>();
 
 
 

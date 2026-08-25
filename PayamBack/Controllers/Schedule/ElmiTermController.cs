@@ -368,7 +368,7 @@ namespace PayamBack.Controllers.Schedule
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                var isOstad = currentUser.OstadId.HasValue;
+                var isOstad = currentRole?.Name == "استاد";
 
                 if (isOstad && dto.UserId != currentUser.Id)
                     return BadRequest(new { success = false, message = "شما فقط می‌توانید درخواست خود را ثبت کنید" });
@@ -380,33 +380,7 @@ namespace PayamBack.Controllers.Schedule
                 }
 
                 // ============================================================
-                // 🔥 بررسی تکراری نبودن
-                // ============================================================
-                var exists = await _context.Set<ElmiTerm>()
-                    .AnyAsync(e => e.UserId == dto.UserId);
-
-                if (exists)
-                {
-                    var activeExists = await _context.Set<ElmiTerm>()
-                        .AnyAsync(e => e.UserId == dto.UserId && e.Vazeeat == true);
-
-                    if (activeExists)
-                        return BadRequest(new { success = false, message = "این استاد قبلاً یک رکورد فعال دارد. ابتدا رکورد قبلی را غیرفعال کنید." });
-                }
-
-                // ============================================================
-                // 🔥 غیرفعال کردن رکورد فعال قبلی این استاد
-                // ============================================================
-                var activeRecord = await _context.Set<ElmiTerm>()
-                    .FirstOrDefaultAsync(e => e.UserId == dto.UserId && e.Vazeeat == true);
-
-                if (activeRecord != null)
-                {
-                    activeRecord.Vazeeat = false;
-                }
-
-                // ============================================================
-                // 🔥 ثبت درخواست جدید
+                // 🔥 ثبت پیش‌نویس جدید (غیرفعال)
                 // ============================================================
                 var newEntity = new ElmiTerm
                 {
@@ -419,8 +393,8 @@ namespace PayamBack.Controllers.Schedule
                     FullTime = dto.FullTime,
                     TedadSaatMovazafi = dto.TedadSaatMovazafi,
                     TedadVahedMovazafi = dto.TedadVahedMovazafi,
-                    ApproveStatus = 0,
-                    Vazeeat = true
+                    ApproveStatus = 0,          // در انتظار بررسی
+                    Vazeeat = false             // ❌ هنوز فعال نشده (پیش‌نویس)
                 };
 
                 await _context.Set<ElmiTerm>().AddAsync(newEntity);
@@ -435,7 +409,7 @@ namespace PayamBack.Controllers.Schedule
                 return Ok(new
                 {
                     success = true,
-                    message = "درخواست با موفقیت ثبت شد",
+                    message = "پیش‌نویس با موفقیت ثبت شد",
                     data = new { id = newEntity.Id }
                 });
             }
@@ -444,7 +418,7 @@ namespace PayamBack.Controllers.Schedule
                 return StatusCode(500, new
                 {
                     success = false,
-                    message = "خطا در ثبت درخواست",
+                    message = "خطا در ثبت پیش‌نویس",
                     error = ex.Message
                 });
             }
@@ -468,7 +442,7 @@ namespace PayamBack.Controllers.Schedule
                 if (entity == null)
                     return NotFound(new { success = false, message = "درخواست یافت نشد" });
 
-                var isOstad = currentUser.OstadId.HasValue;
+                var isOstad = currentRole?.Name == "استاد";
                 if (isOstad && entity.UserId != currentUser.Id)
                     return Forbid();
 
@@ -549,6 +523,30 @@ namespace PayamBack.Controllers.Schedule
                 entity.ApprovedByRoleMarkaz = roleMarkaz;
                 entity.ApprovedAt = DateTime.Now;
                 entity.ApproveTozihat = dto.Tozihat;
+
+                // ============================================================
+                // 🔥 اگر تایید شد، فقط این رکورد فعال شود و بقیه غیرفعال
+                // ============================================================
+                if (dto.ApproveStatus == 1 && entity.UserId.HasValue)
+                {
+                    // 1️⃣ این رکورد را فعال کن
+                    entity.Vazeeat = true;
+
+                    // 2️⃣ همه رکوردهای دیگر این استاد را غیرفعال کن
+                    var otherRecords = await _context.Set<ElmiTerm>()
+                        .Where(e => e.UserId == entity.UserId.Value && e.Id != entity.Id)
+                        .ToListAsync();
+
+                    foreach (var other in otherRecords)
+                    {
+                        other.Vazeeat = false;
+                    }
+                }
+                else
+                {
+                    // اگر رد شد، Vazeeat را false نگه دار (تغییری نمی‌دهیم)
+                    entity.Vazeeat = false;
+                }
 
                 await _context.SaveChangesAsync();
 

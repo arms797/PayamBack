@@ -17,7 +17,11 @@ namespace PayamBack.Models.Edu
 
         /// <summary>تاریخ شروع ترم جاری</summary>
         [Column(TypeName = "date")]
-        public DateOnly? TermJari { get; set; }
+        public DateOnly? TermJariShoroo { get; set; }
+
+        /// <summary>تاریخ پایان ترم جاری</summary>
+        [Column(TypeName = "date")]
+        public DateOnly? TermJariPayan { get; set; }
 
         /// <summary>تاریخ دسترسی به ترم جاری</summary>
         [Column(TypeName = "date")]
@@ -49,5 +53,15 @@ namespace PayamBack.Models.Edu
 
         /// <summary>وضعیت ترم (فعال/غیرفعال)</summary>
         public bool? Vazeeyat { get; set; }
+
+        // ============================================================
+        // 🔥 فیلد جدید
+        // ============================================================
+        /// <summary>
+        /// آیا برنامه هفتگی برای این ترم الزامی است؟
+        /// پیش‌فرض: true (برای ترم‌های اول و دوم)
+        /// در ترم تابستان می‌توان false تنظیم کرد
+        /// </summary>
+        public bool IsHaftegiRequired { get; set; } = true;
     }
 }

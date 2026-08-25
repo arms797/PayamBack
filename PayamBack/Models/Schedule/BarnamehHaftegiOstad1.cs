@@ -13,7 +13,7 @@ namespace PayamBack.Models.Schedule
         //کلید خارجی آیدی برنامه هفتگی استاد
         public int BarnamehHaftegiOstadId {  get; set; }
 
-        //شهر انتخابی فعالیت حضوری
+        //شهر اصلی آن روز برای فعالیت 
         public int? MarkazId { get; set; }
 
         /// <summary>روز هفته (شنبه، یکشنبه، ...)</summary>

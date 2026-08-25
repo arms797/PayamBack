@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PayamBack.Data;
 
@@ -11,9 +12,11 @@ using PayamBack.Data;
 namespace PayamBack.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260823143551_AddIsLock-BarnamehHaftegi")]
+    partial class AddIsLockBarnamehHaftegi
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1204,13 +1207,13 @@ namespace PayamBack.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<bool>("IsLocked")
+                    b.Property<bool>("IsLock")
                         .HasColumnType("bit");
 
                     b.Property<int?>("MarkazId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("NazarElmi")
+                    b.Property<int?>("NararElmi")
                         .HasColumnType("int");
 
                     b.Property<int?>("NazarMoaven")
@@ -1367,7 +1370,7 @@ namespace PayamBack.Migrations
                     b.HasIndex("BarnamehHaftegiOstadId", "RoozeHafteh")
                         .HasDatabaseName("IX_BarnamehHaftegiOstad1_OstadId_RoozeHafteh");
 
-                    b.ToTable("BarnamehHaftegiOstad1s");
+                    b.ToTable("BarnamehHaftegiOstad1");
                 });
 
             modelBuilder.Entity("PayamBack.Models.Schedule.BarnamehTermiOstad", b =>

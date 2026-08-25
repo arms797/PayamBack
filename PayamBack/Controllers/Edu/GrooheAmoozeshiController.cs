@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using PayamBack.Data;
+using PayamBack.DTOs.Edu.GrooheAmoozeshi;
 using PayamBack.Models.Edu;
 using System.ComponentModel.DataAnnotations;
 
@@ -12,14 +14,17 @@ namespace PayamBack.Controllers.Edu
     public class GrooheAmoozeshiController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IMemoryCache _cache;
+        private const string AllGrooheCacheKey = "AllGrooheList";
 
-        public GrooheAmoozeshiController(AppDbContext context)
+        public GrooheAmoozeshiController(AppDbContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         // ============================================================
-        // 1️⃣ دریافت لیست همه گروه‌های آموزشی (عمومی)
+        // 1️⃣ دریافت لیست همه گروه‌های آموزشی (عمومی) - با کش
         // ============================================================
         [HttpGet("list")]
         [AllowAnonymous]
@@ -27,6 +32,17 @@ namespace PayamBack.Controllers.Edu
         {
             try
             {
+                // 🔥 بررسی کش
+                if (_cache.TryGetValue(AllGrooheCacheKey, out List<object>? cachedData) && cachedData != null)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "لیست گروه‌های آموزشی دریافت شد",
+                        data = cachedData
+                    });
+                }
+
                 var list = await _context.GrooheAmoozeshis
                     .OrderBy(g => g.CodeDaneshkade)
                     .ThenBy(g => g.CodeGrooheAmoozeshi)
@@ -39,6 +55,9 @@ namespace PayamBack.Controllers.Edu
                         g.OnvanGrooheAmoozeshi
                     })
                     .ToListAsync();
+
+                // 🔥 ذخیره در کش به مدت ۱ ساعت
+                _cache.Set(AllGrooheCacheKey, list, TimeSpan.FromHours(1));
 
                 return Ok(new
                 {
@@ -185,7 +204,7 @@ namespace PayamBack.Controllers.Edu
         // 5️⃣ ایجاد گروه آموزشی جدید (نیاز به مجوز)
         // ============================================================
         [HttpPost("create")]
-        [Authorize]  // ← فقط احراز هویت، مجوز توسط PermissionFilter بررسی می‌شود
+        [Authorize]
         public async Task<IActionResult> Create([FromBody] GrooheAmoozeshiCreateDto dto)
         {
             try
@@ -212,6 +231,9 @@ namespace PayamBack.Controllers.Edu
                 await _context.GrooheAmoozeshis.AddAsync(item);
                 await _context.SaveChangesAsync();
 
+                // 🔥 پاک کردن کش بعد از ایجاد
+                _cache.Remove(AllGrooheCacheKey);
+
                 return Ok(new
                 {
                     success = true,
@@ -234,7 +256,7 @@ namespace PayamBack.Controllers.Edu
         // 6️⃣ ویرایش گروه آموزشی (نیاز به مجوز)
         // ============================================================
         [HttpPut("update/{id}")]
-        [Authorize]  // ← فقط احراز هویت، مجوز توسط PermissionFilter بررسی می‌شود
+        [Authorize]
         public async Task<IActionResult> Update(int id, [FromBody] GrooheAmoozeshiUpdateDto dto)
         {
             try
@@ -264,6 +286,9 @@ namespace PayamBack.Controllers.Edu
 
                 await _context.SaveChangesAsync();
 
+                // 🔥 پاک کردن کش بعد از ویرایش
+                _cache.Remove(AllGrooheCacheKey);
+
                 return Ok(new
                 {
                     success = true,
@@ -285,7 +310,7 @@ namespace PayamBack.Controllers.Edu
         // 7️⃣ حذف گروه آموزشی (نیاز به مجوز)
         // ============================================================
         [HttpDelete("delete/{id}")]
-        [Authorize]  // ← فقط احراز هویت، مجوز توسط PermissionFilter بررسی می‌شود
+        [Authorize]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -309,6 +334,9 @@ namespace PayamBack.Controllers.Edu
                 _context.GrooheAmoozeshis.Remove(item);
                 await _context.SaveChangesAsync();
 
+                // 🔥 پاک کردن کش بعد از حذف
+                _cache.Remove(AllGrooheCacheKey);
+
                 return Ok(new
                 {
                     success = true,
@@ -325,43 +353,16 @@ namespace PayamBack.Controllers.Edu
                 });
             }
         }
-    }
 
-    // ============================================================
-    // DTOها
-    // ============================================================
-
-    public class GrooheAmoozeshiCreateDto
-    {
-        [Required]
-        [MaxLength(50)]
-        public string CodeDaneshkade { get; set; } = string.Empty;
-
-        [Required]
-        [MaxLength(200)]
-        public string NaamDaneshkadeh { get; set; } = string.Empty;
-
-        [Required]
-        [MaxLength(50)]
-        public string CodeGrooheAmoozeshi { get; set; } = string.Empty;
-
-        [Required]
-        [MaxLength(200)]
-        public string OnvanGrooheAmoozeshi { get; set; } = string.Empty;
-    }
-
-    public class GrooheAmoozeshiUpdateDto
-    {
-        [MaxLength(50)]
-        public string? CodeDaneshkade { get; set; }
-
-        [MaxLength(200)]
-        public string? NaamDaneshkadeh { get; set; }
-
-        [MaxLength(50)]
-        public string? CodeGrooheAmoozeshi { get; set; }
-
-        [MaxLength(200)]
-        public string? OnvanGrooheAmoozeshi { get; set; }
+        // ============================================================
+        // 8️⃣ پاک کردن کش (برای مواقع ضروری)
+        // ============================================================
+        [HttpDelete("clear-cache")]
+        [Authorize(Roles = "ادمین سامانه")]
+        public IActionResult ClearCache()
+        {
+            _cache.Remove(AllGrooheCacheKey);
+            return Ok(new { success = true, message = "کش گروه‌های آموزشی پاک شد" });
+        }
     }
 }

@@ -2,14 +2,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
-using PayamBack.DTOs.Edu.Term;
 using PayamBack.Models.Edu;
 
 namespace PayamBack.Controllers.Edu
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "ادمین سامانه")]
+    [Authorize]
     public class TermController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -23,18 +22,19 @@ namespace PayamBack.Controllers.Edu
         // 1️⃣ دریافت لیست همه ترم‌ها
         // ============================================================
         [HttpGet("list")]
-        [AllowAnonymous]  // برای نمایش در صفحات عمومی
+        [AllowAnonymous]
         public async Task<IActionResult> GetList()
         {
             try
             {
                 var terms = await _context.Terms
-                    .OrderByDescending(t => t.TermJari)
+                    .OrderByDescending(t => t.TermJariShoroo)
                     .Select(t => new TermListDto
                     {
                         CodeTerm = t.CodeTerm ?? "",
                         OnvanTerm = t.OnvanTerm ?? "",
-                        TermJari = t.TermJari,
+                        TermJariShoroo = t.TermJariShoroo,
+                        TermJariPayan = t.TermJariPayan,
                         TarikheDastrasi = t.TarikheDastrasi,
                         TarikheEraeeDars = t.TarikheEraeeDars,
                         TarikhePayanDars = t.TarikhePayanDars,
@@ -42,7 +42,8 @@ namespace PayamBack.Controllers.Edu
                         TarikhePayanClass = t.TarikhePayanClass,
                         TarikheShorooMojavezMarakez = t.TarikheShorooMojavezMarakez,
                         TarikhePayanMojavezMarakez = t.TarikhePayanMojavezMarakez,
-                        Vazeeyat = t.Vazeeyat ?? false
+                        Vazeeyat = t.Vazeeyat ?? false,
+                        IsHaftegiRequired = t.IsHaftegiRequired
                     })
                     .ToListAsync();
 
@@ -79,7 +80,8 @@ namespace PayamBack.Controllers.Edu
                     {
                         CodeTerm = t.CodeTerm ?? "",
                         OnvanTerm = t.OnvanTerm ?? "",
-                        TermJari = t.TermJari,
+                        TermJariShoroo = t.TermJariShoroo,
+                        TermJariPayan = t.TermJariPayan,
                         TarikheDastrasi = t.TarikheDastrasi,
                         TarikheEraeeDars = t.TarikheEraeeDars,
                         TarikhePayanDars = t.TarikhePayanDars,
@@ -87,7 +89,8 @@ namespace PayamBack.Controllers.Edu
                         TarikhePayanClass = t.TarikhePayanClass,
                         TarikheShorooMojavezMarakez = t.TarikheShorooMojavezMarakez,
                         TarikhePayanMojavezMarakez = t.TarikhePayanMojavezMarakez,
-                        Vazeeyat = t.Vazeeyat ?? false
+                        Vazeeyat = t.Vazeeyat ?? false,
+                        IsHaftegiRequired = t.IsHaftegiRequired
                     })
                     .FirstOrDefaultAsync();
 
@@ -139,11 +142,15 @@ namespace PayamBack.Controllers.Edu
                     });
                 }
 
+                // تعیین مقدار پیش‌فرض IsHaftegiRequired
+                bool isHaftegiRequired = dto.IsHaftegiRequired ?? IsTermRequiresHaftegi(dto.CodeTerm, dto.TermJariShoroo);
+
                 var term = new Term
                 {
                     CodeTerm = dto.CodeTerm,
                     OnvanTerm = dto.OnvanTerm,
-                    TermJari = dto.TermJari,
+                    TermJariShoroo = dto.TermJariShoroo,
+                    TermJariPayan = dto.TermJariPayan,
                     TarikheDastrasi = dto.TarikheDastrasi,
                     TarikheEraeeDars = dto.TarikheEraeeDars,
                     TarikhePayanDars = dto.TarikhePayanDars,
@@ -151,12 +158,11 @@ namespace PayamBack.Controllers.Edu
                     TarikhePayanClass = dto.TarikhePayanClass,
                     TarikheShorooMojavezMarakez = dto.TarikheShorooMojavezMarakez,
                     TarikhePayanMojavezMarakez = dto.TarikhePayanMojavezMarakez,
-                    Vazeeyat = dto.Vazeeyat ?? false
+                    Vazeeyat = dto.Vazeeyat ?? false,
+                    IsHaftegiRequired = isHaftegiRequired
                 };
 
-                // ============================================================
                 // اگر ترم فعال است، سایر ترم‌ها را غیرفعال کن
-                // ============================================================
                 if (term.Vazeeyat == true)
                 {
                     await DeactivateOtherTerms(term.CodeTerm);
@@ -205,7 +211,8 @@ namespace PayamBack.Controllers.Edu
 
                 // به‌روزرسانی فیلدها
                 term.OnvanTerm = dto.OnvanTerm ?? term.OnvanTerm;
-                term.TermJari = dto.TermJari ?? term.TermJari;
+                term.TermJariShoroo = dto.TermJariShoroo ?? term.TermJariShoroo;
+                term.TermJariPayan = dto.TermJariPayan ?? term.TermJariPayan;
                 term.TarikheDastrasi = dto.TarikheDastrasi ?? term.TarikheDastrasi;
                 term.TarikheEraeeDars = dto.TarikheEraeeDars ?? term.TarikheEraeeDars;
                 term.TarikhePayanDars = dto.TarikhePayanDars ?? term.TarikhePayanDars;
@@ -213,6 +220,12 @@ namespace PayamBack.Controllers.Edu
                 term.TarikhePayanClass = dto.TarikhePayanClass ?? term.TarikhePayanClass;
                 term.TarikheShorooMojavezMarakez = dto.TarikheShorooMojavezMarakez ?? term.TarikheShorooMojavezMarakez;
                 term.TarikhePayanMojavezMarakez = dto.TarikhePayanMojavezMarakez ?? term.TarikhePayanMojavezMarakez;
+
+                // به‌روزرسانی IsHaftegiRequired
+                if (dto.IsHaftegiRequired.HasValue)
+                {
+                    term.IsHaftegiRequired = dto.IsHaftegiRequired.Value;
+                }
 
                 // اگر وضعیت فعال تغییر کرده است
                 if (dto.Vazeeyat.HasValue && dto.Vazeeyat.Value != term.Vazeeyat)
@@ -265,9 +278,7 @@ namespace PayamBack.Controllers.Edu
                     });
                 }
 
-                // ============================================================
-                // 🔥 جلوگیری از حذف ترم جاری (فعال)
-                // ============================================================
+                // جلوگیری از حذف ترم جاری (فعال)
                 if (term.Vazeeyat == true)
                 {
                     return BadRequest(new
@@ -312,15 +323,17 @@ namespace PayamBack.Controllers.Edu
                     {
                         CodeTerm = t.CodeTerm ?? "",
                         OnvanTerm = t.OnvanTerm ?? "",
-                        TermJari = t.TermJari,
-                        TarikheDastrasi=t.TarikheDastrasi,
-                        TarikheEraeeDars=t.TarikheEraeeDars,
-                        TarikhePayanDars=t.TarikhePayanDars,
+                        TermJariShoroo = t.TermJariShoroo,
+                        TermJariPayan = t.TermJariPayan,
+                        TarikheDastrasi = t.TarikheDastrasi,
+                        TarikheEraeeDars = t.TarikheEraeeDars,
+                        TarikhePayanDars = t.TarikhePayanDars,
                         TarikheShorooClass = t.TarikheShorooClass,
                         TarikhePayanClass = t.TarikhePayanClass,
-                        TarikheShorooMojavezMarakez=t.TarikheShorooMojavezMarakez,
-                        TarikhePayanMojavezMarakez=t.TarikhePayanMojavezMarakez,
-                        Vazeeyat= t.Vazeeyat
+                        TarikheShorooMojavezMarakez = t.TarikheShorooMojavezMarakez,
+                        TarikhePayanMojavezMarakez = t.TarikhePayanMojavezMarakez,
+                        Vazeeyat = t.Vazeeyat,
+                        IsHaftegiRequired = t.IsHaftegiRequired
                     })
                     .FirstOrDefaultAsync();
 
@@ -355,6 +368,34 @@ namespace PayamBack.Controllers.Edu
             {
                 term.Vazeeyat = false;
             }
+        }
+
+        // ============================================================
+        // متد کمکی: تعیین مقدار پیش‌فرض IsHaftegiRequired
+        // ============================================================
+        private bool IsTermRequiresHaftegi(string codeTerm, DateOnly? termJariShoroo)
+        {
+            // روش 1: بررسی کد ترم
+            // فرض می‌کنیم ترم‌های تابستان با کد خاصی مشخص می‌شوند
+            // مثلاً اگر کد ترم شامل "2" باشد (نیمسال دوم تابستان)
+            if (!string.IsNullOrEmpty(codeTerm))
+            {
+                // این منطق را بر اساس فرمت کد ترم خودت تنظیم کن
+                // مثلاً اگر کد ترم به "2" ختم می‌شود (تابستان)
+                if (codeTerm.EndsWith("2") || codeTerm.Contains("-2"))
+                    return false;
+            }
+
+            // روش 2: بررسی تاریخ شروع ترم
+            if (termJariShoroo.HasValue)
+            {
+                var month = termJariShoroo.Value.Month;
+                // تیر (7)، مرداد (8)، شهریور (9) ← تابستان
+                if (month >= 7 && month <= 9)
+                    return false;
+            }
+
+            return true;
         }
     }
 }

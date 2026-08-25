@@ -20,7 +20,7 @@ namespace PayamBack.Models.Schedule
         //0=ثبت اولیه
         //1=تایید
         //2=رد
-        public int? NararElmi { get; set; }
+        public int? NazarElmi { get; set; }
         //تاریخ انجام
         public DateTime? TarikhElmi {  get; set; }
 
@@ -45,7 +45,7 @@ namespace PayamBack.Models.Schedule
         public int? NazarMoaven { get; set; }
         //تاریخ انجام
         public DateTime? TarikhMoaven { get; set; }
-
+        public bool IsLocked { get; set; } = false;
 
         // ======== Navigation Properties ========
 

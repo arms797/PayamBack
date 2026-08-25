@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿// RoleAssignmentController.cs - نسخه اصلاح‌شده
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.DTOs.Identity.RoleAssignment;
 using PayamBack.Models.Core;
 using PayamBack.Models.Identity;
+using PayamBack.Services.Interfaces;
 using System.Security.Claims;
 
 namespace PayamBack.Controllers.Identity
@@ -16,109 +18,38 @@ namespace PayamBack.Controllers.Identity
         private readonly AppDbContext _context;
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<AppRole> _roleManager;
+        private readonly ICurrentUserService _currentUserService;
+        private readonly IAccessService _accessService;
+        private readonly IMarkazCacheService _markazCache;
 
         public RoleAssignmentController(
             AppDbContext context,
             UserManager<AppUser> userManager,
-            RoleManager<AppRole> roleManager)
+            RoleManager<AppRole> roleManager,
+            ICurrentUserService currentUserService,
+            IAccessService accessService,
+            IMarkazCacheService markazCache)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
+            _currentUserService = currentUserService;
+            _accessService = accessService;
+            _markazCache = markazCache;
         }
 
         // ============================================================
-        // 🔥 متدهای کمکی
+        // 🔥 متد کمکی جدید با استفاده از سرویس‌ها
         // ============================================================
 
-        /// <summary>دریافت اطلاعات کاربر فعلی و نقش فعال</summary>
-        private async Task<(AppUser? user, AppRole? role, Markaz? markaz, int? codeRole)> GetCurrentUserInfoAsync()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                return (null, null, null, null);
-
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null)
-                return (null, null, null, null);
-
-            var roleName = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (string.IsNullOrEmpty(roleName))
-                return (user, null, null, null);
-
-            var role = await _roleManager.FindByNameAsync(roleName);
-            if (role == null)
-                return (user, null, null, null);
-
-            var activeRole = await _context.Set<AppUserRole>()
-                .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
-
-            Markaz? markaz = null;
-            if (activeRole?.MarkazId != null)
-            {
-                markaz = await _context.Markazes.FindAsync(activeRole.MarkazId.Value);
-            }
-
-            return (user, role, markaz, role.CodeRole);
-        }
-
-        /// <summary>بررسی دسترسی به مرکز هدف</summary>
-        private async Task<bool> CanAccessTargetMarkazAsync(int targetMarkazId, int codeRole, int? currentMarkazId)
-        {
-            if (codeRole == 1) return true;
-
-            var targetMarkaz = await _context.Markazes.FindAsync(targetMarkazId);
-            if (targetMarkaz == null) return false;
-
-            var currentMarkaz = await _context.Markazes.FindAsync(currentMarkazId);
-            if (currentMarkaz == null) return false;
-
-            if (codeRole == 2)
-                return targetMarkaz.Level == 2 || targetMarkaz.Level == 3;
-
-            if (codeRole == 3)
-                return targetMarkaz.Level == 3 || (targetMarkaz.Level == 4 && targetMarkaz.CodeOstan == currentMarkaz.CodeOstan);
-
-            if (codeRole == 4)
-                return targetMarkaz.Id == currentMarkaz.Id;
-
-            return false;
-        }
-
-        /// <summary>دریافت مراکز قابل دسترس</summary>
-        private async Task<List<int>> GetAccessibleMarkazIdsAsync(int codeRole, int? currentMarkazId)
-        {
-            if (codeRole == 1)
-                return await _context.Markazes.Where(m => m.Vazeeyat == true).Select(m => m.Id).ToListAsync();
-
-            var currentMarkaz = await _context.Markazes.FindAsync(currentMarkazId);
-            if (currentMarkaz == null) return new List<int>();
-
-            if (codeRole == 2)
-                return await _context.Markazes
-                    .Where(m => m.Vazeeyat == true && (m.Level == 2 || m.Level == 3))
-                    .Select(m => m.Id).ToListAsync();
-
-            if (codeRole == 3)
-                return await _context.Markazes
-                    .Where(m => m.Vazeeyat == true &&
-                        ((m.Level == 3 && m.CodeOstan == currentMarkaz.CodeOstan) ||
-                         (m.Level == 4 && m.CodeOstan == currentMarkaz.CodeOstan)))
-                    .Select(m => m.Id).ToListAsync();
-
-            if (codeRole == 4)
-                return new List<int> { currentMarkaz.Id };
-
-            return new List<int>();
-        }
-
-        /// <summary>بررسی مجاز بودن نقش برای این کاربر</summary>
+        /// <summary>بررسی مجاز بودن نقش برای کاربر فعلی در مرکز مشخص</summary>
         private async Task<bool> CanAssignRoleAsync(int roleId, int codeRole, int markazId)
         {
             var role = await _roleManager.FindByIdAsync(roleId.ToString());
             if (role == null) return false;
 
-            var targetMarkaz = await _context.Markazes.FindAsync(markazId);
+            var allMarkaz = await _markazCache.GetAllAsync();
+            var targetMarkaz = allMarkaz.FirstOrDefault(m => m.Id == markazId);
             if (targetMarkaz == null) return false;
 
             // ============================================================
@@ -185,11 +116,11 @@ namespace PayamBack.Controllers.Identity
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                var accessibleMarkazIds = await GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
+                var accessibleMarkazIds = await _accessService.GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
                 if (!accessibleMarkazIds.Any())
                     return Ok(new { success = true, message = "شما دسترسی به هیچ مرکزی ندارید", data = new List<object>(), pagination = new { page, pageSize, totalCount = 0, totalPages = 0 } });
 
@@ -317,11 +248,11 @@ namespace PayamBack.Controllers.Identity
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                var accessibleMarkazIds = await GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
+                var accessibleMarkazIds = await _accessService.GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
 
                 var assignments = await _context.Set<AppUserRole>()
                     .Include(ur => ur.Role)
@@ -368,11 +299,11 @@ namespace PayamBack.Controllers.Identity
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                if (!await CanAccessTargetMarkazAsync(markazId, codeRole.Value, currentMarkaz?.Id))
+                if (!await _accessService.CanAccessTargetMarkazAsync(markazId, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
 
                 var assignments = await _context.Set<AppUserRole>()
@@ -415,11 +346,11 @@ namespace PayamBack.Controllers.Identity
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                if (!await CanAccessTargetMarkazAsync(markazId, codeRole.Value, currentMarkaz?.Id))
+                if (!await _accessService.CanAccessTargetMarkazAsync(markazId, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
 
                 var allRoles = await _roleManager.Roles
@@ -465,11 +396,11 @@ namespace PayamBack.Controllers.Identity
         {
             try
             {
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                if (!await CanAccessTargetMarkazAsync(markazId, codeRole.Value, currentMarkaz?.Id))
+                if (!await _accessService.CanAccessTargetMarkazAsync(markazId, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
 
                 var assignedRoles = await _context.Set<AppUserRole>()
@@ -518,14 +449,14 @@ namespace PayamBack.Controllers.Identity
                 // ============================================================
                 // 🔥 دریافت اطلاعات کاربر فعلی
                 // ============================================================
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
                 // ============================================================
                 // 🔥 بررسی دسترسی به مرکز
                 // ============================================================
-                if (!await CanAccessTargetMarkazAsync(dto.MarkazId, codeRole.Value, currentMarkaz?.Id))
+                if (!await _accessService.CanAccessTargetMarkazAsync(dto.MarkazId, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
 
                 // ============================================================
@@ -662,7 +593,7 @@ namespace PayamBack.Controllers.Identity
                 // ============================================================
                 // 🔥 بررسی دسترسی
                 // ============================================================
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -678,7 +609,7 @@ namespace PayamBack.Controllers.Identity
                     return NotFound(new { success = false, message = "انتصاب یافت نشد" });
 
                 // بررسی دسترسی به مرکز
-                if (!await CanAccessTargetMarkazAsync(assignment.MarkazId ?? 0, codeRole.Value, currentMarkaz?.Id))
+                if (!await _accessService.CanAccessTargetMarkazAsync(assignment.MarkazId ?? 0, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
 
                 // ============================================================
@@ -768,7 +699,7 @@ namespace PayamBack.Controllers.Identity
                 // ============================================================
                 // 🔥 بررسی دسترسی (فقط ادمین سامانه)
                 // ============================================================
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -817,7 +748,7 @@ namespace PayamBack.Controllers.Identity
                 // ============================================================
                 // 🔥 بررسی دسترسی
                 // ============================================================
-                var (currentUser, currentRole, currentMarkaz, codeRole) = await GetCurrentUserInfoAsync();
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
@@ -831,7 +762,7 @@ namespace PayamBack.Controllers.Identity
                     return NotFound(new { success = false, message = "انتصاب یافت نشد" });
 
                 // بررسی دسترسی به مرکز
-                if (!await CanAccessTargetMarkazAsync(assignment.MarkazId ?? 0, codeRole.Value, currentMarkaz?.Id))
+                if (!await _accessService.CanAccessTargetMarkazAsync(assignment.MarkazId ?? 0, codeRole.Value, currentMarkaz?.Id))
                     return Forbid();
 
                 // ============================================================
