@@ -51,6 +51,8 @@ namespace PayamBack.Data
         public DbSet<ElmiTerm> ElmiTerms { get; set; }
         public DbSet<UserSignature> UserSignatures { get; set; }
         public DbSet<ModirGrooh> ModirGroohs { get; set; }
+        public DbSet<WeekDay> WeekDays { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

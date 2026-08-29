@@ -143,7 +143,7 @@ namespace PayamBack.Controllers.Edu
                 }
 
                 // تعیین مقدار پیش‌فرض IsHaftegiRequired
-                bool isHaftegiRequired = dto.IsHaftegiRequired ?? IsTermRequiresHaftegi(dto.CodeTerm, dto.TermJariShoroo);
+                bool isHaftegiRequired = dto.IsHaftegiRequired ?? true; //IsTermRequiresHaftegi(dto.CodeTerm, dto.TermJariShoroo);
 
                 var term = new Term
                 {
@@ -373,7 +373,7 @@ namespace PayamBack.Controllers.Edu
         // ============================================================
         // متد کمکی: تعیین مقدار پیش‌فرض IsHaftegiRequired
         // ============================================================
-        private bool IsTermRequiresHaftegi(string codeTerm, DateOnly? termJariShoroo)
+        /*private bool IsTermRequiresHaftegi(string codeTerm, DateOnly? termJariShoroo)
         {
             // روش 1: بررسی کد ترم
             // فرض می‌کنیم ترم‌های تابستان با کد خاصی مشخص می‌شوند
@@ -396,6 +396,6 @@ namespace PayamBack.Controllers.Edu
             }
 
             return true;
-        }
+        }*/
     }
 }

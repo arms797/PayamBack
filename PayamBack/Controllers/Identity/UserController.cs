@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
+using PayamBack.Filters;
 using PayamBack.Models.Core;
 using PayamBack.Models.Identity;
 using PayamBack.Services.Interfaces;
@@ -40,7 +41,7 @@ namespace PayamBack.Controllers.Identity
         // 1️⃣ دریافت کاربر بر اساس نوع و شناسه
         // ============================================================
         [HttpGet("by-type")]
-        [AllowAnonymous]
+        [NoPermission]
         public async Task<IActionResult> GetUserByType(
             [FromQuery] string type,
             [FromQuery] int id)
@@ -279,7 +280,7 @@ namespace PayamBack.Controllers.Identity
         // 4️⃣ دریافت اطلاعات کاربر با شناسه
         // ============================================================
         [HttpGet("{userId}")]
-        [AllowAnonymous]
+        [NoPermission]
         public async Task<IActionResult> GetUserById(int userId)
         {
             try

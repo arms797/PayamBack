@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.Models.Core;
+using PayamBack.Models.Edu;
 using PayamBack.Models.Identity;
 
 namespace PayamBack
@@ -226,6 +227,21 @@ namespace PayamBack
                             await userManager.UpdateAsync(adminUser);
                         }
                     }
+                }
+                if (!context.WeekDays.Any())
+                {
+                    var days = new List<WeekDay>
+                    {
+                        new() { Code = 1, Title = "شنبه", IsActive = true, Order = 1, IsHoliday = false },
+                        new() { Code = 2, Title = "یکشنبه", IsActive = true, Order = 2, IsHoliday = false },
+                        new() { Code = 3, Title = "دوشنبه", IsActive = true, Order = 3, IsHoliday = false },
+                        new() { Code = 4, Title = "سه‌شنبه", IsActive = true, Order = 4, IsHoliday = false },
+                        new() { Code = 5, Title = "چهارشنبه", IsActive = true, Order = 5, IsHoliday = false },
+                        new() { Code = 6, Title = "پنجشنبه", IsActive = true, Order = 6, IsHoliday = false },
+                        new() { Code = 7, Title = "جمعه", IsActive = false, Order = 7, IsHoliday = true }
+                    };
+                    await context.WeekDays.AddRangeAsync(days);
+                    await context.SaveChangesAsync();
                 }
             }
             catch (Exception ex)

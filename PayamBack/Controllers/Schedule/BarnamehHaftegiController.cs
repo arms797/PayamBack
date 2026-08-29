@@ -26,8 +26,9 @@ namespace PayamBack.Controllers.Schedule
         private readonly IAccessService _accessService;
         private readonly IMarkazCacheService _markazCache;
         private readonly IMemoryCache _cache;
-        private readonly IFaaliatCacheService _faaliatCacheService;
-        private readonly ISaatBargozariCacheService _saatBargozariCacheService;
+        //private readonly IFaaliatCacheService _faaliatCacheService;
+        //private readonly ISaatBargozariCacheService _saatBargozariCacheService;
+        private readonly ILookupCacheService _lookupCache;
 
         public BarnamehHaftegiController(
             AppDbContext context,
@@ -37,8 +38,9 @@ namespace PayamBack.Controllers.Schedule
             IAccessService accessService,
             IMarkazCacheService markazCache,
             IMemoryCache cache,
-            IFaaliatCacheService faaliatCacheService,
-            ISaatBargozariCacheService saatBargozariCacheService)
+            //IFaaliatCacheService faaliatCacheService,
+            //ISaatBargozariCacheService saatBargozariCacheService
+            ILookupCacheService lookupCacheService)
         {
             _context = context;
             _userManager = userManager;
@@ -47,8 +49,9 @@ namespace PayamBack.Controllers.Schedule
             _accessService = accessService;
             _markazCache = markazCache;
             _cache = cache;
-            _faaliatCacheService = faaliatCacheService;
-            _saatBargozariCacheService = saatBargozariCacheService;
+            //_faaliatCacheService = faaliatCacheService;
+            //_saatBargozariCacheService = saatBargozariCacheService;
+            _lookupCache = lookupCacheService;
         }
 
         // ============================================================
@@ -173,6 +176,8 @@ namespace PayamBack.Controllers.Schedule
             return result;
         }
 
+
+        
         /// <summary>
         /// بررسی حداقل ۵ روز در مرکز اصلی یا مراکز مجاز
         /// </summary>
@@ -247,7 +252,7 @@ namespace PayamBack.Controllers.Schedule
             // ============================================================
             // 2️⃣ دریافت لیست ساعت‌های مجاز از سرویس کش
             // ============================================================
-            var allSaats = await _saatBargozariCacheService.GetAllActiveAsync();
+            var allSaats = await _lookupCache.GetActiveHoursAsync();
             var saatCodes = allSaats.Select(s => s.CodeSaat).ToHashSet();
 
             var warnings = new List<string>();
@@ -542,43 +547,73 @@ namespace PayamBack.Controllers.Schedule
             bool isUpdate = false)
         {
             // ============================================================
-            // 1️⃣ دریافت اطلاعات مراکز مجاز
+            // 1️⃣ دریافت داده‌های مرجع از Lookup Cache (یکجا)
+            // ============================================================
+            var lookupData = await _lookupCache.GetAllAsync();
+
+            // روزهای فعال
+            var activeDays = lookupData.Days;
+            var activeDayCodes = activeDays.Select(d => d.Code.ToString()).ToHashSet();
+            var dayTitleDict = activeDays.ToDictionary(d => d.Code.ToString(), d => d.Title);
+
+            // ساعت‌های فعال
+            var activeHours = lookupData.Hours;
+            var activeHourCodes = activeHours.Select(h => h.CodeSaat).ToHashSet();
+            var saatDict = activeHours.ToDictionary(s => s.CodeSaat);
+
+            // فعالیت‌های فعال
+            var allFaaliats = lookupData.Faaliats;
+            var faaliatDict = allFaaliats.ToDictionary(f => f.Id);
+
+            // ============================================================
+            // 2️⃣ دریافت اطلاعات مراکز مجاز
             // ============================================================
             var permittedMarkazInfo = await GetPermittedMarkazInfoAsync(ostadId, termCode);
             var permittedDict = permittedMarkazInfo.ToDictionary(x => x.MarkazId);
 
-            // 2️⃣ دریافت اطلاعات استاد برای نوع همکاری (IsMadove)
+            // ============================================================
+            // 3️⃣ دریافت اطلاعات استاد برای نوع همکاری (IsMadove)
+            // ============================================================
             var ostad = await _context.Ostads.FirstOrDefaultAsync(o => o.Id == ostadId);
             if (ostad == null)
                 return (false, "استاد یافت نشد");
             bool isHeyatElmi = ostad.NoeHamkari == NoeHamkariEnum.HeyatElmiPayamNoor;
 
-            // 3️⃣ دریافت لیست فعالیت‌های فعال
-            var allFaaliats = await GetActiveFaaliatsAsync();
-            var faaliatDict = allFaaliats.ToDictionary(f => f.Id);
-
-            // 4️⃣ دریافت لیست ساعت‌های مجاز
-            var allSaats = await _saatBargozariCacheService.GetAllActiveAsync();
-            var saatDict = allSaats.ToDictionary(s => s.CodeSaat);
-
-            // 5️⃣ دریافت لیست مراکز با قابلیت مجازی
+            // ============================================================
+            // 4️⃣ دریافت لیست مراکز با قابلیت مجازی
+            // ============================================================
             var allMarkaz = await _markazCache.GetAllAsync();
             var virtualMarkazIds = allMarkaz
                 .Where(m => m.NoeMarkaz == 2 || m.NoeMarkaz == 3)
                 .Select(m => m.Id)
                 .ToHashSet();
 
-            // 6️⃣ شمارش تعداد روزهای استفاده از هر مرکز غیراصلی
+            // ============================================================
+            // 5️⃣ شمارش تعداد روزهای استفاده از هر مرکز غیراصلی
+            // ============================================================
             var nonMainMarkazUsage = new Dictionary<int, int>();
+
+            // ============================================================
+            // 6️⃣ تابع کمکی برای دریافت عنوان روز (با استفاده از دیکشنری)
+            // ============================================================
+            string GetDayTitle(string? dayCode)
+            {
+                if (string.IsNullOrEmpty(dayCode)) return "-";
+                return dayTitleDict.TryGetValue(dayCode, out var title) ? title : dayCode;
+            }
 
             // ============================================================
             // 7️⃣ اعتبارسنجی مرکز اصلی هر روز
             // ============================================================
             foreach (var detail in details)
             {
+                // 🔥 بررسی اینکه روز در لیست روزهای فعال باشد
+                if (!activeDayCodes.Contains(detail.RoozeHafteh))
+                    return (false, $"روز {GetDayTitle(detail.RoozeHafteh)} برای برنامه‌ریزی مجاز نیست");
+
                 // بررسی مجاز بودن MarkazId روز
                 if (!permittedDict.ContainsKey(detail.MarkazId))
-                    return (false, $"مرکز انتخاب‌شده برای روز {GetDayDisplay(detail.RoozeHafteh)} مجاز نیست");
+                    return (false, $"مرکز انتخاب‌شده برای روز {GetDayTitle(detail.RoozeHafteh)} مجاز نیست");
 
                 var markazInfo = permittedDict[detail.MarkazId];
 
@@ -607,7 +642,6 @@ namespace PayamBack.Controllers.Schedule
                 // برای مراکز غیراصلی، بررسی حداقل ۳ جلسه در همان مرکز
                 if (!isMainMarkaz)
                 {
-                    var mainMarkazSessionCount = 0;
                     var hourFields = new List<int?>
                     {
                         detail.MarkazIdA, detail.MarkazIdB, detail.MarkazIdC,
@@ -615,24 +649,24 @@ namespace PayamBack.Controllers.Schedule
                         detail.MarkazIdG, detail.MarkazIdH
                     };
 
-                    mainMarkazSessionCount = hourFields.Count(id => id.HasValue && id.Value == dayMarkazId);
+                    var mainMarkazSessionCount = hourFields.Count(id => id.HasValue && id.Value == dayMarkazId);
 
                     if (mainMarkazSessionCount < 3)
-                        return (false, $"در روز {GetDayDisplay(detail.RoozeHafteh)}، برای مرکز غیراصلی باید حداقل ۳ جلسه (۶ ساعت) در همان مرکز باشد");
+                        return (false, $"در روز {GetDayTitle(detail.RoozeHafteh)}، برای مرکز غیراصلی باید حداقل ۳ جلسه (۶ ساعت) در همان مرکز باشد");
                 }
 
                 // اعتبارسنجی هر ساعت
-                    var hourFieldsWithActivity = new List<(int? ActivityId, int? MarkazId, string FieldName, string CodeSaat)>
-                    {
-                        (detail.A, detail.MarkazIdA, "A", "A"),
-                        (detail.B, detail.MarkazIdB, "B", "B"),
-                        (detail.C, detail.MarkazIdC, "C", "C"),
-                        (detail.D, detail.MarkazIdD, "D", "D"),
-                        (detail.E, detail.MarkazIdE, "E", "E"),
-                        (detail.F, detail.MarkazIdF, "F", "F"),
-                        (detail.G, detail.MarkazIdG, "G", "G"),
-                        (detail.H, detail.MarkazIdH, "H", "H"),
-                    };
+                var hourFieldsWithActivity = new List<(int? ActivityId, int? MarkazId, string FieldName, string CodeSaat)>
+                {
+                    (detail.A, detail.MarkazIdA, "A", "A"),
+                    (detail.B, detail.MarkazIdB, "B", "B"),
+                    (detail.C, detail.MarkazIdC, "C", "C"),
+                    (detail.D, detail.MarkazIdD, "D", "D"),
+                    (detail.E, detail.MarkazIdE, "E", "E"),
+                    (detail.F, detail.MarkazIdF, "F", "F"),
+                    (detail.G, detail.MarkazIdG, "G", "G"),
+                    (detail.H, detail.MarkazIdH, "H", "H"),
+                };
 
                 foreach (var (activityId, markazIdX, fieldName, codeSaat) in hourFieldsWithActivity)
                 {
@@ -643,6 +677,10 @@ namespace PayamBack.Controllers.Schedule
                     // اگر مرکز ساعت انتخاب نشده، خطا
                     if (!markazIdX.HasValue)
                         return (false, $"در ساعت {fieldName} فعالیت انتخاب شده اما مرکز مشخص نشده است");
+
+                    // 🔥 بررسی اینکه ساعت در لیست ساعت‌های فعال باشد
+                    if (!activeHourCodes.Contains(codeSaat))
+                        return (false, $"ساعت {fieldName} در سیستم فعال نیست و نمی‌تواند در برنامه استفاده شود");
 
                     // بررسی مجاز بودن مرکز ساعت
                     var faaliat = faaliatDict.GetValueOrDefault(activityId.Value);
@@ -671,7 +709,7 @@ namespace PayamBack.Controllers.Schedule
 
                     // قانون ۴: اگر مرکز غیراصلی است و فعالیت مجازی است، نیازی به مجوز خاصی ندارد (قبلاً بررسی شده)
 
-                    // قانون ۵: بررسی ساعت مجاز
+                    // قانون ۵: بررسی ساعت مجاز (با استفاده از saatDict که از Lookup دریافت شده)
                     var saat = saatDict.GetValueOrDefault(codeSaat);
                     if (saat == null)
                         return (false, $"ساعت {fieldName} در سیستم تعریف نشده است");
@@ -687,10 +725,10 @@ namespace PayamBack.Controllers.Schedule
                 if (!isHeyatElmi)
                 {
                     var allActivityIds = new List<int?>
-                    {
-                        detail.A, detail.B, detail.C, detail.D,
-                        detail.E, detail.F, detail.G, detail.H
-                    }
+            {
+                detail.A, detail.B, detail.C, detail.D,
+                detail.E, detail.F, detail.G, detail.H
+            }
                     .Where(id => id.HasValue && id.Value > 0)
                     .Select(id => id.Value)
                     .Distinct()
@@ -707,6 +745,83 @@ namespace PayamBack.Controllers.Schedule
             return (true, "");
         }
 
+        /// <summary>
+        /// دریافت مراکز مجاز برای استاد در یک ترم خاص (برای استفاده در فرانت‌اند)
+        /// </summary>
+        [HttpGet("permitted-markazs")]
+        public async Task<IActionResult> GetPermittedMarkazs([FromQuery] int ostadId, [FromQuery] string termCode)
+        {
+            try
+            {
+                // اعتبارسنجی ورودی
+                if (ostadId <= 0 || string.IsNullOrEmpty(termCode))
+                {
+                    return BadRequest(new { success = false, message = "ostadId و termCode اجباری هستند" });
+                }
+
+                // دریافت لیست مراکز مجاز
+                var permitted = await GetPermittedMarkazInfoAsync(ostadId, termCode);
+
+                // تبدیل به DTO مناسب برای فرانت‌اند
+                var result = permitted.Select(p => new
+                {
+                    p.MarkazId,
+                    p.IsMainMarkaz,
+                    p.MaxDays,
+                    AllowedFaaliatIds = p.AllowedFaaliatIds,
+                    p.NoeMarkaz
+                });
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "مراکز مجاز با موفقیت دریافت شدند",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در دریافت مراکز مجاز",
+                    error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// دریافت ساعت موظفی استاد برای ترم مشخص (برای استفاده در فرانت‌اند)
+        /// </summary>
+        [HttpGet("required-hours")]
+        public async Task<IActionResult> GetRequiredHours([FromQuery] int ostadId, [FromQuery] string termCode)
+        {
+            try
+            {
+                if (ostadId <= 0 || string.IsNullOrEmpty(termCode))
+                {
+                    return BadRequest(new { success = false, message = "ostadId و termCode اجباری هستند" });
+                }
+
+                var hours = await GetRequiredHoursAsync(ostadId, termCode);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "ساعت موظفی با موفقیت دریافت شد",
+                    data = hours
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در دریافت ساعت موظفی",
+                    error = ex.Message
+                });
+            }
+        }
         // BarnamehHaftegiController.cs
         [HttpGet("active-saats")]
         [AllowAnonymous]
@@ -715,7 +830,7 @@ namespace PayamBack.Controllers.Schedule
         {
             try
             {
-                var saats = await _saatBargozariCacheService.GetAllActiveAsync();
+                var saats = await _lookupCache.GetActiveHoursAsync();
 
                 if (noeAnjam.HasValue)
                 {
@@ -1162,6 +1277,10 @@ namespace PayamBack.Controllers.Schedule
                 var requiredSessions = requiredHours / 2;
                 var isComplete = totalSessions >= requiredSessions;
 
+                // دریافت لیست روزهای فعال در ابتدای متد
+                var activeDays = await _lookupCache.GetActiveDaysAsync();
+                var dayDict = activeDays.ToDictionary(d => d.Code.ToString(), d => d.Title);
+
                 // ============================================================
                 // 5️⃣ ساخت خروجی
                 // ============================================================
@@ -1201,7 +1320,7 @@ namespace PayamBack.Controllers.Schedule
                         {
                             Id = d.Id,
                             RoozeHafteh = d.RoozeHafteh ?? "",
-                            RoozeHaftehDisplay = GetDayDisplay(d.RoozeHafteh),
+                            RoozeHaftehDisplay = dayDict.TryGetValue(d.RoozeHafteh ?? "", out var title) ? title : d.RoozeHafteh ?? "-",
                             MarkazId = d.MarkazId,  // 🔥 اضافه شد
                             MarkazName = GetMarkazName(d.MarkazId, allMarkaz),  // 🔥 اضافه شد
                             A = d.A,
@@ -1940,18 +2059,12 @@ namespace PayamBack.Controllers.Schedule
             };
         }
 
-        private string GetDayDisplay(string? day)
+        private async Task<string> GetDayDisplayFromLookupAsync(string? dayCode)
         {
-            return day switch
-            {
-                "1" => "شنبه",
-                "2" => "یکشنبه",
-                "3" => "دوشنبه",
-                "4" => "سه‌شنبه",
-                "5" => "چهارشنبه",
-                "6" => "پنجشنبه",
-                _ => day ?? "-"
-            };
+            if (string.IsNullOrEmpty(dayCode)) return "-";
+            var days = await _lookupCache.GetActiveDaysAsync();
+            var day = days.FirstOrDefault(d => d.Code.ToString() == dayCode);
+            return day?.Title ?? dayCode;
         }
 
         private string GetMarkazName(int? markazId, List<Markaz> allMarkaz)
@@ -1983,7 +2096,7 @@ namespace PayamBack.Controllers.Schedule
         /// </summary>
         private async Task<List<Faaliat>> GetActiveFaaliatsAsync()
         {
-            return await _faaliatCacheService.GetAllActiveAsync();
+            return await _lookupCache.GetActiveFaaliatAsync();
         }
 
         
