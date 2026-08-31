@@ -70,5 +70,9 @@ namespace PayamBack.Models.Schedule
 
         /// <summary>وضعیت (فعال/غیرفعال)</summary>
         public bool? Vazeeat { get; set; }
+
+        public int? FaaliatGroupId { get; set; }
+
+        public virtual FaaliatGroup? FaaliatGroup { get; set; }
     }
 }

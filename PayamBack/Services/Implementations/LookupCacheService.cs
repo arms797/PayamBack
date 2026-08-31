@@ -4,6 +4,7 @@ using PayamBack.Data;
 using PayamBack.Models.Edu;
 using PayamBack.Models.Schedule;
 using PayamBack.Services.Interfaces;
+using PayamBack.DTOs.Lookup;
 
 namespace PayamBack.Services.Implementations
 {
@@ -23,6 +24,9 @@ namespace PayamBack.Services.Implementations
         {
             if (_cache.TryGetValue(CacheKey, out LookupData? cached) && cached != null)
                 return cached;
+            var exceptions = await _context.HaftegiExceptions
+                .Where(e => _context.Terms.Any(t => t.CodeTerm == e.TermCode && t.Vazeeyat == true) && e.IsActive)
+                .ToListAsync();
 
             var data = new LookupData
             {
@@ -39,11 +43,35 @@ namespace PayamBack.Services.Implementations
                 Faaliats = await _context.Faaliats
                     .Where(f => f.Vazeeat == true)
                     .OrderBy(f => f.Id)
-                    .ToListAsync()
+                    .ToListAsync(),
+                // در LookupCacheService.GetAllAsync
+                FaaliatGroups = await _context.FaaliatGroups
+                    .Where(g => g.IsActive)
+                    .OrderBy(g => g.Title)
+                    .ToListAsync(),
+
+                // ✅ استثناهای مربوط به ترم‌های فعال (بدون نیاز به activeTerm جداگانه)
+                HaftegiExceptions = exceptions.Select(e => new HaftegiExceptionDto
+                {
+                    Id = e.Id,
+                    TermCode = e.TermCode,
+                    OstanCode = e.OstanCode,
+                    DayCode = e.DayCode,
+                    HourCode = e.HourCode,
+                    NoeHamkariMask = e.NoeHamkariMask,
+                    FaaliatIds = ConvertFaaliatIdsToList(e.FaaliatIds), // ← تابع کمکی
+                    Description = e.Description,
+                    IsActive = e.IsActive
+                }).ToList()
             };
 
             _cache.Set(CacheKey, data, TimeSpan.FromHours(6));
             return data;
+        }
+        public async Task<List<HaftegiExceptionDto>> GetActiveExceptionsAsync()
+        {
+            var all = await GetAllAsync();
+            return all.HaftegiExceptions;
         }
 
         public async Task<List<WeekDay>> GetActiveDaysAsync()
@@ -64,9 +92,26 @@ namespace PayamBack.Services.Implementations
             return all.Faaliats;
         }
 
+        public async Task<List<FaaliatGroup>> GetActiveFaaliatGroupAsync()
+        {
+            var all = await GetAllAsync();
+            return all.FaaliatGroups;
+        }
+
         public void ClearCache()
         {
             _cache.Remove(CacheKey);
+        }
+        // 🔧 تابع کمکی برای تبدیل رشته به لیست اعداد
+        private List<int>? ConvertFaaliatIdsToList(string? faaliatIds)
+        {
+            if (string.IsNullOrEmpty(faaliatIds))
+                return null; // یعنی همه فعالیت‌ها ممنوع هستند
+
+            return faaliatIds
+                .Split('|', StringSplitOptions.RemoveEmptyEntries)
+                .Select(int.Parse)
+                .ToList();
         }
     }
 }

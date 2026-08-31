@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PayamBack.Data;
 
@@ -11,9 +12,11 @@ using PayamBack.Data;
 namespace PayamBack.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260830064919_AddExceptionModels")]
+    partial class AddExceptionModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1664,9 +1667,6 @@ namespace PayamBack.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<int?>("FaaliatGroupId")
-                        .HasColumnType("int");
-
                     b.Property<bool?>("IsMadove")
                         .HasColumnType("bit");
 
@@ -1700,8 +1700,6 @@ namespace PayamBack.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("FaaliatGroupId");
-
                     b.HasIndex("Onvan")
                         .IsUnique()
                         .HasDatabaseName("IX_Faaliat_Onvan")
@@ -1711,50 +1709,6 @@ namespace PayamBack.Migrations
                         .HasDatabaseName("IX_Faaliat_Vazeeat");
 
                     b.ToTable("Faaliats");
-                });
-
-            modelBuilder.Entity("PayamBack.Models.Schedule.FaaliatGroup", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("MaxDayDarHafteh")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MaxSaatDarHafteh")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MinDayDarHafteh")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MinSaatDarHafteh")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IsActive")
-                        .HasDatabaseName("IX_FaaliatGroup_IsActive");
-
-                    b.HasIndex("Title")
-                        .IsUnique()
-                        .HasDatabaseName("IX_FaaliatGroup_Title");
-
-                    b.ToTable("FaaliatGroups");
                 });
 
             modelBuilder.Entity("PayamBack.Models.Schedule.Hamjavar", b =>
@@ -2295,16 +2249,6 @@ namespace PayamBack.Migrations
                     b.Navigation("UserSabtKonandeh");
                 });
 
-            modelBuilder.Entity("PayamBack.Models.Schedule.Faaliat", b =>
-                {
-                    b.HasOne("PayamBack.Models.Schedule.FaaliatGroup", "FaaliatGroup")
-                        .WithMany("Faaliats")
-                        .HasForeignKey("FaaliatGroupId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("FaaliatGroup");
-                });
-
             modelBuilder.Entity("PayamBack.Models.Schedule.Hamjavar", b =>
                 {
                     b.HasOne("PayamBack.Models.Core.Ostad", "Ostad")
@@ -2412,11 +2356,6 @@ namespace PayamBack.Migrations
             modelBuilder.Entity("PayamBack.Models.Schedule.BarnamehHaftegiOstad", b =>
                 {
                     b.Navigation("BarnamehHaftegiOstad1s");
-                });
-
-            modelBuilder.Entity("PayamBack.Models.Schedule.FaaliatGroup", b =>
-                {
-                    b.Navigation("Faaliats");
                 });
 
             modelBuilder.Entity("PayamBack.Models.Schedule.Hamjavar", b =>

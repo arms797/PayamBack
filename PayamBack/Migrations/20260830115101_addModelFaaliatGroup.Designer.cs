@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PayamBack.Data;
 
@@ -11,9 +12,11 @@ using PayamBack.Data;
 namespace PayamBack.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260830115101_addModelFaaliatGroup")]
+    partial class addModelFaaliatGroup
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1667,6 +1670,9 @@ namespace PayamBack.Migrations
                     b.Property<int?>("FaaliatGroupId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("FaaliatGroupId1")
+                        .HasColumnType("int");
+
                     b.Property<bool?>("IsMadove")
                         .HasColumnType("bit");
 
@@ -1701,6 +1707,8 @@ namespace PayamBack.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("FaaliatGroupId");
+
+                    b.HasIndex("FaaliatGroupId1");
 
                     b.HasIndex("Onvan")
                         .IsUnique()
@@ -1746,13 +1754,6 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("IsActive")
-                        .HasDatabaseName("IX_FaaliatGroup_IsActive");
-
-                    b.HasIndex("Title")
-                        .IsUnique()
-                        .HasDatabaseName("IX_FaaliatGroup_Title");
 
                     b.ToTable("FaaliatGroups");
                 });
@@ -2298,9 +2299,13 @@ namespace PayamBack.Migrations
             modelBuilder.Entity("PayamBack.Models.Schedule.Faaliat", b =>
                 {
                     b.HasOne("PayamBack.Models.Schedule.FaaliatGroup", "FaaliatGroup")
-                        .WithMany("Faaliats")
+                        .WithMany()
                         .HasForeignKey("FaaliatGroupId")
                         .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("PayamBack.Models.Schedule.FaaliatGroup", null)
+                        .WithMany("Faaliats")
+                        .HasForeignKey("FaaliatGroupId1");
 
                     b.Navigation("FaaliatGroup");
                 });

@@ -33,7 +33,9 @@ namespace PayamBack.Controllers
                     {
                         days = data.Days,//.Select(d => new { d.Id, d.Code, d.Title, d.IsActive, d.Order, d.IsHoliday }),
                         hours = data.Hours,//.Select(h => new { h.Id, h.CodeSaat, h.OnvanSaat, h.SaatShoroo, h.SaatPayan, h.Hozoori, h.Majazi }),
-                        faaliats = data.Faaliats//.Select(a => new { a.Id, a.Onvan, a.NoeAnjam, a.Color, a.MinSaatDarHafteh, a.MaxSaatDarHafteh, a.IsMadove })
+                        faaliats = data.Faaliats,//.Select(a => new { a.Id, a.Onvan, a.NoeAnjam, a.Color, a.MinSaatDarHafteh, a.MaxSaatDarHafteh, a.IsMadove })
+                        haftegiExceptions = data.HaftegiExceptions,
+                        faaliatGroups=data.FaaliatGroups
                     }
                 });
             }
@@ -52,7 +54,7 @@ namespace PayamBack.Controllers
         /// پاک کردن کش داده‌های مرجع (فقط ادمین)
         /// </summary>
         [HttpDelete("clear-cache")]
-        [Authorize(Roles = "ادمین سامانه")]
+        [Authorize]
         public IActionResult ClearCache()
         {
             _lookupCache.ClearCache();

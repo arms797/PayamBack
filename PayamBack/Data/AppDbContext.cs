@@ -48,10 +48,12 @@ namespace PayamBack.Data
         public DbSet<Hamjavar> Hamjavars { get; set; }
         public DbSet<Hamjavar1> Hamjavar1s { get; set; }
         public DbSet<Faaliat> Faaliats { get; set; }
+        public DbSet<FaaliatGroup> FaaliatGroups { get; set; }
         public DbSet<ElmiTerm> ElmiTerms { get; set; }
         public DbSet<UserSignature> UserSignatures { get; set; }
         public DbSet<ModirGrooh> ModirGroohs { get; set; }
         public DbSet<WeekDay> WeekDays { get; set; }
+        public DbSet<HaftegiException> HaftegiExceptions {  get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -409,6 +411,7 @@ namespace PayamBack.Data
             });
 
             // ======== Faaliat ========
+            // ======== Faaliat ========
             builder.Entity<Faaliat>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -419,6 +422,31 @@ namespace PayamBack.Data
 
                 entity.HasIndex(e => e.Vazeeat)
                     .HasDatabaseName("IX_Faaliat_Vazeeat");
+
+                entity.HasOne(e => e.FaaliatGroup)
+                    .WithMany(g => g.Faaliats)  // ← اصلاح: WithMany با اشاره به مجموعه Faaliats در گروه
+                    .HasForeignKey(e => e.FaaliatGroupId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            // ======== FaaliatGroup ========
+            builder.Entity<FaaliatGroup>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.HasIndex(e => e.Title)
+                    .IsUnique()
+                    .HasDatabaseName("IX_FaaliatGroup_Title");
+
+                entity.HasIndex(e => e.IsActive)
+                    .HasDatabaseName("IX_FaaliatGroup_IsActive");
+
+                // رابطه‌ی معکوس (اختیاری است، چون قبلاً در Faaliat تعریف شده)
+                // اما برای شفافیت بهتر است اینجا هم ذکر شود:
+                entity.HasMany(e => e.Faaliats)
+                    .WithOne(e => e.FaaliatGroup)
+                    .HasForeignKey(e => e.FaaliatGroupId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             // ======== ElmiTerm ========

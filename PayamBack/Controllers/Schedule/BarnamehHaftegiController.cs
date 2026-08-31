@@ -612,6 +612,7 @@ namespace PayamBack.Controllers.Schedule
                     return (false, $"روز {GetDayTitle(detail.RoozeHafteh)} برای برنامه‌ریزی مجاز نیست");
 
                 // بررسی مجاز بودن MarkazId روز
+                //var markazId = detail.MarkazId ?? 0;                    
                 if (!permittedDict.ContainsKey(detail.MarkazId))
                     return (false, $"مرکز انتخاب‌شده برای روز {GetDayTitle(detail.RoozeHafteh)} مجاز نیست");
 
@@ -634,7 +635,7 @@ namespace PayamBack.Controllers.Schedule
             // 8️⃣ اعتبارسنجی جزئیات ساعتی
             // ============================================================
             foreach (var detail in details)
-            {
+            {             
                 var dayMarkazId = detail.MarkazId;
                 var dayMarkazInfo = permittedDict[dayMarkazId];
                 var isMainMarkaz = dayMarkazInfo.IsMainMarkaz;
@@ -743,6 +744,31 @@ namespace PayamBack.Controllers.Schedule
             }
 
             return (true, "");
+        }
+
+        private string GetMaghtaText(int? maghta)
+        {
+            return maghta switch
+            {
+                5 => "کارشناسی",
+                10 => "کارشناسی ارشد",
+                15 => "دکتری",
+                _ => maghta?.ToString() ?? "-"
+            };
+        }
+
+        private int GetNoeHamkariDisplay(NoeHamkariEnum? noeHamkari)
+        {
+            if (!noeHamkari.HasValue) return 0;
+
+            return noeHamkari.Value switch
+            {
+                NoeHamkariEnum.HeyatElmiPayamNoor => 1,
+                NoeHamkariEnum.HeyatElmiGheyrePayamNoor => 2,
+                NoeHamkariEnum.ModaresMadov => 3,
+                NoeHamkariEnum.HeyatElmiPayamNoorSayerOstanha => 4,
+                _ =>0
+            };
         }
 
         /// <summary>
@@ -953,6 +979,7 @@ namespace PayamBack.Controllers.Schedule
                         {
                             BarnamehHaftegiOstadId = program.Id,
                             RoozeHafteh = detail.RoozeHafteh,
+                            MarkazId=detail.MarkazId,
                             A = detail.A,
                             MarkazIdA = detail.MarkazIdA,
                             B = detail.B,
@@ -1079,6 +1106,7 @@ namespace PayamBack.Controllers.Schedule
                         {
                             BarnamehHaftegiOstadId = program.Id,
                             RoozeHafteh = detail.RoozeHafteh,
+                            MarkazId = detail.MarkazId,
                             A = detail.A,
                             MarkazIdA = detail.MarkazIdA,
                             B = detail.B,
@@ -1233,7 +1261,7 @@ namespace PayamBack.Controllers.Schedule
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
                 // ============================================================
-                // 1️⃣ دریافت برنامه
+                // 1️⃣ دریافت برنامه با تمام اطلاعات مرتبط
                 // ============================================================
                 var program = await _context.BarnamehHaftegiOstads
                     .Include(b => b.Ostad)
@@ -1249,7 +1277,6 @@ namespace PayamBack.Controllers.Schedule
                 // 2️⃣ بررسی دسترسی
                 // ============================================================
                 var isOstad = currentRole?.Name == "استاد";
-
                 if (isOstad)
                 {
                     if (currentUser.OstadId != program.OstadId)
@@ -1262,38 +1289,80 @@ namespace PayamBack.Controllers.Schedule
                 }
 
                 // ============================================================
-                // 3️⃣ دریافت اطلاعات مراکز مجاز (با ساختار جدید)
+                // 3️⃣ دریافت اطلاعات تکمیلی استاد
+                // ============================================================
+
+                // 🔥 دریافت مدرک پیش‌فرض (رشته و مقطع)
+                string? reshteh = null;
+                string? maghta = null;
+                var ostadMadrak = await _context.OstadMadraks
+                    .Where(m => m.OstadId == program.OstadId && m.PishFarz == true)
+                    .FirstOrDefaultAsync();
+                if (ostadMadrak != null)
+                {
+                    reshteh = ostadMadrak.Reshteh;
+                    maghta = ostadMadrak.Maghta.HasValue ? GetMaghtaText(ostadMadrak.Maghta.Value) : null;
+                }
+
+                // 🔥 دریافت سمت اجرایی از ElmiTerm (فعال یا تأییدشده)
+                string? postEjraei = null;
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.OstadId == program.OstadId);
+                if (user != null)
+                {
+                    var elmiTerm = await _context.ElmiTerms
+                        .Where(e => e.UserId == user.Id && e.Vazeeat == true && e.ApproveStatus == 1)
+                        .OrderByDescending(e => e.Id)
+                        .FirstOrDefaultAsync();
+                    if (elmiTerm != null && elmiTerm.IsEjeari == true)
+                    {
+                        postEjraei = elmiTerm.OnvanEjraei;
+                    }
+                }
+
+                // ============================================================
+                // 4️⃣ اطلاعات مراکز مجاز
                 // ============================================================
                 var permittedMarkazInfo = await GetPermittedMarkazInfoAsync(program.OstadId, program.CodeTerm);
-                var permittedMarkazIds = permittedMarkazInfo.Select(x => x.MarkazId).ToList();
-
                 var allMarkaz = await _markazCache.GetAllAsync();
 
                 // ============================================================
-                // 4️⃣ محاسبات تکمیلی
+                // 5️⃣ محاسبات تکمیلی
                 // ============================================================
                 var requiredHours = await GetRequiredHoursAsync(program.OstadId, program.CodeTerm);
                 var totalSessions = CalculateTotalSessions(program);
                 var requiredSessions = requiredHours / 2;
                 var isComplete = totalSessions >= requiredSessions;
 
-                // دریافت لیست روزهای فعال در ابتدای متد
                 var activeDays = await _lookupCache.GetActiveDaysAsync();
                 var dayDict = activeDays.ToDictionary(d => d.Code.ToString(), d => d.Title);
 
                 // ============================================================
-                // 5️⃣ ساخت خروجی
+                // 6️⃣ ساخت خروجی
                 // ============================================================
                 var dto = new BarnamehHaftegiDetailDto
                 {
                     Id = program.Id,
                     OstadId = program.OstadId,
-                    OstadName = $"{program.Ostad?.Naam} {program.Ostad?.NaamKhanevadegi}".Trim(),
+                    OstadName = program.Ostad?.Naam ?? "",
+                    OstadLastName = program.Ostad?.NaamKhanevadegi ?? "",
                     OstadCode = program.Ostad?.CodeOstadi ?? "",
                     OstadMarkaz = program.Ostad?.Markaz?.NaamMarkaz ?? "",
-                    TermTitle = program.Term?.OnvanTerm ?? "",
                     CodeTerm = program.CodeTerm,
 
+                    // ============================================================
+                    // 🔥 فیلدهای جدید
+                    // ============================================================
+                    Reshteh = reshteh,
+                    Maghta = maghta,
+                    MartabehElmi = program.Ostad?.MartabeElmi,
+                    PostEjraei = postEjraei,
+                    Mobile = program.Ostad?.Mobile,
+                    NoeHamkari = GetNoeHamkariDisplay(program.Ostad.NoeHamkari),
+
+                    // ============================================================
+                    // فیلدهای قبلی
+                    // ============================================================
                     NazarElmi = program.NazarElmi,
                     NazarElmiDisplay = GetNazarDisplay(program.NazarElmi),
                     NazarModirGrooh = program.NazarModirGrooh,
@@ -1321,8 +1390,8 @@ namespace PayamBack.Controllers.Schedule
                             Id = d.Id,
                             RoozeHafteh = d.RoozeHafteh ?? "",
                             RoozeHaftehDisplay = dayDict.TryGetValue(d.RoozeHafteh ?? "", out var title) ? title : d.RoozeHafteh ?? "-",
-                            MarkazId = d.MarkazId,  // 🔥 اضافه شد
-                            MarkazName = GetMarkazName(d.MarkazId, allMarkaz),  // 🔥 اضافه شد
+                            MarkazId = d.MarkazId,
+                            MarkazName = GetMarkazName(d.MarkazId, allMarkaz),
                             A = d.A,
                             MarkazIdA = d.MarkazIdA,
                             MarkazNameA = GetMarkazName(d.MarkazIdA, allMarkaz),
@@ -1348,7 +1417,7 @@ namespace PayamBack.Controllers.Schedule
                             MarkazIdH = d.MarkazIdH,
                             MarkazNameH = GetMarkazName(d.MarkazIdH, allMarkaz),
                             Jozeiat = d.Jozeiat,
-                            IsPermittedDay = IsDayPermitted(d, permittedMarkazInfo)  // 🔥 اصلاح شد
+                            IsPermittedDay = IsDayPermitted(d, permittedMarkazInfo)
                         })
                         .ToList()
                 };
@@ -1718,7 +1787,7 @@ namespace PayamBack.Controllers.Schedule
                     .FirstOrDefaultAsync(m => m.OstadId == program.OstadId && m.PishFarz == true);
 
                 if (ostadMadrak == null || ostadMadrak.GrooheAmoozeshiId == null)
-                    return BadRequest(new { success = false, message = "رشته‌ی پیش‌فرض استاد مشخص نیست" });
+                    return BadRequest(new { success = false, message = "گروه آموزشی استاد مشخص نیست" });
 
                 // ۵. دریافت AppUserRoleId از دیتابیس بر اساس کاربر و نقش فعلی
                 var appUserRole = await _context.Set<AppUserRole>()
@@ -1772,6 +1841,21 @@ namespace PayamBack.Controllers.Schedule
                 // ============================================================
                 program.NazarModirGrooh = dto.ApproveStatus;
                 program.TarikhModirGrooh = DateTime.UtcNow;
+                program.UserIdModirGrooh = currentUser.Id;
+                var rn = currentRole?.Name?.Trim() ?? "نقش نامشخص";
+                var mn = currentMarkaz?.NaamMarkaz?.Trim() ?? "بدون مرکز";
+                program.RoleMarkazModirGrooh = $"{rn} - {mn}";
+
+                // 🔥 اگر مدیر گروه برنامه را رد کند، به مرحله پیش‌نویس برگردان
+                if (dto.ApproveStatus == 2) // رد
+                {
+                    program.IsLocked = false;          // باز کردن قفل برای ویرایش
+                    program.NazarElmi = 0;             // برگرداندن به پیش‌نویس استاد
+                    program.TarikhElmi = null;         // پاک کردن تاریخ تأیید استاد
+                    program.NazarModirGrooh = 0;
+                    //program.TarikhModirGrooh = 0;
+                   
+                }
 
                 await _context.SaveChangesAsync();
 
@@ -1779,7 +1863,9 @@ namespace PayamBack.Controllers.Schedule
                 return Ok(new
                 {
                     success = true,
-                    message = $"برنامه با موفقیت توسط مدیر گروه {statusText} شد"
+                    message = dto.ApproveStatus == 1
+                        ? "برنامه با موفقیت توسط مدیر گروه تایید شد"
+                        : "برنامه توسط مدیر گروه رد شد و به مرحله پیش‌نویس بازگشت"
                 });
             }
             catch (Exception ex)
@@ -1819,8 +1905,8 @@ namespace PayamBack.Controllers.Schedule
                     return Forbid("شما به این استاد دسترسی ندارید");
 
                 // ۴. بررسی وضعیت برنامه
-                if (program.NazarMoaven != 0)
-                    return BadRequest(new { success = false, message = "این برنامه قبلاً توسط معاون بررسی شده است" });
+                //if (program.NazarMoaven != 0)
+                //    return BadRequest(new { success = false, message = "این برنامه قبلاً توسط معاون بررسی شده است" });
 
                 // ۵. اخطار در صورت عدم نظر مدیرگروه
                 List<string> warnings = new();
@@ -1836,6 +1922,20 @@ namespace PayamBack.Controllers.Schedule
                 // ۶. ثبت نظر معاون
                 program.NazarMoaven = dto.ApproveStatus;
                 program.TarikhMoaven = DateTime.UtcNow;
+                program.UserIdMoaven = currentUser.Id;
+                var rn = currentRole?.Name?.Trim() ?? "نقش نامشخص";
+                var mn = currentMarkaz?.NaamMarkaz?.Trim() ?? "بدون مرکز";
+                program.RoleMarkazMoaven = $"{rn} - {mn}";
+                // ۷. اگر معاون برنامه را رد کند، به مرحله پیش‌نویس برگردان
+                if (dto.ApproveStatus == 2) // رد
+                {
+                    program.IsLocked = false;          // باز کردن قفل برای ویرایش
+                    program.NazarElmi = 0;             // برگرداندن به پیش‌نویس استاد
+                    program.NazarModirGrooh = 0;       // پاک کردن نظر مدیرگروه
+                    //program.TarikhElmi = null;         // پاک کردن تاریخ تأیید استاد
+                    //program.TarikhModirGrooh = null;   // پاک کردن تاریخ نظر مدیرگروه
+                    program.NazarMoaven = 0;
+                }
 
                 await _context.SaveChangesAsync();
 
@@ -1843,7 +1943,9 @@ namespace PayamBack.Controllers.Schedule
                 return Ok(new
                 {
                     success = true,
-                    message = $"برنامه با موفقیت توسط معاون {statusText} شد",
+                    message = dto.ApproveStatus == 1
+                        ? "برنامه با موفقیت توسط معاون تایید شد"
+                        : "برنامه توسط معاون رد شد و به مرحله پیش‌نویس بازگشت",
                     warnings = warnings.Any() ? warnings : null,
                     hasWarnings = warnings.Any()
                 });
@@ -2185,10 +2287,21 @@ namespace PayamBack.Controllers.Schedule
         public int Id { get; set; }
         public int OstadId { get; set; }
         public string OstadName { get; set; } = string.Empty;
+        public string OstadLastName { get; set; } = string.Empty;
         public string OstadCode { get; set; } = string.Empty;
         public string OstadMarkaz { get; set; } = string.Empty;
-        public string TermTitle { get; set; } = string.Empty;
         public string CodeTerm { get; set; } = string.Empty;
+
+        // ============================================================
+        // 🔥 فیلدهای جدید برای کارت اطلاعات استاد
+        // ============================================================
+        public string? Reshteh { get; set; }           // از OstadMadrak (PishFarz == true)
+        public string? Maghta { get; set; }            // از OstadMadrak (PishFarz == true)
+        public string? MartabehElmi { get; set; }      // از Ostad
+        public string? PostEjraei { get; set; }        // از ElmiTerm (فعال یا تأییدشده)
+        public string? Mobile { get; set; }            // از Ostad
+        public int NoeHamkari { get; set; }            // از Ostad
+
 
         public int? NazarElmi { get; set; }
         public string NazarElmiDisplay { get; set; } = string.Empty;
