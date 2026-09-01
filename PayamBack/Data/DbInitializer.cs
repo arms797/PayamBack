@@ -89,6 +89,101 @@ namespace PayamBack
                     new() { Resource = "Ostad", Action = "Create", Name = "Ostad.Create", Description = "ایجاد استاد جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
                     new() { Resource = "Ostad", Action = "Update", Name = "Ostad.Update", Description = "ویرایش استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
                     new() { Resource = "Ostad", Action = "Delete", Name = "Ostad.Delete", Description = "حذف استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Ostad", Action = "BulkUpload", Name = "Ostad.BulkUpload", Description = "افزودن گروهی استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های ادمین کنترلر
+                    new() { Resource = "Admin", Action = "View", Name = "Admin.View", Description = "مشاهده لیست ادمین ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Admin", Action = "Create", Name = "Admin.Create", Description = "ایجاد ادمین جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Admin", Action = "Update", Name = "Admin.Update", Description = "ویرایش ادمین", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Admin", Action = "Delete", Name = "Admin.Delete", Description = "حذف ادمین", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های کارمند 
+                    new() { Resource = "Karmand", Action = "View", Name = "Karmand.View", Description = "مشاهده لیست کارمند ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Karmand", Action = "Create", Name = "Karmand.Create", Description = "ایجاد کارمند جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Karmand", Action = "Update", Name = "Karmand.Update", Description = "ویرایش کارمند", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Karmand", Action = "Delete", Name = "Karmand.Delete", Description = "حذف کارمند", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های مرکز 
+                    new() { Resource = "Markaz", Action = "View", Name = "Markaz.View", Description = "مشاهده لیست مرکز ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Markaz", Action = "Create", Name = "Markaz.Create", Description = "ایجاد مرکز جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Markaz", Action = "Update", Name = "Markaz.Update", Description = "ویرایش مرکز", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Markaz", Action = "Delete", Name = "Markaz.Delete", Description = "حذف مرکز", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های استاد مدرک 
+                    new() { Resource = "OstadMadrak", Action = "View", Name = "OstadMadrak.View", Description = "مشاهده لیست مدرک های استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "OstadMadrak", Action = "Create", Name = "OstadMadrak.Create", Description = "ایجاد مدرک جدید استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "OstadMadrak", Action = "Update", Name = "OstadMadrak.Update", Description = "ویرایش مدرک استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "OstadMadrak", Action = "Delete", Name = "OstadMadrak.Delete", Description = "حذف مدرک استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "OstadMadrak", Action = "Approve", Name = "OstadMadrak.Approve", Description = "تایید مدرک استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "OstadMadrak", Action = "Unapprove", Name = "OstadMadrak.Unapprove", Description = "عدم تایید مدرک استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های گروه آموزشی 
+                    new() { Resource = "GrooheAmoozeshi", Action = "View", Name = "GrooheAmoozeshi.View", Description = "مشاهده لیست گروه آموزشی ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "GrooheAmoozeshi", Action = "Create", Name = "GrooheAmoozeshi.Create", Description = "ایجاد گروه آموزشی جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "GrooheAmoozeshi", Action = "Update", Name = "GrooheAmoozeshi.Update", Description = "ویرایش گروه آموزشی", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "GrooheAmoozeshi", Action = "Delete", Name = "GrooheAmoozeshi.Delete", Description = "حذف گروه آموزشی", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های رشته 
+                    new() { Resource = "Reshteh", Action = "View", Name = "Reshteh.View", Description = "مشاهده لیست رشته ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Reshteh", Action = "Create", Name = "Reshteh.Create", Description = "ایجاد رشته جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Reshteh", Action = "Update", Name = "Reshteh.Update", Description = "ویرایش رشته", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Reshteh", Action = "Delete", Name = "Reshteh.Delete", Description = "حذف رشته", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های ترم 
+                    new() { Resource = "Term", Action = "View", Name = "Term.View", Description = "مشاهده لیست ترم ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Create", Name = "Term.Create", Description = "ایجاد ترم جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Update", Name = "Term.Update", Description = "ویرایش ترم", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Delete", Name = "Term.Delete", Description = "حذف ترم", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های مدیرگروه 
+                    new() { Resource = "ModirGrooh", Action = "View", Name = "ModirGrooh.View", Description = "مشاهده لیست مدیرگروه ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "ModirGrooh", Action = "Create", Name = "ModirGrooh.Create", Description = "ایجاد مدیرگروه جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "ModirGrooh", Action = "Update", Name = "ModirGrooh.Update", Description = "ویرایش مدیرگروه", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "ModirGrooh", Action = "Delete", Name = "ModirGrooh.Delete", Description = "حذف مدیرگروه", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های انتصاب‌ 
+                    new() { Resource = "RoleAssignment", Action = "View", Name = "RoleAssignment.View", Description = "مشاهده لیست انتصاب‌ ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "RoleAssignment", Action = "Create", Name = "RoleAssignment.Create", Description = "ایجاد انتصاب‌ جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "RoleAssignment", Action = "Update", Name = "RoleAssignment.Update", Description = "ویرایش انتصاب‌", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "RoleAssignment", Action = "Delete", Name = "RoleAssignment.Delete", Description = "حذف انتصاب‌", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های امضا 
+                    new() { Resource = "Signature", Action = "View", Name = "Signature.View", Description = "مشاهده لیست امضا ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Signature", Action = "SaveSignature", Name = "Signature.SaveSignature", Description = "ویرایش امضا", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Signature", Action = "ChangePosition", Name = "Signature.ChangePosition", Description = "تغییر موقعیت امضا", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Signature", Action = "UnlockSignature", Name = "Signature.UnlockSignature", Description = "باز کردن قفل امضا", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Signature", Action = "Delete", Name = "Signature.Delete", Description = "حذف نقش", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Signature", Action = "ManageSignatureForReset", Name = "Signature.ManageSignatureForReset", Description = "لیست امضادارها برای ریست امضا", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های کاربر 
+                    new() { Resource = "User", Action = "View", Name = "User.View", Description = "مشاهده اطلاعات کاربر", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "User", Action = "Update", Name = "User.Update", Description = "ویرایش کاربر", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های برنامه هفتگی 
+                    new() { Resource = "Term", Action = "View", Name = "Term.View", Description = "مشاهده برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Create", Name = "Term.Create", Description = "ایجاد برنامه هفتگی جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Update", Name = "Term.Update", Description = "ویرایش برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Delete", Name = "Term.Delete", Description = "حذف برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "BulkLock", Name = "Term.BulkLock", Description = "قفل برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "ConfirmByMoaven", Name = "Term.ConfirmByMoaven", Description = "تایید معاون", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "ConfirmByOstad", Name = "Term.ConfirmByOstad", Description = "تایید استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "ConfirmByModirGrooh", Name = "Term.ConfirmByModirGrooh", Description = "تایید مدیرگروه", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های ترم 
+                    new() { Resource = "Term", Action = "View", Name = "Term.View", Description = "مشاهده لیست ترم ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Create", Name = "Term.Create", Description = "ایجاد ترم جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Update", Name = "Term.Update", Description = "ویرایش ترم", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Delete", Name = "Term.Delete", Description = "حذف ترم", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های ترم 
+                    new() { Resource = "Term", Action = "View", Name = "Term.View", Description = "مشاهده لیست ترم ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Create", Name = "Term.Create", Description = "ایجاد ترم جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Update", Name = "Term.Update", Description = "ویرایش ترم", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Term", Action = "Delete", Name = "Term.Delete", Description = "حذف ترم", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+
+
+
                 };
 
                 foreach (var permission in defaultPermissions)

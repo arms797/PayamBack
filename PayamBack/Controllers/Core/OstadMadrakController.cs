@@ -33,53 +33,6 @@ namespace PayamBack.Controllers.Core
             _currentUserService=currentUserService;
         }
 
-        // ============================================================
-        // 🔥 متد کمکی برای دریافت اطلاعات کاربر فعلی
-        // ============================================================
-       /* private async Task<(AppUser? user, AppRole? role, Markaz? markaz, int? codeRole, string? roleInfo)> GetCurrentUserInfoAsync()
-        {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                return (null, null, null, null, null);
-
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null)
-                return (null, null, null, null, null);
-
-            var roleName = User.FindFirst(ClaimTypes.Role)?.Value;
-            if (string.IsNullOrEmpty(roleName))
-                return (user, null, null, null, null);
-
-            var role = await _roleManager.FindByNameAsync(roleName);
-            if (role == null)
-                return (user, null, null, null, null);
-
-            var activeRole = await _context.Set<AppUserRole>()
-                .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id && ur.RolePishFarz == true);
-
-            if (activeRole == null)
-            {
-                activeRole = await _context.Set<AppUserRole>()
-                    .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
-            }
-
-            Markaz? markaz = null;
-            string? roleInfo = null;
-
-            if (activeRole?.MarkazId != null)
-            {
-                markaz = await _context.Markazes.FindAsync(activeRole.MarkazId.Value);
-                roleInfo = $"{role.Name} - {markaz?.NaamMarkaz ?? "مرکز نامشخص"}";
-            }
-            else
-            {
-                roleInfo = $"{role.Name}";
-            }
-
-            return (user, role, markaz, role.CodeRole, roleInfo);
-        }
-
-        */
 
         // ============================================================
         // 1️⃣ دریافت مدارک یک استاد
