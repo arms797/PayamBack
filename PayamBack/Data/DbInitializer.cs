@@ -32,7 +32,10 @@ namespace PayamBack
                         NaamMarkaz = "مرکز شیراز",
                         CodeOstan = "16",
                         NaamOstan = "فارس",
-                        Vazeeyat = true
+                        Vazeeyat = true,
+                        Dakheli= true,
+                        Level=4,
+                        NoeMarkaz=1,
                     };
                     await context.Markazes.AddAsync(markaz);
                     await context.SaveChangesAsync();
@@ -160,15 +163,40 @@ namespace PayamBack
                     new() { Resource = "User", Action = "Update", Name = "User.Update", Description = "ویرایش کاربر", IsActive = true, CreatedAt = DateTime.UtcNow },
 
                     //مجوز های برنامه هفتگی 
-                    new() { Resource = "Term", Action = "View", Name = "Term.View", Description = "مشاهده برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
-                    new() { Resource = "Term", Action = "Create", Name = "Term.Create", Description = "ایجاد برنامه هفتگی جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
-                    new() { Resource = "Term", Action = "Update", Name = "Term.Update", Description = "ویرایش برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
-                    new() { Resource = "Term", Action = "Delete", Name = "Term.Delete", Description = "حذف برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
-                    new() { Resource = "Term", Action = "BulkLock", Name = "Term.BulkLock", Description = "قفل برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
-                    new() { Resource = "Term", Action = "ConfirmByMoaven", Name = "Term.ConfirmByMoaven", Description = "تایید معاون", IsActive = true, CreatedAt = DateTime.UtcNow },
-                    new() { Resource = "Term", Action = "ConfirmByOstad", Name = "Term.ConfirmByOstad", Description = "تایید استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
-                    new() { Resource = "Term", Action = "ConfirmByModirGrooh", Name = "Term.ConfirmByModirGrooh", Description = "تایید مدیرگروه", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "BarnamehHaftegi", Action = "View", Name = "BarnamehHaftegi.View", Description = "مشاهده برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "BarnamehHaftegi", Action = "Create", Name = "BarnamehHaftegi.Create", Description = "ایجاد برنامه هفتگی جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "BarnamehHaftegi", Action = "Update", Name = "BarnamehHaftegi.Update", Description = "ویرایش برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "BarnamehHaftegi", Action = "Delete", Name = "BarnamehHaftegi.Delete", Description = "حذف برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "BarnamehHaftegi", Action = "BulkLock", Name = "BarnamehHaftegi.BulkLock", Description = "قفل برنامه هفتگی", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "BarnamehHaftegi", Action = "ConfirmByMoaven", Name = "BarnamehHaftegi.ConfirmByMoaven", Description = "تایید معاون", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "BarnamehHaftegi", Action = "ConfirmByOstad", Name = "BarnamehHaftegi.ConfirmByOstad", Description = "تایید استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "BarnamehHaftegi", Action = "ConfirmByModirGrooh", Name = "BarnamehHaftegi.ConfirmByModirGrooh", Description = "تایید مدیرگروه", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "BarnamehHaftegi", Action = "ResetConfirm", Name = "BarnamehHaftegi.ResetConfirm", Description = "ریست به پیش نویس", IsActive = true, CreatedAt = DateTime.UtcNow },
 
+                    //مجوز های علمی ترم 
+                    new() { Resource = "ElmiTerm", Action = "View", Name = "ElmiTerm.View", Description = "مشاهده لیست وضعیت ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "ElmiTerm", Action = "Create", Name = "ElmiTerm.Create", Description = "ایجاد وضعیت جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "ElmiTerm", Action = "Update", Name = "ElmiTerm.Update", Description = "ویرایش وضعیت", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "ElmiTerm", Action = "Delete", Name = "ElmiTerm.Delete", Description = "حذف وضعیت", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "ElmiTerm", Action = "Approve", Name = "ElmiTerm.Approve", Description = "تایید وضعیت", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "ElmiTerm", Action = "ResetToPending", Name = "ElmiTerm.ResetToPending", Description = "ریست وضعیت به حالت پیش نویس", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های ترم 
+                    new() { Resource = "Faaliat", Action = "View", Name = "Faaliat.View", Description = "مشاهده لیست فعالیت ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Faaliat", Action = "Create", Name = "Faaliat.Create", Description = "ایجاد فعالیت جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Faaliat", Action = "Update", Name = "Faaliat.Update", Description = "ویرایش فعالیت", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Faaliat", Action = "Delete", Name = "Faaliat.Delete", Description = "حذف فعالیت", IsActive = true, CreatedAt = DateTime.UtcNow },
+
+                    //مجوز های تدریس‌همجوار 
+                    new() { Resource = "Hamjavar", Action = "View", Name = "Hamjavar.View", Description = "مشاهده لیست تدریس‌همجوار ها", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Hamjavar", Action = "Create", Name = "Hamjavar.Create", Description = "ایجاد تدریس‌همجوار جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Hamjavar", Action = "Update", Name = "Hamjavar.Update", Description = "ویرایش تدریس‌همجوار", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Hamjavar", Action = "Delete", Name = "Hamjavar.Delete", Description = "حذف تدریس‌همجوار", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Hamjavar", Action = "ConfirmSubmitByOstad", Name = "Hamjavar.ConfirmSubmitByOstad", Description = "تایید نهایی استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Hamjavar", Action = "ReviewByRaeis", Name = "Hamjavar.ReviewByRaeis", Description = "بررسی رییس مرکز", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Hamjavar", Action = "ReviewByKhadamat", Name = "Hamjavar.ReviewByKhadamat", Description = "بررسی خدمات آموزشی استان", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "Hamjavar", Action = "ReviewByMoaven", Name = "Hamjavar.ReviewByMoaven", Description = "بررسی معاون استان", IsActive = true, CreatedAt = DateTime.UtcNow },
+/*
                     //مجوز های ترم 
                     new() { Resource = "Term", Action = "View", Name = "Term.View", Description = "مشاهده لیست ترم ها", IsActive = true, CreatedAt = DateTime.UtcNow },
                     new() { Resource = "Term", Action = "Create", Name = "Term.Create", Description = "ایجاد ترم جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
@@ -180,8 +208,7 @@ namespace PayamBack
                     new() { Resource = "Term", Action = "Create", Name = "Term.Create", Description = "ایجاد ترم جدید", IsActive = true, CreatedAt = DateTime.UtcNow },
                     new() { Resource = "Term", Action = "Update", Name = "Term.Update", Description = "ویرایش ترم", IsActive = true, CreatedAt = DateTime.UtcNow },
                     new() { Resource = "Term", Action = "Delete", Name = "Term.Delete", Description = "حذف ترم", IsActive = true, CreatedAt = DateTime.UtcNow },
-
-
+*/
 
 
                 };
@@ -278,7 +305,7 @@ namespace PayamBack
                         Vazeeyat = true,
                         VazeeyatMovaghat = true
                     };
-                    await userManager.CreateAsync(adminUser, "Admin@123");
+                    await userManager.CreateAsync(adminUser, "123456789aA");
                     await userManager.AddToRoleAsync(adminUser, adminRoleName);
 
                     // ثبت در AppUserRole
@@ -338,6 +365,74 @@ namespace PayamBack
                     await context.WeekDays.AddRangeAsync(days);
                     await context.SaveChangesAsync();
                 }
+                if(!context.SaatBargozariKelashas.Any())
+                {
+                    var saats = new List<SaatBargozariKelasha>
+                    {
+                        new() { OnvanSaat = "ساعت اول", CodeSaat = "A", SaatShoroo = "08", SaatPayan = "10", Hozoori = true,Majazi=true },
+                        new() { OnvanSaat = "ساعت دوم", CodeSaat = "B", SaatShoroo = "10", SaatPayan = "12", Hozoori = true,Majazi=true },
+                        new() { OnvanSaat = "ساعت سوم", CodeSaat = "C", SaatShoroo = "12", SaatPayan = "14", Hozoori = true,Majazi=true },
+                        new() { OnvanSaat = "ساعت چهارم", CodeSaat = "D", SaatShoroo = "14", SaatPayan = "16", Hozoori = true,Majazi=true },
+                        new() { OnvanSaat = "ساعت پنجم", CodeSaat = "E", SaatShoroo = "16", SaatPayan = "18", Hozoori = true,Majazi=true },
+                        new() { OnvanSaat = "ساعت ششم", CodeSaat = "F", SaatShoroo = "18", SaatPayan = "20", Hozoori = false,Majazi=false },
+                        new() { OnvanSaat = "ساعت هفتم", CodeSaat = "G", SaatShoroo = "20", SaatPayan = "22", Hozoori = false,Majazi=false },
+                        new() { OnvanSaat = "ساعت هشتم", CodeSaat = "H", SaatShoroo = "22", SaatPayan = "24", Hozoori = false,Majazi=false },
+                    };
+                    await context.SaatBargozariKelashas.AddRangeAsync(saats);
+                    await context.SaveChangesAsync();
+                }
+                if(!context.Terms.Any())
+                {
+                    var t = new List<Term>
+                    {
+                        new(){CodeTerm="4042",OnvanTerm="نیمسال دوم 1405-1404",TermJariShoroo=new DateOnly(2026,1,1),
+                            TermJariPayan=new DateOnly(2026,6,21),TarikheDastrasi=new DateOnly(2025,12,6),
+                            TarikheEraeeDars=new DateOnly(2025,12,10),TarikhePayanDars=new DateOnly(2026,3,6),
+                            TarikheShorooClass=new DateOnly(2026,2,1),TarikhePayanClass=new DateOnly(2026,5,24),
+                            TarikheShorooMojavezMarakez=new DateOnly(2025,12,7),TarikhePayanMojavezMarakez=new DateOnly(2026,1,30),
+                            Vazeeyat=false,IsHaftegiRequired=true
+                        },
+                        new(){CodeTerm="4043",OnvanTerm="نیمسال تابستان 1405-1404",TermJariShoroo=new DateOnly(2026,6,22),
+                            TermJariPayan=new DateOnly(2026,9,14),TarikheDastrasi=new DateOnly(2026,6,22),
+                            TarikheEraeeDars=new DateOnly(2026,6,22),TarikhePayanDars=new DateOnly(2026,7,22),
+                            TarikheShorooClass=new DateOnly(2026,7,11),TarikhePayanClass=new DateOnly(2026,9,1),
+                            TarikheShorooMojavezMarakez=new DateOnly(2026,6,22),TarikhePayanMojavezMarakez=new DateOnly(2026,7,11),
+                            Vazeeyat=true,IsHaftegiRequired=false
+                        },
+                        new(){CodeTerm="4051",OnvanTerm="نیمسال اول 1406-1405",TermJariShoroo=new DateOnly(2026,9,23),
+                            TermJariPayan=new DateOnly(2027,1,20),TarikheDastrasi=new DateOnly(2026,9,1),
+                            TarikheEraeeDars=new DateOnly(2026,9,6),TarikhePayanDars=new DateOnly(2026,10,22),
+                            TarikheShorooClass=new DateOnly(2026,9,23),TarikhePayanClass=new DateOnly(2026,12,21),
+                            TarikheShorooMojavezMarakez=new DateOnly(2026,9,1),TarikhePayanMojavezMarakez=new DateOnly(2026,9,23),
+                            Vazeeyat=true,IsHaftegiRequired=true
+                        },
+                    };
+                    await context.Terms.AddRangeAsync(t);
+                    await context.SaveChangesAsync();
+                }
+                if(!context.Roles.Any())
+                {
+                    var role = new List<AppRole>
+                    {
+                        new(){Name="ادمین سامانه",CodeRole=1,Vazeeyat=true,Emza=true,IsAdmin=true,IsUniquePerMarkaz=false},
+                        new(){Name="ادمین دانشگاه",CodeRole=2,Vazeeyat=true,Emza=true,IsAdmin=true,IsUniquePerMarkaz=false},                        
+                        new(){Name="رییس دانشگاه",CodeRole=2,Vazeeyat=true,Emza=true,IsAdmin=false,IsUniquePerMarkaz=true},
+                        new(){Name="ادمین استان",CodeRole=3,Vazeeyat=true,Emza=true,IsAdmin=true,IsUniquePerMarkaz=false},
+                        new(){Name="رییس استان",CodeRole=3,Vazeeyat=true,Emza=true,IsAdmin=false,IsUniquePerMarkaz=true},
+                        new(){Name="معاون آموزشی استان",CodeRole=3,Vazeeyat=true,Emza=true,IsAdmin=false,IsUniquePerMarkaz=true},
+                        new(){Name="مدیر خدمات آموزشی استان",CodeRole=3,Vazeeyat=true,Emza=true,IsAdmin=false,IsUniquePerMarkaz=true},
+                        new(){Name="مدیر گروه",CodeRole=3,Vazeeyat=true,Emza=true,IsAdmin=false,IsUniquePerMarkaz=false},
+                        new(){Name="ادمین مرکز",CodeRole=4,Vazeeyat=true,Emza=true,IsAdmin=true,IsUniquePerMarkaz=false},
+                        new(){Name="رییس مرکز",CodeRole=4,Vazeeyat=true,Emza=true,IsAdmin=false,IsUniquePerMarkaz=true},
+                        new(){Name="برنامه‌ریزی",CodeRole=4,Vazeeyat=true,Emza=true,IsAdmin=false,IsUniquePerMarkaz=false},
+                        new(){Name="مسئول برنامه‌ریزی",CodeRole=4,Vazeeyat=true,Emza=false,IsAdmin=false,IsUniquePerMarkaz=false},
+                        new(){Name="استاد",CodeRole=4,Vazeeyat=true,Emza=true,IsAdmin=false,IsUniquePerMarkaz=false},
+                        new(){Name="دانشجو",CodeRole=4,Vazeeyat=true,Emza=false,IsAdmin=false,IsUniquePerMarkaz=false},
+                    };
+                    await context.Roles.AddRangeAsync(role);
+                    await context.SaveChangesAsync();   
+                }
+                
             }
             catch (Exception ex)
             {
