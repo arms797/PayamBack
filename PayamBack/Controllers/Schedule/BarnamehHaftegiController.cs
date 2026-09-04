@@ -177,59 +177,14 @@ namespace PayamBack.Controllers.Schedule
         }
 
 
-        
-        /// <summary>
-        /// بررسی حداقل ۵ روز در مرکز اصلی یا مراکز مجاز
-        /// </summary>
-        private async Task<bool> HasMinimumDaysInPermittedMarkazAsync(
-            BarnamehHaftegiOstad program,
-            int ostadId,
-            string termCode)
+       
+        private async Task<string> GetMarkazNameAsync(int markazId)
         {
-            // دریافت اطلاعات مراکز مجاز با ساختار جدید
-            var permittedMarkazInfo = await GetPermittedMarkazInfoAsync(ostadId, termCode);
-            var permittedMarkazIds = permittedMarkazInfo.Select(x => x.MarkazId).ToHashSet();
-
-            var groupedByDay = program.BarnamehHaftegiOstad1s
-                .GroupBy(d => d.RoozeHafteh)
-                .ToList();
-
-            int daysWithPermitted = 0;
-
-            foreach (var day in groupedByDay)
-            {
-                bool hasPermitted = false;
-
-                foreach (var detail in day)
-                {
-                    // 🔥 بررسی مرکز اصلی روز (MarkazId)
-                    if (detail.MarkazId.HasValue && permittedMarkazIds.Contains(detail.MarkazId.Value))
-                    {
-                        hasPermitted = true;
-                        break;
-                    }
-
-                    // بررسی مراکز ساعتی
-                    if (detail.MarkazIdA.HasValue && permittedMarkazIds.Contains(detail.MarkazIdA.Value) ||
-                        detail.MarkazIdB.HasValue && permittedMarkazIds.Contains(detail.MarkazIdB.Value) ||
-                        detail.MarkazIdC.HasValue && permittedMarkazIds.Contains(detail.MarkazIdC.Value) ||
-                        detail.MarkazIdD.HasValue && permittedMarkazIds.Contains(detail.MarkazIdD.Value) ||
-                        detail.MarkazIdE.HasValue && permittedMarkazIds.Contains(detail.MarkazIdE.Value) ||
-                        detail.MarkazIdF.HasValue && permittedMarkazIds.Contains(detail.MarkazIdF.Value) ||
-                        detail.MarkazIdG.HasValue && permittedMarkazIds.Contains(detail.MarkazIdG.Value) ||
-                        detail.MarkazIdH.HasValue && permittedMarkazIds.Contains(detail.MarkazIdH.Value))
-                    {
-                        hasPermitted = true;
-                        break;
-                    }
-                }
-
-                if (hasPermitted) daysWithPermitted++;
-            }
-
-            return daysWithPermitted >= 5;
+            var markaz = await _markazCache.GetByIdAsync(markazId);
+            return markaz?.NaamMarkaz ?? $"مرکز {markazId}";
         }
 
+       
         /// <summary>
         /// اعتبارسنجی قیود فعالیت‌ها در برنامه هفتگی
         /// شامل: ساعات اداری (A,B,C)، حداقل/حداکثر ساعت در هفته، حداقل/حداکثر روز در هفته
@@ -238,6 +193,7 @@ namespace PayamBack.Controllers.Schedule
         /// <param name="ostadId">شناسه استاد</param>
         /// <param name="throwOnWarning">اگر true باشد، هشدارها به‌عنوان خطا در نظر گرفته می‌شوند</param>
         /// <returns>نتیجه اعتبارسنجی همراه با پیام خطا و لیست هشدارها</returns>
+       /*
         private async Task<(bool IsValid, string ErrorMessage, List<string> Warnings)> ValidateFaaliatConstraintsAsync(
             BarnamehHaftegiOstad program,
             int ostadId,
@@ -446,10 +402,270 @@ namespace PayamBack.Controllers.Schedule
 
             return (true, "", warnings);
         }
+        */
 
+        private async Task<(bool IsValid, string ErrorMessage, List<string> Warnings)> ValidateFaaliatConstraintsAsync(
+            BarnamehHaftegiOstad program,
+            int ostadId,
+            bool throwOnWarning = false)
+        {
+            // ============================================================
+            // 1️⃣ دریافت لیست فعالیت‌های فعال از سرویس کش
+            // ============================================================
+            var faaliats = await GetActiveFaaliatsAsync();
+            var faaliatDict = faaliats.ToDictionary(f => f.Id);
+
+            // ============================================================
+            // 2️⃣ دریافت لیست ساعت‌های مجاز از سرویس کش
+            // ============================================================
+            var allSaats = await _lookupCache.GetActiveHoursAsync();
+            var saatCodes = allSaats.Select(s => s.CodeSaat).ToHashSet();
+
+            // ============================================================
+            // 🔥 3️⃣ دریافت لیست گروه‌های فعالیت از کش
+            // ============================================================
+            var lookupData = await _lookupCache.GetAllAsync();
+            var faaliatGroups = lookupData.FaaliatGroups;
+            var groupDict = faaliatGroups.ToDictionary(g => g.Id);
+
+            var warnings = new List<string>();
+            var errors = new List<string>();
+
+            // ============================================================
+            // 4️⃣ جمع‌آوری آمار فعالیت‌ها
+            // ============================================================
+            var activityTotalSessions = new Dictionary<int, int>();      // کل جلسات هر فعالیت
+            var activityEdariSessions = new Dictionary<int, int>();      // جلسات اداری (A,B,C) هر فعالیت
+            var activityDays = new Dictionary<int, HashSet<string>>();   // روزهای هر فعالیت
+
+            // 🔥 آمار گروه‌ها
+            var groupTotalSessions = new Dictionary<int, int>();         // کل جلسات هر گروه
+            var groupEdariSessions = new Dictionary<int, int>();         // جلسات اداری هر گروه
+            var groupDays = new Dictionary<int, HashSet<string>>();      // روزهای هر گروه
+
+            foreach (var detail in program.BarnamehHaftegiOstad1s)
+            {
+                var fields = new List<(int? Id, string Name)>
+                {
+                    (detail.A, "A"), (detail.B, "B"), (detail.C, "C"),
+                    (detail.D, "D"), (detail.E, "E"), (detail.F, "F"),
+                    (detail.G, "G"), (detail.H, "H")
+                };
+
+                foreach (var (id, name) in fields)
+                {
+                    if (!id.HasValue || id.Value == 0)
+                        continue;
+
+                    // بررسی مجاز بودن ساعت
+                    if (!saatCodes.Contains(name))
+                    {
+                        var msg = $"ساعت {name} در سیستم فعال نیست و نمی‌تواند در برنامه استفاده شود";
+                        if (throwOnWarning)
+                            errors.Add(msg);
+                        else
+                            warnings.Add(msg);
+                        continue;
+                    }
+
+                    var activityId = id.Value;
+                    if (!faaliatDict.ContainsKey(activityId))
+                    {
+                        var msg = $"فعالیت با شناسه {activityId} در سیستم یافت نشد یا غیرفعال است";
+                        if (throwOnWarning)
+                            errors.Add(msg);
+                        else
+                            warnings.Add(msg);
+                        continue;
+                    }
+
+                    // ============================================================
+                    // جمع‌آوری آمار فعالیت
+                    // ============================================================
+                    if (!activityTotalSessions.ContainsKey(activityId))
+                        activityTotalSessions[activityId] = 0;
+                    activityTotalSessions[activityId]++;
+
+                    if (name is "A" or "B" or "C")
+                    {
+                        if (!activityEdariSessions.ContainsKey(activityId))
+                            activityEdariSessions[activityId] = 0;
+                        activityEdariSessions[activityId]++;
+                    }
+
+                    if (!activityDays.ContainsKey(activityId))
+                        activityDays[activityId] = new HashSet<string>();
+                    activityDays[activityId].Add(detail.RoozeHafteh ?? "");
+
+                    // ============================================================
+                    // 🔥 جمع‌آوری آمار گروه
+                    // ============================================================
+                    var faaliat = faaliatDict[activityId];
+                    if (faaliat.FaaliatGroupId.HasValue)
+                    {
+                        var groupId = faaliat.FaaliatGroupId.Value;
+
+                        if (!groupTotalSessions.ContainsKey(groupId))
+                            groupTotalSessions[groupId] = 0;
+                        groupTotalSessions[groupId]++;
+
+                        // 🔥 جمع‌آوری ساعات اداری گروه
+                        if (name is "A" or "B" or "C")
+                        {
+                            if (!groupEdariSessions.ContainsKey(groupId))
+                                groupEdariSessions[groupId] = 0;
+                            groupEdariSessions[groupId]++;
+                        }
+
+                        if (!groupDays.ContainsKey(groupId))
+                            groupDays[groupId] = new HashSet<string>();
+                        groupDays[groupId].Add(detail.RoozeHafteh ?? "");
+                    }
+                }
+            }
+
+            // ============================================================
+            // 5️⃣ اگر خطاهای مربوط به ساعت غیرفعال وجود دارد، برگردان
+            // ============================================================
+            if (throwOnWarning && errors.Any())
+            {
+                return (false, string.Join(" | ", errors), warnings);
+            }
+
+            // ============================================================
+            // 6️⃣ بررسی قیود هر فعالیت (کد قبلی)
+            // ============================================================
+            foreach (var activityId in activityTotalSessions.Keys)
+            {
+                var totalSessions = activityTotalSessions[activityId];
+                var totalHours = totalSessions * 2;
+                var edariSessions = activityEdariSessions.GetValueOrDefault(activityId, 0);
+                var edariHours = edariSessions * 2;
+                var totalDays = activityDays[activityId].Count;
+                var faaliat = faaliatDict[activityId];
+
+                if (faaliat.MinSaatDarEdari.HasValue && edariHours < faaliat.MinSaatDarEdari.Value)
+                {
+                    var msg = $"فعالیت '{faaliat.Onvan}' حداقل {faaliat.MinSaatDarEdari} ساعت در ساعات اداری (A,B,C) نیاز دارد (فعلاً {edariHours} ساعت)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+
+                if (faaliat.MaxSaatDarEdari.HasValue && edariHours > faaliat.MaxSaatDarEdari.Value)
+                {
+                    var msg = $"فعالیت '{faaliat.Onvan}' حداکثر {faaliat.MaxSaatDarEdari} ساعت در ساعات اداری مجاز است (فعلاً {edariHours} ساعت)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+
+                if (faaliat.MinSaatDarHafteh.HasValue && totalHours < faaliat.MinSaatDarHafteh.Value)
+                {
+                    var msg = $"فعالیت '{faaliat.Onvan}' حداقل {faaliat.MinSaatDarHafteh} ساعت در هفته نیاز دارد (فعلاً {totalHours} ساعت)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+
+                if (faaliat.MaxSaatDarHafteh.HasValue && totalHours > faaliat.MaxSaatDarHafteh.Value)
+                {
+                    var msg = $"فعالیت '{faaliat.Onvan}' حداکثر {faaliat.MaxSaatDarHafteh} ساعت در هفته مجاز است (فعلاً {totalHours} ساعت)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+
+                if (faaliat.MinDayDarHafteh.HasValue && totalDays < faaliat.MinDayDarHafteh.Value)
+                {
+                    var msg = $"فعالیت '{faaliat.Onvan}' باید حداقل در {faaliat.MinDayDarHafteh} روز باشد (فعلاً {totalDays} روز)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+
+                if (faaliat.MaxDayDarHafteh.HasValue && totalDays > faaliat.MaxDayDarHafteh.Value)
+                {
+                    var msg = $"فعالیت '{faaliat.Onvan}' حداکثر در {faaliat.MaxDayDarHafteh} روز مجاز است (فعلاً {totalDays} روز)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+            }
+
+            // ============================================================
+            // 🔥 7️⃣ بررسی قیود گروه‌های فعالیت (با ساعات اداری)
+            // ============================================================
+            foreach (var groupId in groupTotalSessions.Keys)
+            {
+                if (!groupDict.TryGetValue(groupId, out var group))
+                    continue;
+
+                var totalSessions = groupTotalSessions[groupId];
+                var totalHours = totalSessions * 2;
+                var edariSessions = groupEdariSessions.GetValueOrDefault(groupId, 0);
+                var edariHours = edariSessions * 2;
+                var totalDays = groupDays.TryGetValue(groupId, out var days) ? days.Count : 0;
+
+                // 🔸 حداقل ساعت در ساعات اداری (A,B,C)
+                if (group.MinSaatDarEdari.HasValue && edariHours < group.MinSaatDarEdari.Value)
+                {
+                    var msg = $"گروه '{group.Title}' حداقل {group.MinSaatDarEdari} ساعت در ساعات اداری (A,B,C) نیاز دارد (فعلاً {edariHours} ساعت)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+
+                // 🔸 حداکثر ساعت در ساعات اداری (A,B,C)
+                if (group.MaxSaatDarEdari.HasValue && edariHours > group.MaxSaatDarEdari.Value)
+                {
+                    var msg = $"گروه '{group.Title}' حداکثر {group.MaxSaatDarEdari} ساعت در ساعات اداری مجاز است (فعلاً {edariHours} ساعت)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+
+                // 🔸 حداقل ساعت در کل هفته
+                if (group.MinSaatDarHafteh.HasValue && totalHours < group.MinSaatDarHafteh.Value)
+                {
+                    var msg = $"گروه '{group.Title}' حداقل {group.MinSaatDarHafteh} ساعت در هفته نیاز دارد (فعلاً {totalHours} ساعت)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+
+                // 🔸 حداکثر ساعت در کل هفته
+                if (group.MaxSaatDarHafteh.HasValue && totalHours > group.MaxSaatDarHafteh.Value)
+                {
+                    var msg = $"گروه '{group.Title}' حداکثر {group.MaxSaatDarHafteh} ساعت در هفته مجاز است (فعلاً {totalHours} ساعت)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+
+                // 🔸 حداقل روز در هفته
+                if (group.MinDayDarHafteh.HasValue && totalDays < group.MinDayDarHafteh.Value)
+                {
+                    var msg = $"گروه '{group.Title}' باید حداقل در {group.MinDayDarHafteh} روز باشد (فعلاً {totalDays} روز)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+
+                // 🔸 حداکثر روز در هفته
+                if (group.MaxDayDarHafteh.HasValue && totalDays > group.MaxDayDarHafteh.Value)
+                {
+                    var msg = $"گروه '{group.Title}' حداکثر در {group.MaxDayDarHafteh} روز مجاز است (فعلاً {totalDays} روز)";
+                    if (throwOnWarning) errors.Add(msg); else warnings.Add(msg);
+                }
+            }
+
+            // ============================================================
+            // 8️⃣ بررسی اینکه آیا برنامه حداقل یک فعالیت دارد
+            // ============================================================
+            if (activityTotalSessions.Count == 0)
+            {
+                var msg = "برنامه هفتگی هیچ فعالیتی ندارد";
+                if (throwOnWarning)
+                    return (false, msg, warnings);
+                else
+                    warnings.Add(msg);
+            }
+
+            // ============================================================
+            // 9️⃣ نتیجه نهایی
+            // ============================================================
+            if (throwOnWarning && errors.Any())
+            {
+                return (false, string.Join(" | ", errors), warnings);
+            }
+
+            return (true, "", warnings);
+        }
+
+        
         /// <summary>
         /// بررسی کامل بودن برنامه (حداقل ساعت موظفی + ۵ روز در مراکز مجاز)
         /// </summary>
+        /*
         private async Task<(bool IsValid, string Message)> ValidateProgramCompletenessAsync(
             BarnamehHaftegiOstad program,
             int ostadId,
@@ -457,7 +673,8 @@ namespace PayamBack.Controllers.Schedule
         {
             // 1️⃣ بررسی حداقل ساعت موظفی
             var requiredHours = await GetRequiredHoursAsync(ostadId, termCode);
-            var totalSessions = CalculateTotalSessions(program);
+            //var totalSessions = CalculateTotalSessions(program);
+            var totalSessions =await CountValidSessionsForRequiredHoursAsync(program,ostadId,termCode);
             var requiredSessions = requiredHours / 2;
 
             if (totalSessions < requiredSessions)
@@ -474,6 +691,7 @@ namespace PayamBack.Controllers.Schedule
 
             return (true, "");
         }
+        */
 
         /// <summary>
         /// ساخت برنامه موقت برای اعتبارسنجی بدون ذخیره در دیتابیس
@@ -746,6 +964,272 @@ namespace PayamBack.Controllers.Schedule
             return (true, "");
         }
 
+        
+        //    چک کلی خطاها //////////////////////////////////////////////////////////////////////////////////////////
+
+        /// <summary>
+        /// اعتبارسنجی کامل برنامه با یک بار دریافت داده‌های مورد نیاز
+        /// </summary>
+        private async Task<(bool IsValid, List<string> Errors, List<string> Warnings)> ValidateAllAsync(
+            BarnamehHaftegiOstad program,
+            int ostadId,
+            string termCode,
+            bool throwOnFaaliatWarning = false)
+        {
+            var errors = new List<string>();
+            var warnings = new List<string>();
+
+            // ============================================================
+            // 1️⃣ دریافت یک‌باره داده‌های مورد نیاز
+            // ============================================================
+            var requiredHours = await GetRequiredHoursAsync(ostadId, termCode);
+            var permittedMarkazInfo = await GetPermittedMarkazInfoAsync(ostadId, termCode);
+            var mainMarkazId = await GetMainMarkazIdAsync(ostadId);
+
+            if (mainMarkazId == null)
+            {
+                errors.Add("مرکز اصلی استاد مشخص نیست");
+                return (false, errors, warnings);
+            }
+
+            // ============================================================
+            // 2️⃣ اعتبارسنجی قیود فعالیت‌ها (با دریافت مجدد کش برای گروه‌ها)
+            // ============================================================
+            var (faaliatValid, faaliatErrors, faaliatWarnings) = await ValidateFaaliatConstraintsAsync(
+                program, ostadId, throwOnFaaliatWarning);
+
+            if (faaliatErrors.Any()) errors.AddRange(faaliatErrors);
+            if (faaliatWarnings.Any()) warnings.AddRange(faaliatWarnings);
+
+            // ============================================================
+            // 3️⃣ بررسی ساعت موظفی (فقط جلسات معتبر)
+            // ============================================================
+            var validSessions = CountValidSessionsForRequiredHours(program, mainMarkazId.Value, permittedMarkazInfo);
+            var requiredSessions = requiredHours / 2;
+
+            if (validSessions < requiredSessions)
+            {
+                errors.Add($"حداقل {requiredSessions} جلسه ({requiredHours} ساعت) باید در مرکز اصلی یا مراکز مجاز پر شود. تعداد جلسات معتبر فعلی: {validSessions}");
+            }
+
+            // ============================================================
+            // 4️⃣ بررسی روزهای مورد نیاز (۵ روز یا کمتر بر اساس ساعت موظفی)
+            // ============================================================
+            var requiredDays = CalculateRequiredDays(requiredHours);
+            var daysWithPermitted = CountDaysWithPermittedMarkaz(program, permittedMarkazInfo);
+
+            if (daysWithPermitted < requiredDays)
+            {
+                errors.Add($"حداقل {requiredDays} روز از برنامه باید در مرکز اصلی یا مراکز مجاز پر شده باشد (بر اساس ساعت موظفی {requiredHours} ساعت)");
+            }
+
+            // ============================================================
+            // 5️⃣ بررسی محدودیت تعداد روزهای هر مرکز غیراصلی
+            // ============================================================
+            var nonMainMarkazErrors = ValidateNonMainMarkazDaysLimit(program, permittedMarkazInfo);
+            if (nonMainMarkazErrors.Any()) errors.AddRange(nonMainMarkazErrors);
+
+            // ============================================================
+            // 6️⃣ بررسی حداقل ۳ جلسه در مراکز غیراصلی
+            // ============================================================
+            var sessionsErrors = ValidateNonMainMarkazSessions(program, permittedMarkazInfo);
+            if (sessionsErrors.Any()) errors.AddRange(sessionsErrors);
+
+            return (errors.Count == 0, errors, warnings);
+        }
+
+        // ============================================================
+        // 🔥 متدهای کمکی برای محاسبات (بدون کوئری اضافی)
+        // ============================================================
+        // تعداد جلسات مجاز برای تکمیل برنامه هفتگی(مرکز اصلی و فعالیت های مجاز همجوار)
+        private int CountValidSessionsForRequiredHours(
+            BarnamehHaftegiOstad program,
+            int mainMarkazId,
+            List<PermittedMarkazInfo> permittedMarkazInfo)
+        {
+            var permittedDict = permittedMarkazInfo
+                .Where(x => !x.IsMainMarkaz && x.AllowedFaaliatIds.Any())
+                .ToDictionary(x => x.MarkazId, x => x.AllowedFaaliatIds.ToHashSet());
+
+            int validCount = 0;
+
+            foreach (var detail in program.BarnamehHaftegiOstad1s)
+            {
+                var hourFields = new List<(int? FaaliatId, int? MarkazId)>
+                {
+                    (detail.A, detail.MarkazIdA), (detail.B, detail.MarkazIdB),
+                    (detail.C, detail.MarkazIdC), (detail.D, detail.MarkazIdD),
+                    (detail.E, detail.MarkazIdE), (detail.F, detail.MarkazIdF),
+                    (detail.G, detail.MarkazIdG), (detail.H, detail.MarkazIdH)
+                };
+
+                foreach (var (faaliatId, markazId) in hourFields)
+                {
+                    if (!faaliatId.HasValue || faaliatId.Value == 0 || !markazId.HasValue)
+                        continue;
+
+                    if (markazId.Value == mainMarkazId)
+                    {
+                        validCount++;
+                    }
+                    else if (permittedDict.TryGetValue(markazId.Value, out var allowedIds) &&
+                             allowedIds.Contains(faaliatId.Value))
+                    {
+                        validCount++;
+                    }
+                }
+            }
+
+            return validCount;
+        }
+
+        // محاسبه تعداد روزها بر اساس ساعت موظف هفتگی
+        private int CalculateRequiredDays(int requiredHours)
+        {
+            if (requiredHours <= 0) return 5;
+            var days = (int)Math.Ceiling(requiredHours / 8.0);
+            return days < 1 ? 1 : days;
+        }
+
+        // تعداد روزهای دارای فعالیت در مرکز اصلی و مراکز همجوار
+        private int CountDaysWithPermittedMarkaz(
+            BarnamehHaftegiOstad program,
+            List<PermittedMarkazInfo> permittedMarkazInfo)
+        {
+            var permittedMarkazIds = permittedMarkazInfo.Select(x => x.MarkazId).ToHashSet();
+            var groupedByDay = program.BarnamehHaftegiOstad1s.GroupBy(d => d.RoozeHafteh);
+
+            int daysWithPermitted = 0;
+
+            foreach (var dayGroup in groupedByDay)
+            {
+                bool hasPermitted = false;
+                foreach (var detail in dayGroup)
+                {
+                    if (detail.MarkazId.HasValue && permittedMarkazIds.Contains(detail.MarkazId.Value) &&
+                        (detail.MarkazIdA.HasValue && permittedMarkazIds.Contains(detail.MarkazIdA.Value) ||
+                         detail.MarkazIdB.HasValue && permittedMarkazIds.Contains(detail.MarkazIdB.Value) ||
+                         detail.MarkazIdC.HasValue && permittedMarkazIds.Contains(detail.MarkazIdC.Value) ||
+                         detail.MarkazIdD.HasValue && permittedMarkazIds.Contains(detail.MarkazIdD.Value) ||
+                         detail.MarkazIdE.HasValue && permittedMarkazIds.Contains(detail.MarkazIdE.Value) ||
+                         detail.MarkazIdF.HasValue && permittedMarkazIds.Contains(detail.MarkazIdF.Value) ||
+                         detail.MarkazIdG.HasValue && permittedMarkazIds.Contains(detail.MarkazIdG.Value) ||
+                         detail.MarkazIdH.HasValue && permittedMarkazIds.Contains(detail.MarkazIdH.Value)))
+                    {
+                        hasPermitted = true;
+                        break;
+                    }
+                }
+                if (hasPermitted) daysWithPermitted++;
+            }
+
+            return daysWithPermitted;
+        }
+
+        // چک کردن تعداد روز مرکز همجوار
+        private List<string> ValidateNonMainMarkazDaysLimit(
+            BarnamehHaftegiOstad program,
+            List<PermittedMarkazInfo> permittedMarkazInfo)
+        {
+            var errors = new List<string>();
+            var nonMainMarkazInfo = permittedMarkazInfo
+                .Where(x => !x.IsMainMarkaz && x.MaxDays.HasValue)
+                .ToList();
+
+            if (!nonMainMarkazInfo.Any()) return errors;
+
+            var usageCount = new Dictionary<int, int>();
+            foreach (var detail in program.BarnamehHaftegiOstad1s)
+            {
+                if (detail.MarkazId.HasValue)
+                {
+                    var markazId = detail.MarkazId.Value;
+                    if (nonMainMarkazInfo.Any(x => x.MarkazId == markazId))
+                    {
+                        if (!usageCount.ContainsKey(markazId))
+                            usageCount[markazId] = 0;
+                        usageCount[markazId]++;
+                    }
+                }
+            }
+
+            foreach (var info in nonMainMarkazInfo)
+            {
+                var used = usageCount.GetValueOrDefault(info.MarkazId, 0);
+                if (used > info.MaxDays.Value)
+                {
+                    errors.Add($"استفاده از مرکز '{GetMarkazNameAsync(info.MarkazId).Result}' بیش از حد مجاز ({info.MaxDays.Value} روز) است. (فعلاً {used} روز)");
+                }
+            }
+
+            return errors;
+        }
+
+        // چک کردن حداقل 3 جلسه در مرکز همجوار برای هر روز
+        private List<string> ValidateNonMainMarkazSessions(
+            BarnamehHaftegiOstad program,
+            List<PermittedMarkazInfo> permittedMarkazInfo)
+        {
+            var errors = new List<string>();
+            var nonMainMarkazInfo = permittedMarkazInfo
+                .Where(x => !x.IsMainMarkaz)
+                .ToDictionary(x => x.MarkazId, x => x.AllowedFaaliatIds);
+
+            if (!nonMainMarkazInfo.Any()) return errors;
+
+            var groupedByDay = program.BarnamehHaftegiOstad1s.GroupBy(d => d.RoozeHafteh);
+
+            foreach (var dayGroup in groupedByDay)
+            {
+                var firstDetail = dayGroup.FirstOrDefault();
+                if (firstDetail == null) continue;
+
+                var dayMarkazId = firstDetail.MarkazId;
+                if (!dayMarkazId.HasValue || !nonMainMarkazInfo.ContainsKey(dayMarkazId.Value))
+                    continue;
+
+                var allowedFaaliatIds = nonMainMarkazInfo[dayMarkazId.Value];
+                int validSessionCount = 0;
+
+                var hourFields = new List<(int? FaaliatId, int? MarkazId)>
+                {
+                    (firstDetail.A, firstDetail.MarkazIdA),
+                    (firstDetail.B, firstDetail.MarkazIdB),
+                    (firstDetail.C, firstDetail.MarkazIdC),
+                    (firstDetail.D, firstDetail.MarkazIdD),
+                    (firstDetail.E, firstDetail.MarkazIdE),
+                    (firstDetail.F, firstDetail.MarkazIdF),
+                    (firstDetail.G, firstDetail.MarkazIdG),
+                    (firstDetail.H, firstDetail.MarkazIdH)
+                };
+
+                foreach (var (faaliatId, markazId) in hourFields)
+                {
+                    if (!faaliatId.HasValue || faaliatId.Value == 0 || !markazId.HasValue)
+                        continue;
+
+                    if (markazId.Value == dayMarkazId.Value && allowedFaaliatIds.Contains(faaliatId.Value))
+                        validSessionCount++;
+                }
+
+                if (validSessionCount < 3)
+                {
+                    var dayTitle = GetDayDisplayFromLookupAsync(firstDetail.RoozeHafteh).Result;
+                    var markazName = GetMarkazNameAsync(dayMarkazId.Value).Result;
+                    errors.Add($"در روز {dayTitle} برای مرکز غیراصلی '{markazName}' حداقل ۳ جلسه (۶ ساعت) باید در همان مرکز ثبت شود.");
+                }
+            }
+
+            return errors;
+        }
+
+        private async Task<int?> GetMainMarkazIdAsync(int ostadId)
+        {
+            var ostad = await _context.Ostads
+                .Include(o => o.Markaz)
+                .FirstOrDefaultAsync(o => o.Id == ostadId);
+            return ostad?.MarkazId;
+        }
         private string GetMaghtaText(int? maghta)
         {
             return maghta switch
@@ -947,13 +1431,18 @@ namespace PayamBack.Controllers.Schedule
                     return BadRequest(new { success = false, message = validation.Message });
 
                 // ============================================================
-                // 5️⃣ اعتبارسنجی قیود فعالیت‌ها (فقط هشدار)
+                // 🔥 5️⃣ اعتبارسنجی کامل با جمع‌آوری همه خطاها (فقط به‌عنوان نقص)
                 // ============================================================
                 var tempProgram = BuildTemporaryProgram(dto.OstadId, dto.CodeTerm, dto.Details);
-                var (_, _, warnings) = await ValidateFaaliatConstraintsAsync(tempProgram, dto.OstadId, false);
+                var (_, errors, _) = await ValidateAllAsync(
+                    tempProgram,
+                    dto.OstadId,
+                    dto.CodeTerm,
+                    throwOnFaaliatWarning: false
+                );
 
                 // ============================================================
-                // 6️⃣ ذخیره‌سازی
+                // 6️⃣ ذخیره‌سازی (حتی با وجود خطاها)
                 // ============================================================
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -979,7 +1468,7 @@ namespace PayamBack.Controllers.Schedule
                         {
                             BarnamehHaftegiOstadId = program.Id,
                             RoozeHafteh = detail.RoozeHafteh,
-                            MarkazId=detail.MarkazId,
+                            MarkazId = detail.MarkazId,
                             A = detail.A,
                             MarkazIdA = detail.MarkazIdA,
                             B = detail.B,
@@ -1007,12 +1496,12 @@ namespace PayamBack.Controllers.Schedule
                     var response = new
                     {
                         success = true,
-                        message = warnings.Any()
-                            ? "برنامه با هشدار ذخیره شد. لطفاً قبل از تأیید، هشدارها را برطرف کنید."
+                        message = errors.Any()
+                            ? "برنامه با نقایص زیر ذخیره شد. لطفاً قبل از تأیید، آنها را برطرف کنید."
                             : "برنامه هفتگی با موفقیت ایجاد شد",
                         data = new { id = program.Id },
-                        warnings = warnings.Any() ? warnings : null,
-                        hasWarnings = warnings.Any()
+                        errors = errors.Any() ? errors : null,
+                        hasErrors = errors.Any()
                     };
 
                     return Ok(response);
@@ -1086,13 +1575,18 @@ namespace PayamBack.Controllers.Schedule
                     return BadRequest(new { success = false, message = validation.Message });
 
                 // ============================================================
-                // 4️⃣ اعتبارسنجی قیود فعالیت‌ها (فقط هشدار)
+                // 🔥 4️⃣ اعتبارسنجی کامل با جمع‌آوری همه خطاها (فقط به‌عنوان نقص)
                 // ============================================================
                 var tempProgram = BuildTemporaryProgram(program.OstadId, program.CodeTerm, dto.Details);
-                var (_, _, warnings) = await ValidateFaaliatConstraintsAsync(tempProgram, program.OstadId, false);
+                var (_, errors, _) = await ValidateAllAsync(
+                    tempProgram,
+                    program.OstadId,
+                    program.CodeTerm,
+                    throwOnFaaliatWarning: false
+                );
 
                 // ============================================================
-                // 5️⃣ به‌روزرسانی
+                // 5️⃣ به‌روزرسانی (حتی با وجود خطاها)
                 // ============================================================
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
@@ -1137,11 +1631,11 @@ namespace PayamBack.Controllers.Schedule
                     var response = new
                     {
                         success = true,
-                        message = warnings.Any()
-                            ? "برنامه با هشدار ذخیره شد. لطفاً قبل از تأیید، هشدارها را برطرف کنید."
+                        message = errors.Any()
+                            ? "برنامه با نقایص زیر ذخیره شد. لطفاً قبل از تأیید، آنها را برطرف کنید."
                             : "برنامه هفتگی با موفقیت ویرایش شد",
-                        warnings = warnings.Any() ? warnings : null,
-                        hasWarnings = warnings.Any()
+                        errors = errors.Any() ? errors : null,
+                        hasErrors = errors.Any()
                     };
 
                     return Ok(response);
@@ -1699,34 +2193,28 @@ namespace PayamBack.Controllers.Schedule
                     return BadRequest(new { success = false, message = "این برنامه قفل شده است" });
 
                 // ============================================================
-                // 4️⃣ اعتبارسنجی کامل قیود فعالیت‌ها (با خطا)
+                // 🔥 4️⃣ اعتبارسنجی کامل با جمع‌آوری همه خطاها
                 // ============================================================
-                var (faaliatValid, faaliatError, faaliatWarnings) = await ValidateFaaliatConstraintsAsync(program, program.OstadId, true);
-                if (!faaliatValid)
+                var (isValid, errors, warnings) = await ValidateAllAsync(
+                    program,
+                    program.OstadId,
+                    program.CodeTerm,
+                    throwOnFaaliatWarning: true
+                );
+
+                if (!isValid)
                 {
                     return BadRequest(new
                     {
                         success = false,
-                        message = $"برنامه دارای خطاهای زیر است و قابل تأیید نیست: {faaliatError}",
-                        warnings = faaliatWarnings
+                        message = "برنامه دارای خطاهای زیر است و قابل تأیید نیست",
+                        errors = errors,
+                        warnings = warnings.Any() ? warnings : null
                     });
                 }
 
                 // ============================================================
-                // 5️⃣ بررسی کامل بودن برنامه (حداقل ساعت + ۵ روز)
-                // ============================================================
-                var completeness = await ValidateProgramCompletenessAsync(program, program.OstadId, program.CodeTerm);
-                if (!completeness.IsValid)
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message = completeness.Message
-                    });
-                }
-
-                // ============================================================
-                // 6️⃣ تأیید
+                // 5️⃣ تأیید
                 // ============================================================
                 program.NazarElmi = 1;
                 program.TarikhElmi = DateTime.UtcNow;

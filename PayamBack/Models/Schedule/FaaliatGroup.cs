@@ -23,6 +23,8 @@ namespace PayamBack.Models.Schedule
         public int? MaxSaatDarHafteh { get; set; }
         public int? MinDayDarHafteh { get; set; }
         public int? MaxDayDarHafteh { get; set; }
+        public int? MinSaatDarEdari { get; set; }
+        public int? MaxSaatDarEdari { get; set; }
 
         // Navigation
         public virtual ICollection<Faaliat>? Faaliats { get; set; }
