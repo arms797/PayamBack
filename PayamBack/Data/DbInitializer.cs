@@ -4,6 +4,7 @@ using PayamBack.Data;
 using PayamBack.Models.Core;
 using PayamBack.Models.Edu;
 using PayamBack.Models.Identity;
+using PayamBack.Models.Schedule;
 
 namespace PayamBack
 {
@@ -250,7 +251,7 @@ namespace PayamBack
                     new() { Title = "مدیریت کاربران",  Icon = "bi-people-fill",  Order = 3, Vazeeat = true, CreatedAt = DateTime.UtcNow },
                     new() { Title = "کاربران", ParentId = 7, Icon = "bi-person-badge-fill", Path = "/personel", PermissionName = "Karmand.View", Order = 1, Vazeeat = true, CreatedAt = DateTime.UtcNow },
                     new() { Title = "اساتید", ParentId = 7, Icon = "bi-person-fill", Path = "/ostad", PermissionName = "Ostad.View", Order = 2, Vazeeat = true, CreatedAt = DateTime.UtcNow },
-                    new() { Title = "فعالیت های علمی", ParentId = 11, Icon = "bi-book-fill", Path = "/faaliat", PermissionName = "Faaliat.View", Order = 5, Vazeeat = true, CreatedAt = DateTime.UtcNow },
+                    new() { Title = "فعالیت های علمی", ParentId = 2, Icon = "bi-book-fill", Path = "/faaliat", PermissionName = "Faaliat.View", Order = 5, Vazeeat = true, CreatedAt = DateTime.UtcNow },
                     new() { Title = "برنامه های اساتید",  Icon = "bi-calendar-event-fill",  Order = 4, Vazeeat = true, CreatedAt = DateTime.UtcNow },
                     new() { Title = "وضعیت ترمی هیات علمی", ParentId = 11, Icon = "bi-gear-wide-connected", Path = "/elmi-term", PermissionName = "ElmiTerm.View", Order = 1, Vazeeat = true, CreatedAt = DateTime.UtcNow },
                     new() { Title = "درخواست تدریس در سایر مراکز", ParentId = 11, Icon = "bi-calendar-event-fill", Path = "/tadris-hamjavar-list", PermissionName = "Hamjavar.View", Order = 2, Vazeeat = true, CreatedAt = DateTime.UtcNow },
@@ -272,6 +273,48 @@ namespace PayamBack
                     }
                 }
                 await context.SaveChangesAsync();
+
+                if (!context.FaaliatGroups.Any())
+                {
+                    var fg = new List<FaaliatGroup>
+                    {
+                        new() { Title="فعالیت آموزشی",IsActive=true,MinSaatDarHafteh=0,MaxSaatDarHafteh=20,
+                                MinSaatDarEdari=0,MaxSaatDarEdari=20,MinDayDarHafteh=0,MaxDayDarHafteh=7},
+                        new() { Title="فعالیت پژوهشی",IsActive=true,MinSaatDarHafteh=0,MaxSaatDarHafteh=10,
+                                MinSaatDarEdari=0,MaxSaatDarEdari=6,MinDayDarHafteh=0,MaxDayDarHafteh=7},
+                        new() { Title="فعالیت اجرایی",IsActive=true,MinSaatDarHafteh=12,MaxSaatDarHafteh=40,
+                                MinSaatDarEdari=12,MaxSaatDarEdari=40,MinDayDarHafteh=2,MaxDayDarHafteh=7},
+                    };
+                    await context.FaaliatGroups.AddRangeAsync(fg);
+                    await context.SaveChangesAsync();
+                }
+
+                if (!context.Faaliats.Any())
+                {
+                    var f = new List<Faaliat>
+                    {
+                        new() { Onvan="تدریس حضوری",NoeAnjam=1,MinSaatDarHafteh=0,MaxSaatDarHafteh=20,
+                                MinSaatDarEdari=0,MaxSaatDarEdari=20,MinDayDarHafteh=0,MaxDayDarHafteh=7,
+                                IsMadove=true,Vazeeat=true,FaaliatGroupId=1,Color="#8ff095"},
+                        new() { Onvan="تدریس مجازی",NoeAnjam=2,MinSaatDarHafteh=0,MaxSaatDarHafteh=20,
+                                MinSaatDarEdari=0,MaxSaatDarEdari=20,MinDayDarHafteh=0,MaxDayDarHafteh=7,
+                                IsMadove=true,Vazeeat=true,FaaliatGroupId=1,Color="#e1fe4d"},
+                        new() { Onvan="پژوهشی",NoeAnjam=1,MinSaatDarHafteh=0,MaxSaatDarHafteh=10,
+                                MinSaatDarEdari=0,MaxSaatDarEdari=6,MinDayDarHafteh=0,MaxDayDarHafteh=7,
+                                IsMadove=false,Vazeeat=true,FaaliatGroupId=2,Color="#7180cc"},
+                        new() { Onvan="فعالیت اجرایی",NoeAnjam=1,MinSaatDarHafteh=0,MaxSaatDarHafteh=40,
+                                MinSaatDarEdari=0,MaxSaatDarEdari=40,MinDayDarHafteh=0,MaxDayDarHafteh=7,
+                                IsMadove=false,Vazeeat=true,FaaliatGroupId=3,Color="#fb4dfe"},
+                        new() { Onvan="مشاوره دانشجویی",NoeAnjam=1,MinSaatDarHafteh=4,MaxSaatDarHafteh=40,
+                                MinSaatDarEdari=4,MaxSaatDarEdari=40,MinDayDarHafteh=2,MaxDayDarHafteh=7,
+                                IsMadove=false,Vazeeat=true,FaaliatGroupId=3,Color="#eead81"},
+                        new() { Onvan="فعالیت فرهنگی",NoeAnjam=1,MinSaatDarHafteh=0,MaxSaatDarHafteh=40,
+                                MinSaatDarEdari=0,MaxSaatDarEdari=40,MinDayDarHafteh=0,MaxDayDarHafteh=7,
+                                IsMadove=false,Vazeeat=true,FaaliatGroupId=3,Color="#e3cee3"},
+                    };
+                    await context.Faaliats.AddRangeAsync(f);
+                    await context.SaveChangesAsync();
+                }
 
                 if (!context.WeekDays.Any())
                 {

@@ -1086,8 +1086,8 @@ namespace PayamBack.Controllers.Schedule
         // محاسبه تعداد روزها بر اساس ساعت موظف هفتگی
         private int CalculateRequiredDays(int requiredHours)
         {
-            if (requiredHours <= 0) return 5;
-            var days = (int)Math.Ceiling(requiredHours / 8.0);
+            if (requiredHours <= 0) return 0;
+            var days = (int)Math.Ceiling(requiredHours / 10.0);
             return days < 1 ? 1 : days;
         }
 
