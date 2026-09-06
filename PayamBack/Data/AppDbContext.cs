@@ -138,10 +138,11 @@ namespace PayamBack.Data
             });
 
             // ======== Markaz ========
-            builder.Entity<Markaz>()
+            /*builder.Entity<Markaz>()
                 .HasIndex(m => m.CodeMarkaz)
                 .IsUnique()
                 .HasDatabaseName("IX_Markaz_CodeMarkaz");
+            */
 
             // ======== Ostad ========
             builder.Entity<Ostad>()
@@ -517,7 +518,7 @@ namespace PayamBack.Data
             });
         }
 
-
+        /*
         public override int SaveChanges()
         {
             UpdateOnvanTerm();
@@ -543,5 +544,6 @@ namespace PayamBack.Data
                 }
             }
         }
+        */
     }
 }

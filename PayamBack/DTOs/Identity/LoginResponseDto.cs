@@ -19,6 +19,8 @@
         public List<MenuDto> Menus { get; set; } = new();           // منوهای قابل نمایش
         public List<string> Permissions { get; set; } = new();      //لیست مجوزهای نقش فعال
         public int ExpiresIn { get; set; }                          // مدت اعتبار توکن (دقیقه)
+        public bool? IsElmiOstad { get; set; }
+        public bool? HasActiveElmiTerm { get; set; }
     }
 
     /// <summary>

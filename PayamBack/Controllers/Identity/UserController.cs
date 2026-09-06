@@ -330,8 +330,46 @@ namespace PayamBack.Controllers.Identity
                 return StatusCode(500, new { success = false, message = "خطا در دریافت اطلاعات کاربر", error = ex.Message });
             }
         }
+
+        /// <summary>
+        ///  تغییر رمز عبور
+        /// </summary>
+
+        [HttpPost("change-password")]
+        [NoPermission]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(dto.UserId.ToString());
+                if (user == null)
+                    return NotFound(new { success = false, message = "کاربر یافت نشد" });
+
+                var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+                if (!result.Succeeded)
+                {
+                    var errors = result.Errors.Select(e => e.Description);
+                    return BadRequest(new { success = false, message = string.Join(", ", errors) });
+                }
+
+                return Ok(new { success = true, message = "رمز عبور با موفقیت تغییر یافت" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, error = ex.Message });
+            }
+            
+        }
+
+        
     }
 
+    public class ChangePasswordDto
+    {
+        public int UserId { get; set; }
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+    }
     public class ToggleUserStatusDto
     {
         public bool? Vazeeyat { get; set; }

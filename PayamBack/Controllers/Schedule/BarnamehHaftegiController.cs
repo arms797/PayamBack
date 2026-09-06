@@ -1849,7 +1849,7 @@ namespace PayamBack.Controllers.Schedule
                     OstadName = program.Ostad?.Naam ?? "",
                     OstadLastName = program.Ostad?.NaamKhanevadegi ?? "",
                     OstadCode = program.Ostad?.CodeOstadi ?? "",
-                    OstadMarkaz = program.Ostad?.Markaz ?? null,
+                    OstadMarkaz = program.Ostad?.Markaz,
                     //OstadOstan = program.Ostad?.Markaz?.NaamOstan ?? "",
                     CodeTerm = program.CodeTerm,
 

@@ -161,7 +161,7 @@ namespace PayamBack.Filters
             if (action == "Update" || action == "Edit" || action == "Modify" ||
                 action == "Change" || action == "Toggle" || action == "Active" ||
                 action == "Deactive" || action == "Activate" || action == "Deactivate" ||
-                action == "ResetPassword" || action == "ToggleStatus")
+                action == "ResetPassword" || action == "ToggleStatus" )
                 return "Update";
 
             // 4️⃣ حذف → Delete

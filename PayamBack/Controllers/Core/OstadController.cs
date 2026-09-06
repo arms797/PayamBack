@@ -1,4 +1,5 @@
 ﻿using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Drawing.Charts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -23,19 +24,22 @@ namespace PayamBack.Controllers.Core
         private readonly RoleManager<AppRole> _roleManager;
         private readonly ICurrentUserService _currentUserService;
         private readonly IAccessService _accessService;
+        private readonly IMarkazCacheService _markazCacheService;
 
         public OstadController(
             AppDbContext context,
             UserManager<AppUser> userManager,
             RoleManager<AppRole> roleManager,
             ICurrentUserService currentUserService,
-            IAccessService accessService)
+            IAccessService accessService,
+            IMarkazCacheService markazCacheService)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
             _currentUserService = currentUserService;
             _accessService = accessService;
+            _markazCacheService = markazCacheService;
         }
 
         // ============================================================
@@ -418,9 +422,19 @@ namespace PayamBack.Controllers.Core
                     return BadRequest(new { success = false, message = "شما دسترسی به هیچ مرکزی برای افزودن استاد ندارید" });
 
                 // 5️⃣ کش کردن داده‌ها برای سرعت
-                var allMarkazes = await _context.Markazes
-                    .Where(m => m.Vazeeyat == true && m.CodeMarkaz != null)
-                    .ToDictionaryAsync(m => m.CodeMarkaz!, m => m.Id);
+                //var allMarkazes = await _context.Markazes
+                //   .Where(m => m.Vazeeyat == true && m.CodeMarkaz != null)
+                // .ToDictionaryAsync(m => m.CodeMarkaz!, m => m.Id);
+
+                var allMarkaz = await _markazCacheService.GetAllAsync();
+                var allMarkazes = allMarkaz
+                    .Where(m => m.Vazeeyat == true && m.Level==4)
+                    .GroupBy(m => new { m.CodeMarkaz, m.CodeOstan, m.Level })
+                    .Select(g => g.First())
+                    .ToDictionary(
+                        m => m.CodeMarkaz ?? $"OSTAN_{m.CodeOstan ?? "UNKNOWN"}_LEVEL_{m.Level ?? 4}",
+                        m => m.Id
+                    );
 
                 var allGroohes = await _context.GrooheAmoozeshis
                     .Where(g => g.CodeDaneshkade != null && g.CodeGrooheAmoozeshi != null)

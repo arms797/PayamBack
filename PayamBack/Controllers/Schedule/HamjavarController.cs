@@ -664,6 +664,9 @@ namespace PayamBack.Controllers.Schedule
 
                 try
                 {
+                    // ============================================================
+                    // 1️⃣ ایجاد Hamjavar اصلی
+                    // ============================================================
                     var entity = new Hamjavar
                     {
                         OstadId = ostadId,
@@ -681,31 +684,10 @@ namespace PayamBack.Controllers.Schedule
                     };
 
                     await _context.Set<Hamjavar>().AddAsync(entity);
-                    await _context.SaveChangesAsync();
 
-                    foreach (var h1Dto in hamjavar1s)
-                    {
-                        var faaliatIdsString = h1Dto.FaaliatIds != null && h1Dto.FaaliatIds.Any()
-                            ? string.Join("|", h1Dto.FaaliatIds)
-                            : null;
-
-                        var detail = new Hamjavar1
-                        {
-                            HamjavarId = entity.Id,
-                            UserIdSabtKonandeh = currentUser.Id,
-                            RoleMarkazSabtKonandeh = roleMarkaz ?? "نامشخص",
-                            MarkazId = h1Dto.MarkazId,
-                            InOstan = h1Dto.InOstan ?? true,
-                            FaaliatIds = faaliatIdsString,
-                            TedadRoozElmi = h1Dto.TedadRoozElmi,
-                            TedadRoozRaeis = h1Dto.TedadRoozRaeis,
-                            TedadRoozKhadamat = h1Dto.TedadRoozKhadamat,
-                            TedadRoozMoaven = h1Dto.TedadRoozMoaven
-                        };
-
-                        await _context.Set<Hamjavar1>().AddAsync(detail);
-                    }
-
+                    // ============================================================
+                    // 2️⃣ ذخیره فایل (اگر وجود داشته باشد) - قبل از SaveChanges
+                    // ============================================================
                     if (dto.UploadElmi != null)
                     {
                         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
@@ -722,9 +704,47 @@ namespace PayamBack.Controllers.Schedule
 
                         uploadElmiPath = await SaveFileAsync(dto.UploadElmi, "hamjavar");
                         entity.UploadElmi = uploadElmiPath;
-                        await _context.SaveChangesAsync();
                     }
 
+                    // ============================================================
+                    // 3️⃣ ذخیره Hamjavar اصلی (تا Id تولید شود)
+                    // ============================================================
+                    await _context.SaveChangesAsync();
+
+                    // ============================================================
+                    // 4️⃣ حالا Id تولید شده است، Hamjavar1 ها را اضافه کن
+                    // ============================================================
+                    foreach (var h1Dto in hamjavar1s)
+                    {
+                        var faaliatIdsString = h1Dto.FaaliatIds != null && h1Dto.FaaliatIds.Any()
+                            ? string.Join("|", h1Dto.FaaliatIds)
+                            : null;
+
+                        var detail = new Hamjavar1
+                        {
+                            HamjavarId = entity.Id,  // ← حالا Id معتبر است
+                            UserIdSabtKonandeh = currentUser.Id,
+                            RoleMarkazSabtKonandeh = roleMarkaz ?? "نامشخص",
+                            MarkazId = h1Dto.MarkazId,
+                            InOstan = h1Dto.InOstan ?? true,
+                            FaaliatIds = faaliatIdsString,
+                            TedadRoozElmi = h1Dto.TedadRoozElmi,
+                            TedadRoozRaeis = h1Dto.TedadRoozRaeis,
+                            TedadRoozKhadamat = h1Dto.TedadRoozKhadamat,
+                            TedadRoozMoaven = h1Dto.TedadRoozMoaven
+                        };
+
+                        await _context.Set<Hamjavar1>().AddAsync(detail);
+                    }
+
+                    // ============================================================
+                    // 5️⃣ ذخیره Hamjavar1 ها
+                    // ============================================================
+                    await _context.SaveChangesAsync();
+
+                    // ============================================================
+                    // 6️⃣ commit تراکنش
+                    // ============================================================
                     await transaction.CommitAsync();
 
                     return Ok(new
@@ -732,6 +752,23 @@ namespace PayamBack.Controllers.Schedule
                         success = true,
                         message = "درخواست هم‌جاوری با موفقیت ثبت شد",
                         data = new { id = entity.Id }
+                    });
+                }
+                catch (DbUpdateException ex)
+                {
+                    await transaction.RollbackAsync();
+
+                    if (!string.IsNullOrEmpty(uploadElmiPath))
+                    {
+                        DeleteFile(uploadElmiPath);
+                    }
+
+                    var errorMsg = ex.InnerException?.Message ?? ex.Message;
+                    return StatusCode(500, new
+                    {
+                        success = false,
+                        message = "خطا در ثبت درخواست",
+                        error = errorMsg
                     });
                 }
                 catch (Exception ex)

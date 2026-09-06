@@ -364,7 +364,7 @@ namespace PayamBack
                             TarikheEraeeDars=new DateOnly(2026,6,22),TarikhePayanDars=new DateOnly(2026,7,22),
                             TarikheShorooClass=new DateOnly(2026,7,11),TarikhePayanClass=new DateOnly(2026,9,1),
                             TarikheShorooMojavezMarakez=new DateOnly(2026,6,22),TarikhePayanMojavezMarakez=new DateOnly(2026,7,11),
-                            Vazeeyat=true,IsHaftegiRequired=false
+                            Vazeeyat=false,IsHaftegiRequired=false
                         },
                         new(){CodeTerm="4051",Nimsal="اول",SalTahsili="1406-1405",TermJariShoroo=new DateOnly(2026,9,23),
                             TermJariPayan=new DateOnly(2027,1,20),TarikheDastrasi=new DateOnly(2026,9,1),

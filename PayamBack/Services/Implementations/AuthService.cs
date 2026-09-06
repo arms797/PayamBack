@@ -5,7 +5,8 @@ using PayamBack.DTOs.Identity;
 using PayamBack.Models.Identity;
 using PayamBack.Services.Interfaces;
 using System.Security.Claims;
-using Microsoft.Extensions.Caching.Memory; 
+using Microsoft.Extensions.Caching.Memory;
+using PayamBack.Models.Core;
 
 
 namespace PayamBack.Services.Implementations
@@ -420,6 +421,16 @@ namespace PayamBack.Services.Implementations
                     lastName = admin.NaameKhanevadeghi ?? "";
                 }
             }
+            var ostadInfo = await _context.Ostads
+                .Where(o => o.Id == user.OstadId)
+                .Select(o => new
+                {
+                    o.NoeHamkari,
+                    HasElmiTerm = _context.ElmiTerms
+                        .Any(e => e.UserId == user.Id && e.Vazeeat == true && e.ApproveStatus == 1)
+                })
+                .FirstOrDefaultAsync();
+            var isElmi = user?.Ostad?.NoeHamkari == NoeHamkariEnum.HeyatElmiPayamNoor;
 
             // ============================================================
             // 🔥 پاسخ نهایی
@@ -439,7 +450,10 @@ namespace PayamBack.Services.Implementations
                 Roles = roles,
                 Menus = menus,
                 Permissions = permissions,
-                ExpiresIn = Convert.ToInt32(_configuration["Jwt:AccessTokenExpiryMinutes"] ?? "15")
+                ExpiresIn = Convert.ToInt32(_configuration["Jwt:AccessTokenExpiryMinutes"] ?? "15"),
+                IsElmiOstad =isElmi,
+                HasActiveElmiTerm = ostadInfo?.HasElmiTerm ?? false
+
             };
         }
     }
