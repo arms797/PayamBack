@@ -294,6 +294,7 @@ namespace PayamBack.Controllers.Identity
 
                 if (user == null)
                     return NotFound(new { success = false, message = "کاربر یافت نشد" });
+                
 
                 return Ok(new
                 {
@@ -309,7 +310,18 @@ namespace PayamBack.Controllers.Identity
                         user.KarmandId,
                         user.OstadId,
                         user.DaneshjooId,
-                        user.AdminId
+                        user.AdminId,
+                        // 🔥 با استفاده از ?. از خطا جلوگیری می‌کنیم
+                        OstadNaam = user.Ostad?.Naam,
+                        OstadNaamKhanevadegi = user.Ostad?.NaamKhanevadegi,
+
+                        // اگر بخواهید برای سایر مدل‌ها هم اطلاعات برگردانید:
+                        KarmandNaam = user.Karmand?.Naam,
+                        KarmandNaameKhanevadeghi = user.Karmand?.NaameKhanevadeghi,
+                        DaneshjooNaam = user.Daneshjoo?.Naam,
+                        DaneshjooNaamKhanevadegi = user.Daneshjoo?.NaamKhanevadegi,
+                        AdminNaam = user.MoshakhasatAdmin?.Naam,
+                        AdminNaameKhanevadeghi = user.MoshakhasatAdmin?.NaameKhanevadeghi
                     }
                 });
             }

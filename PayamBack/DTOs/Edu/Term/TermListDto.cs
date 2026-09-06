@@ -2,6 +2,8 @@
 {
     public string CodeTerm { get; set; } = string.Empty;
     public string OnvanTerm { get; set; } = string.Empty;
+    public string Nimsal { get; set; } = string.Empty;
+    public string SalTahsili { get; set; } = string.Empty;
     public DateOnly? TermJariShoroo { get; set; }
     public DateOnly? TermJariPayan { get; set; }
     public DateOnly? TarikheDastrasi { get; set; }

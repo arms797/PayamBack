@@ -357,6 +357,7 @@ namespace PayamBack.Controllers.Core
         {
             try
             {
+                // 1️⃣ اعتبارسنجی اولیه
                 var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
@@ -367,10 +368,13 @@ namespace PayamBack.Controllers.Core
                 if (!file.FileName.EndsWith(".xlsx"))
                     return BadRequest(new { success = false, message = "فرمت فایل باید xlsx باشد" });
 
-                // ============================================================
-                // 🔥 بررسی وجود نقش "استاد" در دیتابیس (قبل از هر گونه پردازش)
-                // ============================================================
+                // 2️⃣ بررسی وجود نقش "استاد"
                 var ostadRole = await _roleManager.FindByNameAsync("استاد");
+                if (ostadRole == null)
+                {
+                    // جستجوی مستقیم در دیتابیس (در صورت عدم تطابق نام)
+                    ostadRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "استاد");
+                }
                 if (ostadRole == null)
                 {
                     return BadRequest(new
@@ -380,14 +384,8 @@ namespace PayamBack.Controllers.Core
                     });
                 }
 
-                // ============================================================
-                // 🔥 خواندن کل فایل برای ذخیره داده‌های خطا
-                // ============================================================
+                // 3️⃣ خواندن فایل
                 var allRowsData = new List<List<string>>();
-                var errors = new List<string>();
-                var errorDetails = new List<ProcessedItem>();
-                var rowCount = 0;
-
                 using var stream = new MemoryStream();
                 await file.CopyToAsync(stream);
                 using var workbook = new XLWorkbook(stream);
@@ -397,18 +395,13 @@ namespace PayamBack.Controllers.Core
                 if (rowCountTotal < 2)
                     return BadRequest(new { success = false, message = "فایل خالی است" });
 
-                // ============================================================
-                // 🔥 ذخیره هدرها
-                // ============================================================
+                // هدرها
                 var headers = new List<string>();
                 for (int col = 1; col <= 23; col++)
                 {
                     headers.Add(worksheet.Cell(1, col).GetString()?.Trim() ?? $"ستون{col}");
                 }
 
-                // ============================================================
-                // 🔥 خواندن تمام داده‌ها
-                // ============================================================
                 for (int row = 2; row <= rowCountTotal; row++)
                 {
                     var rowData = new List<string>();
@@ -419,10 +412,12 @@ namespace PayamBack.Controllers.Core
                     allRowsData.Add(rowData);
                 }
 
+                // 4️⃣ دریافت مراکز قابل دسترس
                 var accessibleMarkazIds = await _accessService.GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
                 if (!accessibleMarkazIds.Any())
                     return BadRequest(new { success = false, message = "شما دسترسی به هیچ مرکزی برای افزودن استاد ندارید" });
 
+                // 5️⃣ کش کردن داده‌ها برای سرعت
                 var allMarkazes = await _context.Markazes
                     .Where(m => m.Vazeeyat == true && m.CodeMarkaz != null)
                     .ToDictionaryAsync(m => m.CodeMarkaz!, m => m.Id);
@@ -434,26 +429,18 @@ namespace PayamBack.Controllers.Core
                         g => g.Id
                     );
 
-                // ============================================================
-                // 🔥 پردازش هر ردیف
-                // ============================================================
-                var errorRows = new List<List<string>>();
+                // 6️⃣ پردازش ردیف‌ها
+                var errorRows = new List<(int RowNumber, List<string> RowData, string ErrorMessage)>();
+                var successCount = 0;
 
                 for (int i = 0; i < allRowsData.Count; i++)
                 {
                     var rowData = allRowsData[i];
                     var rowNumber = i + 2;
-                    var processedItem = new ProcessedItem
-                    {
-                        RowNumber = rowNumber,
-                        RowData = rowData
-                    };
 
                     try
                     {
-                        // ============================================================
-                        // 1️⃣ خواندن داده‌ها از ردیف
-                        // ============================================================
+                        // خواندن داده‌ها
                         var codeMarkazKhedmati = rowData[0];
                         var codeMarkazAsli = rowData[1];
                         var codeOstadi = rowData[2];
@@ -463,7 +450,7 @@ namespace PayamBack.Controllers.Core
                         var naamPedar = rowData[6];
                         var tarikhTavalod = rowData[7];
                         var shomareShenasname = rowData[8];
-                        var shomareMelli = rowData[9];
+                        var shomareMelli = NormalizeShomareMelli(rowData[9]);
                         var email = rowData[10];
                         var mobile1 = rowData[11];
                         var mobile2 = rowData[12];
@@ -478,120 +465,78 @@ namespace PayamBack.Controllers.Core
                         var maghtaText = rowData[21];
                         var mahalAkhz = rowData[22];
 
-                        // ============================================================
-                        // 🔥 نرمال‌سازی کد ملی
-                        // ============================================================
-                        shomareMelli = NormalizeShomareMelli(shomareMelli);
-
-                        processedItem.CodeOstadi = codeOstadi;
-                        processedItem.ShomareMelli = shomareMelli;
-
-                        // ============================================================
-                        // 2️⃣ اعتبارسنجی
-                        // ============================================================
+                        // اعتبارسنجی اجباری
                         if (string.IsNullOrEmpty(codeOstadi) || string.IsNullOrEmpty(shomareMelli))
                         {
-                            errors.Add($"ردیف {rowNumber}: کد استادی و کد ملی الزامی است");
-                            errorRows.Add(rowData);
-                            errorDetails.Add(new ProcessedItem { RowNumber = rowNumber, CodeOstadi = codeOstadi, ShomareMelli = shomareMelli, Status = "خطا", Message = "کد استادی و کد ملی الزامی است" });
+                            errorRows.Add((rowNumber, rowData, "کد استادی و کد ملی الزامی است"));
                             continue;
                         }
 
                         if (string.IsNullOrEmpty(codeMarkazKhedmati))
                         {
-                            errors.Add($"ردیف {rowNumber}: کد مرکز محل خدمت الزامی است");
-                            errorRows.Add(rowData);
-                            errorDetails.Add(new ProcessedItem { RowNumber = rowNumber, CodeOstadi = codeOstadi, ShomareMelli = shomareMelli, Status = "خطا", Message = "کد مرکز محل خدمت الزامی است" });
+                            errorRows.Add((rowNumber, rowData, "کد مرکز محل خدمت الزامی است"));
                             continue;
                         }
 
-                        // ============================================================
-                        // 3️⃣ پیدا کردن MarkazId
-                        // ============================================================
+                        // پیدا کردن MarkazId
                         if (!allMarkazes.TryGetValue(codeMarkazKhedmati, out int markazKhedmatiId))
                         {
-                            errors.Add($"ردیف {rowNumber}: کد مرکز '{codeMarkazKhedmati}' یافت نشد");
-                            errorRows.Add(rowData);
-                            errorDetails.Add(new ProcessedItem { RowNumber = rowNumber, CodeOstadi = codeOstadi, ShomareMelli = shomareMelli, Status = "خطا", Message = $"کد مرکز '{codeMarkazKhedmati}' یافت نشد" });
+                            errorRows.Add((rowNumber, rowData, $"کد مرکز '{codeMarkazKhedmati}' یافت نشد"));
                             continue;
                         }
 
                         if (!accessibleMarkazIds.Contains(markazKhedmatiId))
                         {
-                            errors.Add($"ردیف {rowNumber}: شما دسترسی به مرکز '{codeMarkazKhedmati}' را ندارید");
-                            errorRows.Add(rowData);
-                            errorDetails.Add(new ProcessedItem { RowNumber = rowNumber, CodeOstadi = codeOstadi, ShomareMelli = shomareMelli, Status = "خطا", Message = $"دسترسی به مرکز '{codeMarkazKhedmati}' ندارید" });
+                            errorRows.Add((rowNumber, rowData, $"دسترسی به مرکز '{codeMarkazKhedmati}' ندارید"));
                             continue;
                         }
 
-                        // ============================================================
-                        // 4️⃣ بررسی تکراری
-                        // ============================================================
-                        var exists = await _context.Ostads.AnyAsync(o => o.CodeOstadi == codeOstadi);
-                        if (exists)
+                        // بررسی تکراری
+                        if (await _context.Ostads.AnyAsync(o => o.CodeOstadi == codeOstadi))
                         {
-                            errors.Add($"ردیف {rowNumber}: کد استادی {codeOstadi} قبلاً ثبت شده است");
-                            errorRows.Add(rowData);
-                            errorDetails.Add(new ProcessedItem { RowNumber = rowNumber, CodeOstadi = codeOstadi, ShomareMelli = shomareMelli, Status = "خطا", Message = "کد استادی قبلاً ثبت شده است" });
+                            errorRows.Add((rowNumber, rowData, $"کد استادی {codeOstadi} قبلاً ثبت شده است"));
                             continue;
                         }
 
-                        var userExists = await _userManager.FindByNameAsync(codeOstadi);
-                        if (userExists != null)
+                        if (await _userManager.FindByNameAsync(codeOstadi) != null)
                         {
-                            errors.Add($"ردیف {rowNumber}: کد استادی {codeOstadi} قبلاً به عنوان نام کاربری ثبت شده است");
-                            errorRows.Add(rowData);
-                            errorDetails.Add(new ProcessedItem { RowNumber = rowNumber, CodeOstadi = codeOstadi, ShomareMelli = shomareMelli, Status = "خطا", Message = "کد استادی قبلاً به عنوان نام کاربری ثبت شده است" });
+                            errorRows.Add((rowNumber, rowData, $"کد استادی {codeOstadi} قبلاً به عنوان نام کاربری ثبت شده است"));
                             continue;
                         }
 
-                        // ============================================================
-                        // 5️⃣ پیدا کردن MarkazAsliId
-                        // ============================================================
+                        // پیدا کردن MarkazAsliId
                         int? markazAsliId = null;
                         if (!string.IsNullOrEmpty(codeMarkazAsli))
                         {
                             if (!allMarkazes.TryGetValue(codeMarkazAsli, out int asliId))
                             {
-                                errors.Add($"ردیف {rowNumber}: کد مرکز اصلی '{codeMarkazAsli}' یافت نشد");
-                                errorRows.Add(rowData);
-                                errorDetails.Add(new ProcessedItem { RowNumber = rowNumber, CodeOstadi = codeOstadi, ShomareMelli = shomareMelli, Status = "خطا", Message = $"کد مرکز اصلی '{codeMarkazAsli}' یافت نشد" });
+                                errorRows.Add((rowNumber, rowData, $"کد مرکز اصلی '{codeMarkazAsli}' یافت نشد"));
                                 continue;
                             }
                             markazAsliId = asliId;
                         }
 
-                        // ============================================================
-                        // 6️⃣ پیدا کردن GrooheAmoozeshiId
-                        // ============================================================
+                        // پیدا کردن GrooheAmoozeshiId
                         int? grooheAmoozeshiId = null;
                         if (!string.IsNullOrEmpty(codeDaneshkadeh) && !string.IsNullOrEmpty(codeGroohAmoozeshi))
                         {
-                            if (codeDaneshkadeh.Length == 1)
-                                codeDaneshkadeh = "0" + codeDaneshkadeh;
-                            if (codeGroohAmoozeshi.Length == 1)
-                                codeGroohAmoozeshi = "0" + codeGroohAmoozeshi;
+                            if (codeDaneshkadeh.Length == 1) codeDaneshkadeh = "0" + codeDaneshkadeh;
+                            if (codeGroohAmoozeshi.Length == 1) codeGroohAmoozeshi = "0" + codeGroohAmoozeshi;
                             var key = codeDaneshkadeh + "_" + codeGroohAmoozeshi;
                             if (!allGroohes.TryGetValue(key, out int gId))
                             {
-                                errors.Add($"ردیف {rowNumber}: ترکیب کد دانشکده '{codeDaneshkadeh}' و کد گروه '{codeGroohAmoozeshi}' یافت نشد");
-                                errorRows.Add(rowData);
-                                errorDetails.Add(new ProcessedItem { RowNumber = rowNumber, CodeOstadi = codeOstadi, ShomareMelli = shomareMelli, Status = "خطا", Message = $"ترکیب کد دانشکده '{codeDaneshkadeh}' و کد گروه '{codeGroohAmoozeshi}' یافت نشد" });
+                                errorRows.Add((rowNumber, rowData, $"ترکیب کد دانشکده '{codeDaneshkadeh}' و کد گروه '{codeGroohAmoozeshi}' یافت نشد"));
                                 continue;
                             }
                             grooheAmoozeshiId = gId;
                         }
                         else if (!string.IsNullOrEmpty(codeDaneshkadeh) || !string.IsNullOrEmpty(codeGroohAmoozeshi))
                         {
-                            errors.Add($"ردیف {rowNumber}: برای یافتن گروه آموزشی، هر دو کد دانشکده و کد گروه باید وارد شوند");
-                            errorRows.Add(rowData);
-                            errorDetails.Add(new ProcessedItem { RowNumber = rowNumber, CodeOstadi = codeOstadi, ShomareMelli = shomareMelli, Status = "خطا", Message = "هر دو کد دانشکده و کد گروه باید وارد شوند" });
+                            errorRows.Add((rowNumber, rowData, "برای یافتن گروه آموزشی، هر دو کد دانشکده و کد گروه باید وارد شوند"));
                             continue;
                         }
 
-                        // ============================================================
-                        // 7️⃣ تبدیل نوع همکاری
-                        // ============================================================
+                        // تبدیل نوع همکاری
                         int? noeHamkariValue = null;
                         if (!string.IsNullOrEmpty(noeHamkariText))
                         {
@@ -610,9 +555,7 @@ namespace PayamBack.Controllers.Core
                             }
                         }
 
-                        // ============================================================
-                        // 8️⃣ تبدیل مقطع
-                        // ============================================================
+                        // تبدیل مقطع
                         int? maghtaValue = null;
                         if (!string.IsNullOrEmpty(maghtaText))
                         {
@@ -620,15 +563,13 @@ namespace PayamBack.Controllers.Core
                             {
                                 "کارشناسی" => 5,
                                 "کارشناسی ارشد" => 10,
-                                "دکتری"  => 15,
-                                "دکتری تخصصی" => 15 ,
+                                "دکتری" => 15,
+                                "دکتری تخصصی" => 15,
                                 _ => int.TryParse(maghtaText, out int m) ? m : null
                             };
                         }
 
-                        // ============================================================
-                        // 9️⃣ ساخت اشیاء برای ذخیره با تراکنش
-                        // ============================================================
+                        // ساخت اشیاء
                         var ostad = new Ostad
                         {
                             CodeOstadi = codeOstadi,
@@ -669,40 +610,28 @@ namespace PayamBack.Controllers.Core
                             VazeeyatMovaghat = true
                         };
 
-                        // ============================================================
-                        // 🔟 ذخیره با تراکنش
-                        // ============================================================
+                        // ذخیره با تراکنش
                         using var transaction = await _context.Database.BeginTransactionAsync();
-
                         try
                         {
-                            // 1️⃣ ذخیره استاد
-                            await _context.Ostads.AddAsync(ostad);
+                            _context.Ostads.Add(ostad);
                             await _context.SaveChangesAsync();
 
-                            // 2️⃣ ذخیره مدرک تحصیلی
                             madrak.OstadId = ostad.Id;
-                            await _context.OstadMadraks.AddAsync(madrak);
+                            _context.OstadMadraks.Add(madrak);
                             await _context.SaveChangesAsync();
 
-                            // 3️⃣ ایجاد کاربر
                             user.OstadId = ostad.Id;
                             var password = shomareMelli + "aA";
                             var createUserResult = await _userManager.CreateAsync(user, password);
-
                             if (!createUserResult.Succeeded)
                             {
                                 throw new Exception($"خطا در ایجاد کاربر: {string.Join(", ", createUserResult.Errors.Select(e => e.Description))}");
                             }
 
-                            // ============================================================
-                            // 🔥 4️⃣ اضافه کردن نقش "استاد" به صورت پیش‌فرض
-                            // ============================================================
-
-                            // بررسی اینکه کاربر قبلاً این نقش را ندارد
+                            // اختصاص نقش "استاد"
                             var existingRole = await _context.Set<AppUserRole>()
                                 .FirstOrDefaultAsync(ur => ur.UserId == user.Id && ur.RoleId == ostadRole.Id);
-
                             if (existingRole == null)
                             {
                                 var assignRole = new AppUserRole
@@ -710,130 +639,81 @@ namespace PayamBack.Controllers.Core
                                     UserId = user.Id,
                                     RoleId = ostadRole.Id,
                                     MarkazId = ostad.MarkazId,
-                                    RolePishFarz = true,
-                                    ParentUserRole = null
+                                    RolePishFarz = true
                                 };
-                                await _context.Set<AppUserRole>().AddAsync(assignRole);
+                                _context.Set<AppUserRole>().Add(assignRole);
                                 await _context.SaveChangesAsync();
                             }
 
                             await transaction.CommitAsync();
-                            rowCount++;
+                            successCount++;
                         }
                         catch (Exception ex)
                         {
                             await transaction.RollbackAsync();
-                            errors.Add($"ردیف {rowNumber}: خطا در ثبت {codeOstadi} - {ex.Message}");
-                            errorRows.Add(rowData);
-                            errorDetails.Add(new ProcessedItem
-                            {
-                                RowNumber = rowNumber,
-                                CodeOstadi = codeOstadi,
-                                ShomareMelli = shomareMelli,
-                                Status = "خطا",
-                                Message = ex.Message
-                            });
+                            errorRows.Add((rowNumber, rowData, $"خطا در ثبت: {ex.Message}"));
                         }
-
                     }
                     catch (Exception ex)
                     {
-                        errors.Add($"ردیف {rowNumber}: خطا در پردازش - {ex.Message}");
-                        errorRows.Add(rowData);
-                        errorDetails.Add(new ProcessedItem
-                        {
-                            RowNumber = rowNumber,
-                            CodeOstadi = rowData[2],
-                            ShomareMelli = rowData[9],
-                            Status = "خطا",
-                            Message = ex.Message
-                        });
+                        errorRows.Add((rowNumber, rowData, $"خطا در پردازش: {ex.Message}"));
                     }
                 }
 
-                // ============================================================
-                // 🔥 تولید فایل اکسل خطاها (اگر خطایی وجود داشت)
-                // ============================================================
-                byte[]? errorFileBytes = null;
+                // 7️⃣ تولید فایل خطا (اگر خطایی وجود دارد)
                 if (errorRows.Any())
                 {
                     using var errorWorkbook = new XLWorkbook();
                     var errorWorksheet = errorWorkbook.Worksheets.Add("خطاها");
 
-                    // ============================================================
-                    // 🔥 نوشتن هدرها (با یک ستون اضافی برای توضیح خطا)
-                    // ============================================================
+                    // هدرها + ستون توضیح خطا
                     for (int col = 1; col <= headers.Count; col++)
                     {
                         errorWorksheet.Cell(1, col).Value = headers[col - 1];
                     }
                     errorWorksheet.Cell(1, headers.Count + 1).Value = "توضیح خطا";
 
-                    // ============================================================
-                    // 🔥 نوشتن داده‌های خطا
-                    // ============================================================
+                    // داده‌های خطا
                     for (int row = 0; row < errorRows.Count; row++)
                     {
-                        var rowData = errorRows[row];
+                        var (rowNumber, rowData, errorMsg) = errorRows[row];
                         for (int col = 0; col < rowData.Count; col++)
                         {
                             errorWorksheet.Cell(row + 2, col + 1).Value = rowData[col];
                         }
-
-                        // ============================================================
-                        // 🔥 اصلاح: استفاده از errorDetails با اندیس row (نه جستجو با RowNumber)
-                        // ============================================================
-                        var errorDetail = errorDetails[row];
-                        var errorMsg = errorDetail?.Message ?? "خطای ناشناخته";
                         errorWorksheet.Cell(row + 2, headers.Count + 1).Value = errorMsg;
                     }
 
-                    // ============================================================
-                    // 🔥 تنظیم عرض ستون‌ها
-                    // ============================================================
                     errorWorksheet.Columns().AdjustToContents();
-
                     using var ms = new MemoryStream();
                     errorWorkbook.SaveAs(ms);
-                    errorFileBytes = ms.ToArray();
-                }
-                // ============================================================
-                // 🔥 پاسخ نهایی
-                // ============================================================
-                var result = new BulkUploadResult
-                {
-                    Success = true,
-                    Message = $"تعداد {rowCount} استاد با موفقیت ثبت شد",
-                    TotalRows = rowCountTotal - 1,
-                    SuccessCount = rowCount,
-                    ErrorCount = errorRows.Count,
-                    Errors = errors,
-                    Details = errorDetails,
-                    ErrorFileBytes = errorFileBytes,
-                    ErrorFileName = errorRows.Any() ? "خطاهای_بارگذاری_اساتید.xlsx" : null
-                };
+                    var errorFileBytes = ms.ToArray();
 
-                // ============================================================
-                // 🔥 اگر فایل خطا وجود دارد، به صورت فایل برگردان
-                // ============================================================
-                if (errorFileBytes != null)
-                {
                     return File(errorFileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "خطاهای_بارگذاری_اساتید.xlsx");
                 }
 
+                // 8️⃣ اگر همه موفق بودند
                 return Ok(new
                 {
                     success = true,
-                    message = result.Message,
-                    totalRows = result.TotalRows,
-                    successCount = result.SuccessCount,
-                    errorCount = result.ErrorCount,
-                    errors = result.Errors.Any() ? result.Errors : null
+                    message = $"تعداد {successCount} استاد با موفقیت ثبت شد",
+                    totalRows = rowCountTotal - 1,
+                    successCount = successCount,
+                    errorCount = 0
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { success = false, message = "خطا در آپلود فایل", error = ex.Message });
+                // اگر خطای کلی رخ داد، یک فایل خطای ساده بسازیم
+                using var errorWorkbook = new XLWorkbook();
+                var errorWorksheet = errorWorkbook.Worksheets.Add("خطا");
+                errorWorksheet.Cell(1, 1).Value = "خطای کلی در بارگذاری فایل";
+                errorWorksheet.Cell(2, 1).Value = ex.Message;
+                errorWorksheet.Columns().AdjustToContents();
+                using var ms = new MemoryStream();
+                errorWorkbook.SaveAs(ms);
+                var errorFileBytes = ms.ToArray();
+                return File(errorFileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "خطای_سیستم.xlsx");
             }
         }
 

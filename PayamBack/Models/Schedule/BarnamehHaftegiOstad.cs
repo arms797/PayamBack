@@ -35,6 +35,14 @@ namespace PayamBack.Models.Schedule
         //تاریخ انجام
         public DateTime? TarikhModirGrooh { get; set; }
 
+        // ============================================================
+        // 🔥 مرحله تأیید رئیس مرکز
+        // ============================================================
+        public int? NazarRaeisMarkaz { get; set; }     // 0=بدون نظر, 1=تایید, 2=رد
+        public int? UserIdRaeisMarkaz { get; set; }    // شناسه کاربر رئیس مرکز
+        public string? RoleMarkazRaeisMarkaz { get; set; } // نقش و مرکز رئیس
+        public DateTime? TarikhRaeisMarkaz { get; set; }   // تاریخ ثبت نظر
+
         //آیدی معاون
         public int? UserIdMoaven { get; set; }
         //نقش و مرکز معاون
@@ -58,6 +66,10 @@ namespace PayamBack.Models.Schedule
         public virtual Term? Term { get; set; }
         [ForeignKey(nameof(UserIdModirGrooh))]
         public virtual AppUser? AppUserModirGrooh { get; set; }
+
+        [ForeignKey(nameof(UserIdRaeisMarkaz))]
+        public virtual AppUser? AppUserRaeisMarkaz { get; set; }
+
         [ForeignKey(nameof(UserIdMoaven))]
         public virtual AppUser? AppUserMoaven { get; set; }
 

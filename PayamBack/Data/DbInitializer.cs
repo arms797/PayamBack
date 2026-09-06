@@ -182,6 +182,7 @@ namespace PayamBack
                     new() { Resource = "BarnamehHaftegi", Action = "ConfirmByOstad", Name = "BarnamehHaftegi.ConfirmByOstad", Description = "تایید استاد", IsActive = true, CreatedAt = DateTime.UtcNow },
                     new() { Resource = "BarnamehHaftegi", Action = "ConfirmByModirGrooh", Name = "BarnamehHaftegi.ConfirmByModirGrooh", Description = "تایید مدیرگروه", IsActive = true, CreatedAt = DateTime.UtcNow },
                     new() { Resource = "BarnamehHaftegi", Action = "ResetConfirm", Name = "BarnamehHaftegi.ResetConfirm", Description = "ریست به پیش نویس", IsActive = true, CreatedAt = DateTime.UtcNow },
+                    new() { Resource = "BarnamehHaftegi", Action = "ConfirmByRaeisMarkaz", Name = "BarnamehHaftegi.ConfirmByRaeisMarkaz", Description = "تایید رییس مرکز", IsActive = true, CreatedAt = DateTime.UtcNow },
 
                     //مجوز های علمی ترم 
                     new() { Resource = "ElmiTerm", Action = "View", Name = "ElmiTerm.View", Description = "مشاهده لیست وضعیت ها", IsActive = true, CreatedAt = DateTime.UtcNow },
@@ -351,21 +352,21 @@ namespace PayamBack
                 {
                     var t = new List<Term>
                     {
-                        new(){CodeTerm="4042",OnvanTerm="نیمسال دوم 1405-1404",TermJariShoroo=new DateOnly(2026,1,1),
+                        new(){CodeTerm="4042",Nimsal="دوم",SalTahsili="1405-1404",TermJariShoroo=new DateOnly(2026,1,1),
                             TermJariPayan=new DateOnly(2026,6,21),TarikheDastrasi=new DateOnly(2025,12,6),
                             TarikheEraeeDars=new DateOnly(2025,12,10),TarikhePayanDars=new DateOnly(2026,3,6),
                             TarikheShorooClass=new DateOnly(2026,2,1),TarikhePayanClass=new DateOnly(2026,5,24),
                             TarikheShorooMojavezMarakez=new DateOnly(2025,12,7),TarikhePayanMojavezMarakez=new DateOnly(2026,1,30),
                             Vazeeyat=false,IsHaftegiRequired=true
                         },
-                        new(){CodeTerm="4043",OnvanTerm="نیمسال تابستان 1405-1404",TermJariShoroo=new DateOnly(2026,6,22),
+                        new(){CodeTerm="4043",Nimsal="تابستان",SalTahsili="1405-1404",TermJariShoroo=new DateOnly(2026,6,22),
                             TermJariPayan=new DateOnly(2026,9,14),TarikheDastrasi=new DateOnly(2026,6,22),
                             TarikheEraeeDars=new DateOnly(2026,6,22),TarikhePayanDars=new DateOnly(2026,7,22),
                             TarikheShorooClass=new DateOnly(2026,7,11),TarikhePayanClass=new DateOnly(2026,9,1),
                             TarikheShorooMojavezMarakez=new DateOnly(2026,6,22),TarikhePayanMojavezMarakez=new DateOnly(2026,7,11),
                             Vazeeyat=true,IsHaftegiRequired=false
                         },
-                        new(){CodeTerm="4051",OnvanTerm="نیمسال اول 1406-1405",TermJariShoroo=new DateOnly(2026,9,23),
+                        new(){CodeTerm="4051",Nimsal="اول",SalTahsili="1406-1405",TermJariShoroo=new DateOnly(2026,9,23),
                             TermJariPayan=new DateOnly(2027,1,20),TarikheDastrasi=new DateOnly(2026,9,1),
                             TarikheEraeeDars=new DateOnly(2026,9,6),TarikhePayanDars=new DateOnly(2026,10,22),
                             TarikheShorooClass=new DateOnly(2026,9,23),TarikhePayanClass=new DateOnly(2026,12,21),
@@ -404,7 +405,8 @@ namespace PayamBack
                 // ============================================================
                 // 05 تخصیص همه مجوزها به نقش "ادمین سامانه"
                 // ============================================================
-                var adminRole = await context.Set<AppRole>().Where(r => r.Name == "ادمین سامانه").FirstOrDefaultAsync();
+                //var adminRole = await context.Set<AppRole>().Where(r => r.Name == "ادمین سامانه").FirstOrDefaultAsync();
+                var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == "ادمین سامانه");
                 var allPermissions = await context.Permissions.ToListAsync();
                 foreach (var permission in allPermissions)
                 {

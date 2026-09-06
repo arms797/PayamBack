@@ -104,30 +104,30 @@ namespace PayamBack.Services.Implementations
             // 5️⃣ ساخت Claims
             // ============================================================
             var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-        new Claim(ClaimTypes.Name, user.UserName ?? ""),
-        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.UserName ?? ""),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
 
-        // ============================================================
-        // 🔥 اطلاعات نقش فعال
-        // ============================================================
-        new Claim("RoleId", activeRoleId?.ToString() ?? ""),
-        new Claim(ClaimTypes.Role, activeRoleName ?? ""),
-        new Claim("CodeRole", codeRole?.ToString() ?? "4"),
+                // ============================================================
+                // 🔥 اطلاعات نقش فعال
+                // ============================================================
+                new Claim("RoleId", activeRoleId?.ToString() ?? ""),
+                new Claim(ClaimTypes.Role, activeRoleName ?? ""),
+                new Claim("CodeRole", codeRole?.ToString() ?? "4"),
 
-        // ============================================================
-        // 🔥 اطلاعات مرکز نقش فعال
-        // ============================================================
-        new Claim("MarkazId", markazId?.ToString() ?? ""),
-        new Claim("MarkazLevel", markazLevel?.ToString() ?? "4"),
-        new Claim("MarkazMarkaz", markazCode ?? ""),
+                // ============================================================
+                // 🔥 اطلاعات مرکز نقش فعال
+                // ============================================================
+                new Claim("MarkazId", markazId?.ToString() ?? ""),
+                new Claim("MarkazLevel", markazLevel?.ToString() ?? "4"),
+                new Claim("MarkazMarkaz", markazCode ?? ""),
 
-        // ============================================================
-        // 🔥 اطلاعات استان مرکز نقش فعال
-        // ============================================================
-        new Claim("MarkazOstan", ostanCode ?? "")
-    };
+                // ============================================================
+                // 🔥 اطلاعات استان مرکز نقش فعال
+                // ============================================================
+                new Claim("MarkazOstan", ostanCode ?? "")
+            };
 
             // ============================================================
             // 6️⃣ همه نقش‌های کاربر (برای سازگاری با سیستم)

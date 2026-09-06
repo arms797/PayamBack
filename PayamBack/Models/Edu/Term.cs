@@ -14,6 +14,10 @@ namespace PayamBack.Models.Edu
         /// <summary>عنوان ترم (مثلاً "نیمسال اول ۱۴۰۴")</summary>
         [MaxLength(100)]
         public string? OnvanTerm { get; set; }
+        [MaxLength(50)]
+        public string? Nimsal { get; set; }
+        [MaxLength(50)]
+        public string? SalTahsili { get; set; }
 
         /// <summary>تاریخ شروع ترم جاری</summary>
         [Column(TypeName = "date")]

@@ -205,6 +205,11 @@ namespace PayamBack.Data
                     .WithMany()
                     .HasForeignKey(b => b.UserIdModirGrooh)
                     .OnDelete(DeleteBehavior.NoAction);
+                //ارتباط با رییس مرکز
+                entity.HasOne(b => b.AppUserRaeisMarkaz)
+                    .WithMany()
+                    .HasForeignKey(b => b.UserIdRaeisMarkaz)
+                    .OnDelete(DeleteBehavior.NoAction);
 
                 // ارتباط با کاربر معاون
                 entity.HasOne(b => b.AppUserMoaven)
@@ -510,6 +515,33 @@ namespace PayamBack.Data
                     .HasForeignKey(mg => mg.GrooheAmoozeshiId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
+        }
+
+
+        public override int SaveChanges()
+        {
+            UpdateOnvanTerm();
+            return base.SaveChanges();
+        }
+
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            UpdateOnvanTerm();
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
+        private void UpdateOnvanTerm()
+        {
+            var entries = ChangeTracker.Entries<Term>()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
+
+            foreach (var entry in entries)
+            {
+                if (entry.Entity.Nimsal != null || entry.Entity.SalTahsili != null)
+                {
+                    entry.Entity.OnvanTerm = $"{entry.Entity.Nimsal} {entry.Entity.SalTahsili}".Trim();
+                }
+            }
         }
     }
 }

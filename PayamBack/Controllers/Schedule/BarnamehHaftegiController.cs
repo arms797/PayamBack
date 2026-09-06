@@ -1800,6 +1800,7 @@ namespace PayamBack.Controllers.Schedule
 
                 // 🔥 دریافت سمت اجرایی از ElmiTerm (فعال یا تأییدشده)
                 string? postEjraei = null;
+                decimal? vahedMovazafi = 0;
                 var user = await _context.Users
                     .FirstOrDefaultAsync(u => u.OstadId == program.OstadId);
                 if (user != null)
@@ -1811,6 +1812,10 @@ namespace PayamBack.Controllers.Schedule
                     if (elmiTerm != null && elmiTerm.IsEjeari == true)
                     {
                         postEjraei = elmiTerm.OnvanEjraei;
+                    }
+                    if(elmiTerm!=null )
+                    {
+                        vahedMovazafi = elmiTerm.TedadVahedMovazafi ?? 0;
                     }
                 }
 
@@ -1831,6 +1836,9 @@ namespace PayamBack.Controllers.Schedule
                 var activeDays = await _lookupCache.GetActiveDaysAsync();
                 var dayDict = activeDays.ToDictionary(d => d.Code.ToString(), d => d.Title);
 
+                var modirGroohName = await GetUserFullNameAsync(program.UserIdModirGrooh);
+                var raeisMarkazName = await GetUserFullNameAsync(program.UserIdRaeisMarkaz);
+                var moavenName = await GetUserFullNameAsync(program.UserIdMoaven);
                 // ============================================================
                 // 6️⃣ ساخت خروجی
                 // ============================================================
@@ -1841,7 +1849,8 @@ namespace PayamBack.Controllers.Schedule
                     OstadName = program.Ostad?.Naam ?? "",
                     OstadLastName = program.Ostad?.NaamKhanevadegi ?? "",
                     OstadCode = program.Ostad?.CodeOstadi ?? "",
-                    OstadMarkaz = program.Ostad?.Markaz?.NaamMarkaz ?? "",
+                    OstadMarkaz = program.Ostad?.Markaz ?? null,
+                    //OstadOstan = program.Ostad?.Markaz?.NaamOstan ?? "",
                     CodeTerm = program.CodeTerm,
 
                     // ============================================================
@@ -1851,6 +1860,7 @@ namespace PayamBack.Controllers.Schedule
                     Maghta = maghta,
                     MartabehElmi = program.Ostad?.MartabeElmi,
                     PostEjraei = postEjraei,
+                    VahedMovazafi=vahedMovazafi,
                     Mobile = program.Ostad?.Mobile,
                     NoeHamkari = GetNoeHamkariDisplay(program.Ostad.NoeHamkari),
 
@@ -1863,6 +1873,10 @@ namespace PayamBack.Controllers.Schedule
                     NazarModirGroohDisplay = GetNazarDisplay(program.NazarModirGrooh),
                     NazarMoaven = program.NazarMoaven,
                     NazarMoavenDisplay = GetNazarDisplay(program.NazarMoaven),
+
+                    RaeisMarkazNaam=raeisMarkazName,
+                    ModirGroohNaam=modirGroohName,
+                    MoavenNaam=moavenName,
 
                     IsLocked = program.IsLocked,
                     ApproveStatus = GetApproveStatus(program),
@@ -2332,7 +2346,7 @@ namespace PayamBack.Controllers.Schedule
                 program.UserIdModirGrooh = currentUser.Id;
                 var rn = currentRole?.Name?.Trim() ?? "نقش نامشخص";
                 var mn = currentMarkaz?.NaamMarkaz?.Trim() ?? "بدون مرکز";
-                program.RoleMarkazModirGrooh = $"{rn} - {mn}";
+                program.RoleMarkazModirGrooh = $"{rn}-{mn}";
 
                 // 🔥 اگر مدیر گروه برنامه را رد کند، به مرحله پیش‌نویس برگردان
                 if (dto.ApproveStatus == 2) // رد
@@ -2362,6 +2376,87 @@ namespace PayamBack.Controllers.Schedule
                 {
                     success = false,
                     message = "خطا در بررسی برنامه توسط مدیر گروه",
+                    error = ex.Message
+                });
+            }
+        }
+
+        /// <summary>
+        /// تایید توسط رییس مرکز
+        /// </summary>
+        [HttpPatch("confirm/raeis/{id}")]
+        public async Task<IActionResult> ConfirmByRaeisMarkaz(int id, [FromBody] RaeisMarkazApproveDto dto)
+        {
+            try
+            {
+                // ۱. دریافت اطلاعات کاربر فعلی
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
+                if (currentUser == null || codeRole == null)
+                    return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
+
+                // ۲. دریافت برنامه
+                var program = await _context.BarnamehHaftegiOstads
+                    .Include(b => b.Ostad)
+                        .ThenInclude(o => o.Markaz)
+                    .FirstOrDefaultAsync(b => b.Id == id);
+
+                if (program == null)
+                    return NotFound(new { success = false, message = "برنامه یافت نشد" });
+
+                // ۳. 🔥 بررسی مطابقت مرکز (رئیس مرکز فقط می‌تواند برنامه استادان مرکز خود را تأیید کند)
+                if (currentMarkaz == null || program.Ostad.MarkazId == null)
+                    return BadRequest(new { success = false, message = "اطلاعات مرکز کامل نیست" });
+
+                if (program.Ostad.MarkazId.Value != currentMarkaz.Id)
+                    return Forbid("شما فقط می‌توانید برنامه استادان مرکز خود را تأیید کنید");
+
+                // ۴. بررسی وضعیت برنامه
+                if (program.NazarElmi != 1)
+                    return BadRequest(new { success = false, message = "برنامه باید ابتدا توسط استاد تأیید شود" });
+
+                // (اختیاری) اگر ترتیب: استاد → رئیس مرکز → مدیر گروه است، این شرط را حذف کنید
+                // if (program.NazarModirGrooh != 0)
+                //     return BadRequest(new { success = false, message = "برنامه قبلاً توسط مدیر گروه بررسی شده است" });
+
+                if (program.NazarRaeisMarkaz != null && program.NazarRaeisMarkaz != 0)
+                    return BadRequest(new { success = false, message = "این برنامه قبلاً توسط رئیس مرکز بررسی شده است" });
+
+                // ۵. ثبت نظر رئیس مرکز
+                program.NazarRaeisMarkaz = dto.ApproveStatus;
+                program.TarikhRaeisMarkaz = DateTime.UtcNow;
+                program.UserIdRaeisMarkaz = currentUser.Id;
+                var roleName = currentRole?.Name?.Trim() ?? "نقش نامشخص";
+                var markazName = currentMarkaz?.NaamMarkaz?.Trim() ?? "بدون مرکز";
+                program.RoleMarkazRaeisMarkaz = $"{roleName}-{markazName}";
+
+                // 🔥 اگر رئیس مرکز برنامه را رد کند، به مرحله پیش‌نویس برگردان
+                if (dto.ApproveStatus == 2) // رد
+                {
+                    program.IsLocked = false;
+                    program.NazarElmi = 0;
+                    //program.TarikhElmi = null;
+                    // در صورت نیاز، نظر مدیر گروه و رئیس مرکز نیز پاک می‌شوند
+                    program.NazarModirGrooh = 0;
+                    //program.TarikhModirGrooh = null;
+                }
+
+                await _context.SaveChangesAsync();
+
+                var statusText = dto.ApproveStatus == 1 ? "تایید" : "رد";
+                return Ok(new
+                {
+                    success = true,
+                    message = dto.ApproveStatus == 1
+                        ? "برنامه با موفقیت توسط رئیس مرکز تایید شد"
+                        : "برنامه توسط رئیس مرکز رد شد و به مرحله پیش‌نویس بازگشت"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در بررسی برنامه توسط رئیس مرکز",
                     error = ex.Message
                 });
             }
@@ -2413,7 +2508,7 @@ namespace PayamBack.Controllers.Schedule
                 program.UserIdMoaven = currentUser.Id;
                 var rn = currentRole?.Name?.Trim() ?? "نقش نامشخص";
                 var mn = currentMarkaz?.NaamMarkaz?.Trim() ?? "بدون مرکز";
-                program.RoleMarkazMoaven = $"{rn} - {mn}";
+                program.RoleMarkazMoaven = $"{rn}-{mn}";
                 // ۷. اگر معاون برنامه را رد کند، به مرحله پیش‌نویس برگردان
                 if (dto.ApproveStatus == 2) // رد
                 {
@@ -2637,7 +2732,29 @@ namespace PayamBack.Controllers.Schedule
         // ============================================================
         // 🔥 متدهای کمکی نمایشی
         // ============================================================
+        // متد کمکی برای دریافت نام کامل کاربر بر اساس UserId
+        private async Task<string?> GetUserFullNameAsync(int? userId)
+        {
+            if (!userId.HasValue) return null;
 
+            var user = await _context.Users
+                .Include(u => u.Ostad)
+                .Include(u => u.Karmand)
+                .FirstOrDefaultAsync(u => u.Id == userId.Value);
+
+            if (user == null) return null;
+
+            // اگر کاربر استاد است
+            if (user.Ostad != null)
+                return $"{user.Ostad.Naam} {user.Ostad.NaamKhanevadegi}".Trim();
+
+            // اگر کاربر کارمند است
+            if (user.Karmand != null)
+                return $"{user.Karmand.Naam} {user.Karmand.NaameKhanevadeghi}".Trim();
+
+            // در غیر این صورت، نام کاربری را برگردان
+            return user.UserName;
+        }
         private string GetNazarDisplay(int? nazar)
         {
             return nazar switch
@@ -2777,7 +2894,7 @@ namespace PayamBack.Controllers.Schedule
         public string OstadName { get; set; } = string.Empty;
         public string OstadLastName { get; set; } = string.Empty;
         public string OstadCode { get; set; } = string.Empty;
-        public string OstadMarkaz { get; set; } = string.Empty;
+        public Markaz OstadMarkaz { get; set; } 
         public string CodeTerm { get; set; } = string.Empty;
 
         // ============================================================
@@ -2787,6 +2904,7 @@ namespace PayamBack.Controllers.Schedule
         public string? Maghta { get; set; }            // از OstadMadrak (PishFarz == true)
         public string? MartabehElmi { get; set; }      // از Ostad
         public string? PostEjraei { get; set; }        // از ElmiTerm (فعال یا تأییدشده)
+        public decimal? VahedMovazafi { get; set; }
         public string? Mobile { get; set; }            // از Ostad
         public int NoeHamkari { get; set; }            // از Ostad
 
@@ -2798,6 +2916,10 @@ namespace PayamBack.Controllers.Schedule
         public int? NazarMoaven { get; set; }
         public string NazarMoavenDisplay { get; set; } = string.Empty;
         public bool IsLocked { get; set; }
+        public string? ModirGroohNaam { get; set; } = string.Empty;
+        public string? RaeisMarkazNaam { get; set; } = string.Empty;
+        public string? MoavenNaam { get; set; } = string.Empty;
+
 
         public string ApproveStatus { get; set; } = string.Empty;
         public string ApproveStatusDisplay { get; set; } = string.Empty;
@@ -2861,6 +2983,13 @@ namespace PayamBack.Controllers.Schedule
     }
 
     public class ModirGroohApproveDto
+    {
+        [Required]
+        [Range(1, 2, ErrorMessage = "مقدار باید ۱ (تایید) یا ۲ (رد) باشد")]
+        public int ApproveStatus { get; set; }
+    }
+
+    public class RaeisMarkazApproveDto
     {
         [Required]
         [Range(1, 2, ErrorMessage = "مقدار باید ۱ (تایید) یا ۲ (رد) باشد")]

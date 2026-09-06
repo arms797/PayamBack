@@ -32,6 +32,8 @@ namespace PayamBack.Controllers.Edu
                     .Select(t => new TermListDto
                     {
                         CodeTerm = t.CodeTerm ?? "",
+                        Nimsal=t.Nimsal??"",
+                        SalTahsili=t.SalTahsili??"",
                         OnvanTerm = t.OnvanTerm ?? "",
                         TermJariShoroo = t.TermJariShoroo,
                         TermJariPayan = t.TermJariPayan,
