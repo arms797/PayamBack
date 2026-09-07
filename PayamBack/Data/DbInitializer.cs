@@ -351,22 +351,9 @@ namespace PayamBack
                 if (!context.Terms.Any())
                 {
                     var t = new List<Term>
-                    {
-                        new(){CodeTerm="4042",Nimsal="دوم",SalTahsili="1405-1404",TermJariShoroo=new DateOnly(2026,1,1),
-                            TermJariPayan=new DateOnly(2026,6,21),TarikheDastrasi=new DateOnly(2025,12,6),
-                            TarikheEraeeDars=new DateOnly(2025,12,10),TarikhePayanDars=new DateOnly(2026,3,6),
-                            TarikheShorooClass=new DateOnly(2026,2,1),TarikhePayanClass=new DateOnly(2026,5,24),
-                            TarikheShorooMojavezMarakez=new DateOnly(2025,12,7),TarikhePayanMojavezMarakez=new DateOnly(2026,1,30),
-                            Vazeeyat=false,IsHaftegiRequired=true
-                        },
-                        new(){CodeTerm="4043",Nimsal="تابستان",SalTahsili="1405-1404",TermJariShoroo=new DateOnly(2026,6,22),
-                            TermJariPayan=new DateOnly(2026,9,14),TarikheDastrasi=new DateOnly(2026,6,22),
-                            TarikheEraeeDars=new DateOnly(2026,6,22),TarikhePayanDars=new DateOnly(2026,7,22),
-                            TarikheShorooClass=new DateOnly(2026,7,11),TarikhePayanClass=new DateOnly(2026,9,1),
-                            TarikheShorooMojavezMarakez=new DateOnly(2026,6,22),TarikhePayanMojavezMarakez=new DateOnly(2026,7,11),
-                            Vazeeyat=false,IsHaftegiRequired=false
-                        },
-                        new(){CodeTerm="4051",Nimsal="اول",SalTahsili="1406-1405",TermJariShoroo=new DateOnly(2026,9,23),
+                    {                       
+                      
+                        new(){CodeTerm="4051",OnvanTerm="نیمسال اول 1406-1405",Nimsal="اول",SalTahsili="1406-1405",TermJariShoroo=new DateOnly(2026,9,23),
                             TermJariPayan=new DateOnly(2027,1,20),TarikheDastrasi=new DateOnly(2026,9,1),
                             TarikheEraeeDars=new DateOnly(2026,9,6),TarikhePayanDars=new DateOnly(2026,10,22),
                             TarikheShorooClass=new DateOnly(2026,9,23),TarikhePayanClass=new DateOnly(2026,12,21),

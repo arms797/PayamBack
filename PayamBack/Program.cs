@@ -8,7 +8,6 @@ using PayamBack.Filters;
 using PayamBack.Models.Identity;
 using PayamBack.Services.Implementations;
 using PayamBack.Services.Interfaces;
-using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -18,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 // 1️⃣ DbContext
 // ============================================================
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ============================================================
 // 2️⃣ Identity
@@ -30,7 +29,6 @@ builder.Services.AddIdentity<AppUser, AppRole>(opt =>
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
-
 
 // ============================================================
 // 3️⃣ In-Memory Cache
@@ -92,14 +90,11 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICaptchaService, CaptchaService>();
 builder.Services.AddScoped<ISignatureService, SignatureService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddScoped<IMarkazCacheService, MarkazCacheService>(); 
+builder.Services.AddScoped<IMarkazCacheService, MarkazCacheService>();
 builder.Services.AddScoped<IAccessService, AccessService>();
-builder.Services.AddScoped<ICacheManager,CacheManager>();
+builder.Services.AddScoped<ICacheManager, CacheManager>();
 builder.Services.AddScoped<IPermissionCacheService, PermissionCacheService>();
 builder.Services.AddScoped<ILookupCacheService, LookupCacheService>();
-
-
-
 
 builder.Services.AddHttpContextAccessor();
 
@@ -107,7 +102,11 @@ builder.Services.AddHttpContextAccessor();
 // 7️⃣ CORS برای React
 // ============================================================
 builder.Services.AddCors(opt => opt.AddPolicy("React", p =>
-    p.WithOrigins("http://localhost:5173", "http://localhost:3000")
+    p.WithOrigins(
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://94.74.170.19"   // ← آدرس سرور خودتان را اضافه کنید
+    )
      .AllowAnyMethod()
      .AllowAnyHeader()
      .AllowCredentials()));
@@ -120,10 +119,21 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("React");
+
+// ============================================================
+// 🔥 مهم: این سه خط را اضافه کنید
+// ============================================================
+app.UseDefaultFiles();           // ← ایندکس پیش‌فرض (index.html)
+app.UseStaticFiles();            // ← سرو فایل‌های استاتیک از wwwroot
+
 app.UseAuthentication();
-
-
 app.UseAuthorization();
+
+// ============================================================
+// 🔥 Fallback برای React Router
+// ============================================================
+app.MapFallbackToFile("index.html");
+
 app.MapControllers();
 
 // ============================================================
