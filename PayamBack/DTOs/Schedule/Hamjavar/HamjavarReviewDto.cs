@@ -26,9 +26,10 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
         /// <summary>
         /// لیست تعداد روزهای پیشنهادی برای هر Hamjavar1
         /// </summary>
-        public List<Hamjavar1TedadDto>? TedadRoozList { get; set; }
+       public List<Hamjavar1TedadDto>? TedadRoozList { get; set; }
 
-        public string? FaaliatIdsString { get; set; }
+
+        public List<Hamjavar1FaaliatDto>? FaaliatList { get; set; }
 
 
         /// <summary>
@@ -44,4 +45,14 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
 
         public int? TedadRooz { get; set; }
     }
+
+    public class Hamjavar1FaaliatDto
+    {
+        [Required]
+        public int Id { get; set; }  // شناسه Hamjavar1
+
+        public List<int> FaaliatIds { get; set; } = new();
+    }
+
+
 }

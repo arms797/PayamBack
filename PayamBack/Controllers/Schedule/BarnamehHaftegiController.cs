@@ -1009,7 +1009,13 @@ namespace PayamBack.Controllers.Schedule
 
             if (validSessions < requiredSessions)
             {
-                errors.Add($"حداقل {requiredSessions} جلسه ({requiredHours} ساعت) باید در مرکز اصلی یا مراکز مجاز پر شود. تعداد جلسات معتبر فعلی: {validSessions}");
+                //errors.Add($"حداقل {requiredSessions} جلسه ({requiredHours} ساعت) باید در مرکز اصلی یا مراکز مجاز پر شود. تعداد جلسات معتبر فعلی: {validSessions}");
+            }
+            var allsession = CountAllSessions(program);
+            if(allsession<requiredSessions)
+            {
+                errors.Add($"حداقل {requiredSessions} جلسه ({requiredHours} ساعت) باید در مرکز اصلی یا مراکز مجاز پر شود. تعداد جلسات معتبر فعلی: {allsession}");
+
             }
 
             // ============================================================
@@ -1081,6 +1087,30 @@ namespace PayamBack.Controllers.Schedule
             }
 
             return validCount;
+        }
+        //شمارش همه جلسات
+        private int CountAllSessions(BarnamehHaftegiOstad program)
+        {
+            int count = 0;
+
+            foreach (var detail in program.BarnamehHaftegiOstad1s)
+            {
+                // تمام فیلدهای ساعت (A تا H)
+                var hourFields = new List<int?>
+                {
+                    detail.A, detail.B, detail.C, detail.D,
+                    detail.E, detail.F, detail.G, detail.H
+                };
+
+                foreach (var faaliatId in hourFields)
+                {
+                    // اگر فعالیت انتخاب شده باشد (نه null و نه 0)
+                    if (faaliatId.HasValue && faaliatId.Value != 0)
+                        count++;
+                }
+            }
+
+            return count;
         }
 
         // محاسبه تعداد روزها بر اساس ساعت موظف هفتگی

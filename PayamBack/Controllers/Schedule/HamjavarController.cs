@@ -1371,6 +1371,25 @@ namespace PayamBack.Controllers.Schedule
                         }
                     }
 
+                    // ============================================================
+                    // 3️⃣ 🔥 به‌روزرسانی فعالیت‌ها با شناسه هر آیتم
+                    // ============================================================
+                    if (dto.FaaliatList != null && dto.FaaliatList.Any())
+                    {
+                        foreach (var faaliatItem in dto.FaaliatList)
+                        {
+                            var detail = hamjavar.Hamjavar1s
+                                .FirstOrDefault(d => d.Id == faaliatItem.Id);
+
+                            if (detail != null)
+                            {
+                                detail.FaaliatIds = faaliatItem.FaaliatIds != null && faaliatItem.FaaliatIds.Any()
+                                    ? string.Join("|", faaliatItem.FaaliatIds)
+                                    : null;
+                            }
+                        }
+                    }
+
                     hamjavar.NazarMoaven = dto.Nazar;
                     hamjavar.TozihatMoaven = dto.Tozihat;
                     hamjavar.TarikhErsalMoaven = DateTime.Now;
