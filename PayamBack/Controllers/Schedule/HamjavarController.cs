@@ -1312,9 +1312,6 @@ namespace PayamBack.Controllers.Schedule
         // ============================================================
         // 8️⃣ بررسی نهایی توسط معاونت آموزشی استان
         // ============================================================
-        /// <summary>
-        /// بررسی نهایی توسط معاونت آموزشی استان
-        /// </summary>
         [HttpPatch("review-moaven")]
         public async Task<IActionResult> ReviewByMoaven([FromForm] HamjavarReviewDto dto)
         {
@@ -1345,9 +1342,6 @@ namespace PayamBack.Controllers.Schedule
 
                 try
                 {
-                    // ============================================================
-                    // 1️⃣ ذخیره فایل (اگر وجود داشته باشد)
-                    // ============================================================
                     if (dto.UploadFile != null)
                     {
                         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };
@@ -1365,9 +1359,6 @@ namespace PayamBack.Controllers.Schedule
                         uploadMoavenPath = await SaveFileAsync(dto.UploadFile, "hamjavar");
                     }
 
-                    // ============================================================
-                    // 2️⃣ به‌روزرسانی تعداد روزها
-                    // ============================================================
                     if (dto.TedadRoozList != null && dto.TedadRoozList.Any())
                     {
                         foreach (var item in dto.TedadRoozList)
@@ -1380,40 +1371,6 @@ namespace PayamBack.Controllers.Schedule
                         }
                     }
 
-                    // ============================================================
-                    // 3️⃣ 🔥 به‌روزرسانی فعالیت‌ها (فقط اگر رشته ارسال شده باشد)
-                    // ============================================================
-                    if (!string.IsNullOrEmpty(dto.FaaliatIdsString))
-                    {
-                        // رشته را به لیست اعداد تبدیل کن
-                        var faaliatIds = dto.FaaliatIdsString
-                            .Split('|', StringSplitOptions.RemoveEmptyEntries)
-                            .Select(int.Parse)
-                            .ToList();
-
-                        // اگر لیست خالی نبود، به‌روزرسانی کن
-                        if (faaliatIds.Any())
-                        {
-                            // به‌روزرسانی تمام Hamjavar1ها با این رشته
-                            // (فرض: همه مراکز یک رشته واحد دارند)
-                            foreach (var detail in hamjavar.Hamjavar1s)
-                            {
-                                detail.FaaliatIds = dto.FaaliatIdsString;
-                            }
-                        }
-                        else
-                        {
-                            // اگر لیست خالی بود، همه را null کن
-                            foreach (var detail in hamjavar.Hamjavar1s)
-                            {
-                                detail.FaaliatIds = null;
-                            }
-                        }
-                    }
-
-                    // ============================================================
-                    // 4️⃣ ثبت نظر معاون
-                    // ============================================================
                     hamjavar.NazarMoaven = dto.Nazar;
                     hamjavar.TozihatMoaven = dto.Tozihat;
                     hamjavar.TarikhErsalMoaven = DateTime.Now;

@@ -28,10 +28,8 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
         /// </summary>
         public List<Hamjavar1TedadDto>? TedadRoozList { get; set; }
 
-        /// <summary>
-        /// لیست فعالیت‌های انتخاب‌شده برای هر مرکز (فقط برای معاون)
-        /// </summary>
         public string? FaaliatIdsString { get; set; }
+
 
         /// <summary>
         /// فایل آپلودی (برای هر نقش جداگانه)
@@ -46,9 +44,4 @@ namespace PayamBack.DTOs.Schedule.Hamjavar
 
         public int? TedadRooz { get; set; }
     }
-
-    /// <summary>
-    /// DTO برای انتخاب فعالیت‌های هر مرکز توسط معاون
-    /// </summary>
-   
 }
