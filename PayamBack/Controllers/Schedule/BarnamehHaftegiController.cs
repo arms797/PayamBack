@@ -922,8 +922,8 @@ namespace PayamBack.Controllers.Schedule
                     if (!isMainMarkaz && isHozooriActivity)
                     {
                         var allowedFaaliatIds = dayMarkazInfo.AllowedFaaliatIds;
-                        if (!allowedFaaliatIds.Contains(activityId.Value))
-                            return (false, $"فعالیت '{faaliat.Onvan}' برای مرکز {GetMarkazName(dayMarkazId, allMarkaz)} مجاز نیست");
+                        //if (!allowedFaaliatIds.Contains(activityId.Value))
+                        //    return (false, $"فعالیت '{faaliat.Onvan}' برای مرکز {GetMarkazName(dayMarkazId, allMarkaz)} مجاز نیست");
                     }
 
                     // قانون ۴: اگر مرکز غیراصلی است و فعالیت مجازی است، نیازی به مجوز خاصی ندارد (قبلاً بررسی شده)
@@ -1291,8 +1291,9 @@ namespace PayamBack.Controllers.Schedule
         [HttpGet("permitted-markazs")]
         public async Task<IActionResult> GetPermittedMarkazs([FromQuery] int ostadId, [FromQuery] string termCode)
         {
-            try
+           try
             {
+                /*
                 // اعتبارسنجی ورودی
                 if (ostadId <= 0 || string.IsNullOrEmpty(termCode))
                 {
@@ -1311,13 +1312,16 @@ namespace PayamBack.Controllers.Schedule
                     AllowedFaaliatIds = p.AllowedFaaliatIds,
                     p.NoeMarkaz
                 });
-
+                
+                */
+                var result = await GetPermittedMarkazInfoAsync(ostadId, termCode);
                 return Ok(new
                 {
                     success = true,
                     message = "مراکز مجاز با موفقیت دریافت شدند",
                     data = result
                 });
+                
             }
             catch (Exception ex)
             {
