@@ -180,7 +180,9 @@ namespace PayamBack.Services.Implementations
                 Roles = roles,
                 Menus = menus,
                 Permissions = permissions,
+                NoeHamkari=user.Ostad?.NoeHamkari ?? 0,
                 ExpiresIn = Convert.ToInt32(_configuration["Jwt:AccessTokenExpiryMinutes"] ?? "15")
+                
             };
         }
 

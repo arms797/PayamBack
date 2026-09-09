@@ -1,4 +1,6 @@
-﻿namespace PayamBack.DTOs.Identity
+﻿using PayamBack.Models.Core;
+
+namespace PayamBack.DTOs.Identity
 {
     /// <summary>
     /// DTO پاسخ ورود یا تمدید توکن
@@ -21,6 +23,7 @@
         public int ExpiresIn { get; set; }                          // مدت اعتبار توکن (دقیقه)
         public bool? IsElmiOstad { get; set; }
         public bool? HasActiveElmiTerm { get; set; }
+        public NoeHamkariEnum? NoeHamkari { get; set; }
     }
 
     /// <summary>

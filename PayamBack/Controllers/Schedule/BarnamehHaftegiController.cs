@@ -124,6 +124,37 @@ namespace PayamBack.Controllers.Schedule
                 .Include(o => o.Markaz)
                 .FirstOrDefaultAsync(o => o.Id == ostadId);
 
+
+            if(ostad.NoeHamkari!=NoeHamkariEnum.HeyatElmiPayamNoor)
+            {
+                // 🔥 دریافت مرکز از نقش فعلی کاربر (Current Role)
+                var (_, _, currentMarkaz, _) = await _currentUserService.GetCurrentUserInfoAsync();
+
+                if (currentMarkaz == null) return result;
+
+                // 🔥 دریافت همه مراکز از کش
+                var allMarkazs = await _markazCache.GetAllAsync();
+
+                // فیلتر کردن در مموری
+                var filteredMarkazs = allMarkazs
+                    .Where(m => m.Vazeeyat == true
+                                && m.CodeOstan == currentMarkaz.CodeOstan
+                                && m.Level == 4)
+                    .Select(m => new PermittedMarkazInfo
+                    {
+                        MarkazId = m.Id,
+                        IsMainMarkaz = m.Id == currentMarkaz.Id,
+                        MaxDays = null,
+                        AllowedFaaliatIds = new List<int>(),
+                        NoeMarkaz = m.NoeMarkaz ?? 1
+                    })
+                    .ToList();
+
+                result.AddRange(filteredMarkazs);
+
+                _cache.Set(cacheKey, result, TimeSpan.FromHours(1));
+                return result;
+            }
             if (ostad?.MarkazId != null && ostad.Markaz != null)
             {
                 result.Add(new PermittedMarkazInfo
@@ -830,23 +861,26 @@ namespace PayamBack.Controllers.Schedule
                     return (false, $"روز {GetDayTitle(detail.RoozeHafteh)} برای برنامه‌ریزی مجاز نیست");
 
                 // بررسی مجاز بودن MarkazId روز
-                //var markazId = detail.MarkazId ?? 0;                    
-                if (!permittedDict.ContainsKey(detail.MarkazId))
-                    return (false, $"مرکز انتخاب‌شده برای روز {GetDayTitle(detail.RoozeHafteh)} مجاز نیست");
-
-                var markazInfo = permittedDict[detail.MarkazId];
-
-                // اگر مرکز غیراصلی است، تعداد روزهای استفاده را بررسی کن
-                if (!markazInfo.IsMainMarkaz)
+                //var markazId = detail.MarkazId ?? 0;
+                if (ostad.NoeHamkari == NoeHamkariEnum.HeyatElmiPayamNoor)
                 {
-                    if (!nonMainMarkazUsage.ContainsKey(detail.MarkazId))
-                        nonMainMarkazUsage[detail.MarkazId] = 0;
+                    if (!permittedDict.ContainsKey(detail.MarkazId))
+                        return (false, $"مرکز انتخاب‌شده برای روز {GetDayTitle(detail.RoozeHafteh)} مجاز نیست");
 
-                    nonMainMarkazUsage[detail.MarkazId]++;
+                    var markazInfo = permittedDict[detail.MarkazId];
 
-                    if (nonMainMarkazUsage[detail.MarkazId] > markazInfo.MaxDays)
-                        return (false, $"تعداد روزهای استفاده از مرکز {GetMarkazName(detail.MarkazId, allMarkaz)} بیش از حد مجاز ({markazInfo.MaxDays} روز) است");
-                }
+                    // اگر مرکز غیراصلی است، تعداد روزهای استفاده را بررسی کن
+                    if (!markazInfo.IsMainMarkaz)
+                    {
+                        if (!nonMainMarkazUsage.ContainsKey(detail.MarkazId))
+                            nonMainMarkazUsage[detail.MarkazId] = 0;
+
+                        nonMainMarkazUsage[detail.MarkazId]++;
+
+                        if (nonMainMarkazUsage[detail.MarkazId] > markazInfo.MaxDays)
+                            return (false, $"تعداد روزهای استفاده از مرکز {GetMarkazName(detail.MarkazId, allMarkaz)} بیش از حد مجاز ({markazInfo.MaxDays} روز) است");
+                    }
+                }               
             }
 
             // ============================================================
@@ -857,22 +891,25 @@ namespace PayamBack.Controllers.Schedule
                 var dayMarkazId = detail.MarkazId;
                 var dayMarkazInfo = permittedDict[dayMarkazId];
                 var isMainMarkaz = dayMarkazInfo.IsMainMarkaz;
-
-                // برای مراکز غیراصلی، بررسی حداقل ۳ جلسه در همان مرکز
-                if (!isMainMarkaz)
+                if(ostad.NoeHamkari==NoeHamkariEnum.HeyatElmiPayamNoor)
                 {
-                    var hourFields = new List<int?>
+                    // برای مراکز غیراصلی، بررسی حداقل ۳ جلسه در همان مرکز
+                    if (!isMainMarkaz)
+                    {
+                        var hourFields = new List<int?>
                     {
                         detail.MarkazIdA, detail.MarkazIdB, detail.MarkazIdC,
                         detail.MarkazIdD, detail.MarkazIdE, detail.MarkazIdF,
                         detail.MarkazIdG, detail.MarkazIdH
                     };
 
-                    var mainMarkazSessionCount = hourFields.Count(id => id.HasValue && id.Value == dayMarkazId);
+                        var mainMarkazSessionCount = hourFields.Count(id => id.HasValue && id.Value == dayMarkazId);
 
-                    if (mainMarkazSessionCount < 3)
-                        return (false, $"در روز {GetDayTitle(detail.RoozeHafteh)}، برای مرکز غیراصلی باید حداقل ۳ جلسه (۶ ساعت) در همان مرکز باشد");
+                        if (mainMarkazSessionCount < 3 )
+                            return (false, $"در روز {GetDayTitle(detail.RoozeHafteh)}، برای مرکز غیراصلی باید حداقل ۳ جلسه (۶ ساعت) در همان مرکز باشد");
+                    }
                 }
+                
 
                 // اعتبارسنجی هر ساعت
                 var hourFieldsWithActivity = new List<(int? ActivityId, int? MarkazId, string FieldName, string CodeSaat)>
@@ -944,10 +981,10 @@ namespace PayamBack.Controllers.Schedule
                 if (!isHeyatElmi)
                 {
                     var allActivityIds = new List<int?>
-            {
-                detail.A, detail.B, detail.C, detail.D,
-                detail.E, detail.F, detail.G, detail.H
-            }
+                    {
+                        detail.A, detail.B, detail.C, detail.D,
+                        detail.E, detail.F, detail.G, detail.H
+                    }
                     .Where(id => id.HasValue && id.Value > 0)
                     .Select(id => id.Value)
                     .Distinct()
@@ -1038,7 +1075,7 @@ namespace PayamBack.Controllers.Schedule
             // ============================================================
             // 6️⃣ بررسی حداقل ۳ جلسه در مراکز غیراصلی
             // ============================================================
-            var sessionsErrors = ValidateNonMainMarkazSessions(program, permittedMarkazInfo);
+            var sessionsErrors =await ValidateNonMainMarkazSessions(program, permittedMarkazInfo);
             if (sessionsErrors.Any()) errors.AddRange(sessionsErrors);
 
             return (errors.Count == 0, errors, warnings);
@@ -1196,57 +1233,62 @@ namespace PayamBack.Controllers.Schedule
         }
 
         // چک کردن حداقل 3 جلسه در مرکز همجوار برای هر روز
-        private List<string> ValidateNonMainMarkazSessions(
+        private async Task<List<string>> ValidateNonMainMarkazSessions(
             BarnamehHaftegiOstad program,
             List<PermittedMarkazInfo> permittedMarkazInfo)
         {
             var errors = new List<string>();
-            var nonMainMarkazInfo = permittedMarkazInfo
-                .Where(x => !x.IsMainMarkaz)
-                .ToDictionary(x => x.MarkazId, x => x.AllowedFaaliatIds);
+            var (userInfo,_,_,_)=await _currentUserService.GetCurrentUserInfoAsync();
+            if(userInfo.Ostad.NoeHamkari==NoeHamkariEnum.HeyatElmiPayamNoor)
+            {           
+            
+                var nonMainMarkazInfo = permittedMarkazInfo
+                    .Where(x => !x.IsMainMarkaz)
+                    .ToDictionary(x => x.MarkazId, x => x.AllowedFaaliatIds);
 
-            if (!nonMainMarkazInfo.Any()) return errors;
+                if (!nonMainMarkazInfo.Any()) return errors;
 
-            var groupedByDay = program.BarnamehHaftegiOstad1s.GroupBy(d => d.RoozeHafteh);
+                var groupedByDay = program.BarnamehHaftegiOstad1s.GroupBy(d => d.RoozeHafteh);
 
-            foreach (var dayGroup in groupedByDay)
-            {
-                var firstDetail = dayGroup.FirstOrDefault();
-                if (firstDetail == null) continue;
-
-                var dayMarkazId = firstDetail.MarkazId;
-                if (!dayMarkazId.HasValue || !nonMainMarkazInfo.ContainsKey(dayMarkazId.Value))
-                    continue;
-
-                var allowedFaaliatIds = nonMainMarkazInfo[dayMarkazId.Value];
-                int validSessionCount = 0;
-
-                var hourFields = new List<(int? FaaliatId, int? MarkazId)>
+                foreach (var dayGroup in groupedByDay)
                 {
-                    (firstDetail.A, firstDetail.MarkazIdA),
-                    (firstDetail.B, firstDetail.MarkazIdB),
-                    (firstDetail.C, firstDetail.MarkazIdC),
-                    (firstDetail.D, firstDetail.MarkazIdD),
-                    (firstDetail.E, firstDetail.MarkazIdE),
-                    (firstDetail.F, firstDetail.MarkazIdF),
-                    (firstDetail.G, firstDetail.MarkazIdG),
-                    (firstDetail.H, firstDetail.MarkazIdH)
-                };
+                    var firstDetail = dayGroup.FirstOrDefault();
+                    if (firstDetail == null) continue;
 
-                foreach (var (faaliatId, markazId) in hourFields)
-                {
-                    if (!faaliatId.HasValue || faaliatId.Value == 0 || !markazId.HasValue)
+                    var dayMarkazId = firstDetail.MarkazId;
+                    if (!dayMarkazId.HasValue || !nonMainMarkazInfo.ContainsKey(dayMarkazId.Value))
                         continue;
 
-                    if (markazId.Value == dayMarkazId.Value && allowedFaaliatIds.Contains(faaliatId.Value))
-                        validSessionCount++;
-                }
+                    var allowedFaaliatIds = nonMainMarkazInfo[dayMarkazId.Value];
+                    int validSessionCount = 0;
 
-                if (validSessionCount < 3)
-                {
-                    var dayTitle = GetDayDisplayFromLookupAsync(firstDetail.RoozeHafteh).Result;
-                    var markazName = GetMarkazNameAsync(dayMarkazId.Value).Result;
-                    errors.Add($"در روز {dayTitle} برای مرکز غیراصلی '{markazName}' حداقل ۳ جلسه (۶ ساعت) باید در همان مرکز ثبت شود.");
+                    var hourFields = new List<(int? FaaliatId, int? MarkazId)>
+                    {
+                        (firstDetail.A, firstDetail.MarkazIdA),
+                        (firstDetail.B, firstDetail.MarkazIdB),
+                        (firstDetail.C, firstDetail.MarkazIdC),
+                        (firstDetail.D, firstDetail.MarkazIdD),
+                        (firstDetail.E, firstDetail.MarkazIdE),
+                        (firstDetail.F, firstDetail.MarkazIdF),
+                        (firstDetail.G, firstDetail.MarkazIdG),
+                        (firstDetail.H, firstDetail.MarkazIdH)
+                    };
+
+                    foreach (var (faaliatId, markazId) in hourFields)
+                    {
+                        if (!faaliatId.HasValue || faaliatId.Value == 0 || !markazId.HasValue)
+                            continue;
+
+                        if (markazId.Value == dayMarkazId.Value && allowedFaaliatIds.Contains(faaliatId.Value))
+                            validSessionCount++;
+                    }
+
+                    if (validSessionCount < 3)
+                    {
+                        var dayTitle = GetDayDisplayFromLookupAsync(firstDetail.RoozeHafteh).Result;
+                        var markazName = GetMarkazNameAsync(dayMarkazId.Value).Result;
+                        errors.Add($"در روز {dayTitle} برای مرکز غیراصلی '{markazName}' حداقل ۳ جلسه (۶ ساعت) باید در همان مرکز ثبت شود.");
+                    }
                 }
             }
 
