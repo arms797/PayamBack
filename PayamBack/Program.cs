@@ -124,7 +124,28 @@ app.UseCors("React");
 // 🔥 مهم: این سه خط را اضافه کنید
 // ============================================================
 app.UseDefaultFiles();           // ← ایندکس پیش‌فرض (index.html)
-app.UseStaticFiles();            // ← سرو فایل‌های استاتیک از wwwroot
+// ← سرو فایل‌های استاتیک از wwwroot
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var path = ctx.File.Name.ToLower();
+        var requestPath = ctx.Context.Request.Path.Value?.ToLower() ?? "";
+
+        // 🔥 index.html هرگز کش نشود
+        if (path == "index.html" || !requestPath.Contains("."))
+        {
+            ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
+            ctx.Context.Response.Headers.Append("Pragma", "no-cache");
+            ctx.Context.Response.Headers.Append("Expires", "0");
+        }
+        // 🔥 فایل‌های هش‌دار در assets کش طولانی‌مدت
+        else if (requestPath.Contains("/assets/"))
+        {
+            ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=31536000, immutable");
+        }
+    }
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

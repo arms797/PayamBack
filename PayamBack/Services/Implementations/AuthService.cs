@@ -348,14 +348,7 @@ namespace PayamBack.Services.Implementations
                 _cacheManager.ClearPermissionCache(newRole.Id);
             }
 
-            // 3️⃣ (اختیاری) اگر نقش قدیمی هم نیاز به پاک کردن دارد
-            // اما معمولاً نیازی نیست چون مجوزهای نقش قدیمی تغییری نکرده است
-            // if (oldRoleId.HasValue)
-            // {
-            //     _cacheManager.ClearPermissionCache(oldRoleId.Value);
-            // }
-
-            // ❌ نیازی به پاک کردن کش RoleId_ نیست (نقش‌ها تغییر نمی‌کنند)
+            
 
             // ============================================================
             // 🔥 دریافت مجوزهای نقش جدید
@@ -452,6 +445,7 @@ namespace PayamBack.Services.Implementations
                 Roles = roles,
                 Menus = menus,
                 Permissions = permissions,
+                NoeHamkari = user.Ostad?.NoeHamkari ?? 0,
                 ExpiresIn = Convert.ToInt32(_configuration["Jwt:AccessTokenExpiryMinutes"] ?? "15"),
                 IsElmiOstad =isElmi,
                 HasActiveElmiTerm = ostadInfo?.HasElmiTerm ?? false
