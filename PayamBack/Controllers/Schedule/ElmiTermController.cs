@@ -695,5 +695,59 @@ namespace PayamBack.Controllers.Schedule
 
             return File(fileBytes, contentType, fileName);
         }
+
+        // ============================================================
+        // GET: api/ElmiTerm/by-user/{userId}
+        // دریافت اطلاعات علمی بر اساس UserId
+        // ============================================================
+        [HttpGet("by-user/{userId}")]
+        public async Task<IActionResult> GetByUserId(int userId)
+        {
+            try
+            {
+                // 🔥 دریافت آخرین رکورد ElmiTerm برای این کاربر
+                var elmiTerm = await _context.ElmiTerms
+                    .Where(e => e.UserId == userId && e.ApproveStatus==1 && e.Vazeeat==true)
+                    .OrderByDescending(e => e.Id) // آخرین رکورد
+                    .FirstOrDefaultAsync();
+
+                if (elmiTerm == null)
+                {
+                    // اگر رکوردی وجود نداشت، مقادیر پیش‌فرض برگردان
+                    return Ok(new
+                    {
+                        success = true,
+                        data = (object?)null
+                    });
+                }
+
+                var result = new ElmiTermDto
+                {
+                    Id = elmiTerm.Id,
+                    UserId = elmiTerm.UserId,
+                    AkharinVazeeat = elmiTerm.AkharinVazeeat ?? "مشغول به کار",
+                    IsEjeari = elmiTerm.IsEjeari ?? false,
+                    OnvanEjraei = elmiTerm.OnvanEjraei ?? "",
+                    FullTime = elmiTerm.FullTime ?? true,
+                    TedadSaatMovazafi = elmiTerm.TedadSaatMovazafi ?? 40,
+                    TedadVahedMovazafi = elmiTerm.TedadVahedMovazafi ?? 0
+                };
+
+                return Ok(new
+                {
+                    success = true,
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در دریافت اطلاعات علمی",
+                    error = ex.Message
+                });
+            }
+        }
     }
 }
