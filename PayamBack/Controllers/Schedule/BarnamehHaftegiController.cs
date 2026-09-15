@@ -769,6 +769,7 @@ namespace PayamBack.Controllers.Schedule
         {
             if (program.NazarMoaven == 1) return "tayeed_moaven";
             if (program.NazarModirGrooh == 1) return "tayeed_modir";
+            if (program.NazarRaeisMarkaz == 1) return "tayeed_raeis";
             if (program.NazarElmi == 1) return "tayeed_ostad";
             return "pishnevis";
         }
@@ -779,7 +780,8 @@ namespace PayamBack.Controllers.Schedule
             {
                 "pishnevis" => "پیش‌نویس",
                 "tayeed_ostad" => "تایید استاد",
-                "tayeed_modir" => "تایید مدیر گروه",
+                "tayeed_raeis" => "تایید رییس مرکز",
+                "tayeed_modir" => "تایید مدیر گروه",                
                 "tayeed_moaven" => "تایید معاون آموزشی استان",
                 "no_program" => "فاقد برنامه",
                 _ => "نامشخص"
@@ -1947,6 +1949,8 @@ namespace PayamBack.Controllers.Schedule
                     // ============================================================
                     NazarElmi = program.NazarElmi,
                     NazarElmiDisplay = GetNazarDisplay(program.NazarElmi),
+                    NazarRaeisMarkaz=program.NazarRaeisMarkaz,
+                    NazarRaeisMarkazDisplay=GetNazarDisplay(program.NazarRaeisMarkaz),
                     NazarModirGrooh = program.NazarModirGrooh,
                     NazarModirGroohDisplay = GetNazarDisplay(program.NazarModirGrooh),
                     NazarMoaven = program.NazarMoaven,
@@ -2145,31 +2149,46 @@ namespace PayamBack.Controllers.Schedule
                             _context.BarnamehHaftegiOstads.Any(b =>
                                 b.OstadId == o.Id &&
                                 b.CodeTerm == termCode &&
-                                b.NazarElmi == 0 &&
-                                b.NazarModirGrooh == 0 &&
-                                b.NazarMoaven == 0)),
+                                (b.NazarElmi ?? 0) == 0 &&
+                                (b.NazarRaeisMarkaz ?? 0) == 0 &&
+                                (b.NazarModirGrooh ?? 0) == 0 &&
+                                (b.NazarMoaven ?? 0) == 0)),
+
                         "tayeed_ostad" => ostadQuery.Where(o =>
                             _context.BarnamehHaftegiOstads.Any(b =>
                                 b.OstadId == o.Id &&
                                 b.CodeTerm == termCode &&
-                                b.NazarElmi == 1 &&
-                                b.NazarModirGrooh == 0 &&
-                                b.NazarMoaven == 0)),
+                                (b.NazarElmi ?? 0) == 1 &&
+                                (b.NazarRaeisMarkaz ?? 0) == 0 &&
+                                (b.NazarModirGrooh ?? 0) == 0 &&
+                                (b.NazarMoaven ?? 0) == 0)),
+
+                        "tayeed_raeis" => ostadQuery.Where(o =>
+                            _context.BarnamehHaftegiOstads.Any(b =>
+                                b.OstadId == o.Id &&
+                                b.CodeTerm == termCode &&
+                                (b.NazarRaeisMarkaz ?? 0) == 1 &&
+                                (b.NazarModirGrooh ?? 0) == 0 &&
+                                (b.NazarMoaven ?? 0) == 0)),
+
                         "tayeed_modir" => ostadQuery.Where(o =>
                             _context.BarnamehHaftegiOstads.Any(b =>
                                 b.OstadId == o.Id &&
                                 b.CodeTerm == termCode &&
-                                b.NazarModirGrooh == 1 &&
-                                b.NazarMoaven == 0)),
+                                (b.NazarModirGrooh ?? 0) == 1 &&
+                                (b.NazarMoaven ?? 0) == 0)),
+
                         "tayeed_moaven" => ostadQuery.Where(o =>
                             _context.BarnamehHaftegiOstads.Any(b =>
                                 b.OstadId == o.Id &&
                                 b.CodeTerm == termCode &&
-                                b.NazarMoaven == 1)),
+                                (b.NazarMoaven ?? 0) == 1)),
+
                         "no_program" => ostadQuery.Where(o =>
                             !_context.BarnamehHaftegiOstads.Any(b =>
                                 b.OstadId == o.Id &&
                                 b.CodeTerm == termCode)),
+
                         _ => ostadQuery
                     };
                 }
@@ -2661,6 +2680,7 @@ namespace PayamBack.Controllers.Schedule
                 // ۶. ریست همه نظرات
                 program.IsLocked = false;
                 program.NazarElmi = 0;
+                program.NazarRaeisMarkaz = 0;
                 program.NazarModirGrooh = 0;
                 program.NazarMoaven = 0;
                 program.TarikhElmi = null;
@@ -2990,6 +3010,8 @@ namespace PayamBack.Controllers.Schedule
 
         public int? NazarElmi { get; set; }
         public string NazarElmiDisplay { get; set; } = string.Empty;
+        public int? NazarRaeisMarkaz { get; set; }
+        public string NazarRaeisMarkazDisplay { get; set; } = string.Empty;
         public int? NazarModirGrooh { get; set; }
         public string NazarModirGroohDisplay { get; set; } = string.Empty;
         public int? NazarMoaven { get; set; }
