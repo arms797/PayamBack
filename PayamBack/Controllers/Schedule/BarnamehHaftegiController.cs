@@ -171,7 +171,7 @@ namespace PayamBack.Controllers.Schedule
             var hamjavarData = await _context.Hamjavar1s
                 .Where(h => h.Hamjavar.OstadId == ostadId
                             && h.Hamjavar.TermCode == termCode
-                            && h.Hamjavar.NazarMoaven == 2
+                            && (h.Hamjavar.NazarMoaven == 2 || h.Hamjavar.NazarMoaven==4)
                             && h.TedadRoozMoaven.HasValue
                             && h.TedadRoozMoaven.Value > 0)
                 .Select(h => new
@@ -818,7 +818,8 @@ namespace PayamBack.Controllers.Schedule
             // 2️⃣ دریافت اطلاعات مراکز مجاز
             // ============================================================
             var permittedMarkazInfo = await GetPermittedMarkazInfoAsync(ostadId, termCode);
-            var permittedDict = permittedMarkazInfo.ToDictionary(x => x.MarkazId);
+            var permittedDict = permittedMarkazInfo
+                .ToDictionary(x => x.MarkazId);
 
             // ============================================================
             // 3️⃣ دریافت اطلاعات استاد برای نوع همکاری (IsMadove)
@@ -870,14 +871,15 @@ namespace PayamBack.Controllers.Schedule
                     var markazInfo = permittedDict[detail.MarkazId];
 
                     // اگر مرکز غیراصلی است، تعداد روزهای استفاده را بررسی کن
-                    if (!markazInfo.IsMainMarkaz)
+                    
+                    if (!markazInfo.IsMainMarkaz )
                     {
                         if (!nonMainMarkazUsage.ContainsKey(detail.MarkazId))
                             nonMainMarkazUsage[detail.MarkazId] = 0;
 
                         nonMainMarkazUsage[detail.MarkazId]++;
 
-                        if (nonMainMarkazUsage[detail.MarkazId] > markazInfo.MaxDays)
+                        if (nonMainMarkazUsage[detail.MarkazId] > markazInfo.MaxDays )
                             return (false, $"تعداد روزهای استفاده از مرکز {GetMarkazName(detail.MarkazId, allMarkaz)} بیش از حد مجاز ({markazInfo.MaxDays} روز) است");
                     }
                 }               
@@ -1854,8 +1856,8 @@ namespace PayamBack.Controllers.Schedule
                 }
                 else
                 {
-                    if (!await _accessService.CanAccessTargetOstadAsync(program.OstadId, codeRole.Value, currentMarkaz?.Id))
-                        return Forbid();
+                    //if (!await _accessService.CanAccessTargetOstadAsync(program.OstadId, codeRole.Value, currentMarkaz?.Id))
+                     //   return Forbid();
                 }
 
                 // ============================================================
@@ -2375,13 +2377,14 @@ namespace PayamBack.Controllers.Schedule
                     return Unauthorized("نقش فعال کاربر در سیستم ثبت نشده است");
 
                 // ۶. بررسی دسترسی به گروه آموزشی
-                var hasAccessToGroohe = await _context.ModirGroohs
+               /* var hasAccessToGroohe = await _context.ModirGroohs
                     .AnyAsync(mg => mg.AppUserRoleId == appUserRole.Id
                                     && mg.GrooheAmoozeshiId == ostadMadrak.GrooheAmoozeshiId.Value
                                     && mg.Vazeeat == true);
 
                 if (!hasAccessToGroohe)
                     return Forbid("شما به این گروه آموزشی دسترسی ندارید");
+               */
 
                 // ۷. بررسی سطح دسترسی (استان یا مرکز)
                 if (isOstanModir)

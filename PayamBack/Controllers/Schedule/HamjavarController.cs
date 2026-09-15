@@ -264,9 +264,9 @@ namespace PayamBack.Controllers.Schedule
                 {
                     query = query.Where(x => x.Hamjavar.OstadId == currentUser.OstadId);
                 }
-                else if (codeRole == 3 && currentMarkaz != null)
+                else //if (codeRole == 3 && currentMarkaz != null)
                 {
-                    var markazIdsInOstan = await _context.Markazes
+                /*   var markazIdsInOstan = await _context.Markazes
                         .Where(m => m.CodeOstan == currentMarkaz.CodeOstan)
                         .Select(m => m.Id)
                         .ToListAsync();
@@ -284,7 +284,9 @@ namespace PayamBack.Controllers.Schedule
                     query = query.Where(x =>
                         x.Hamjavar.NazarElmi != null &&
                         x.Hamjavar.NazarElmi >= 2);
+                */
                 }
+                
 
                 // ============================================================
                 // 🔥 فیلتر بر اساس استان و مرکز (برای ادمین‌ها)

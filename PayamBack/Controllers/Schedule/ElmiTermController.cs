@@ -172,8 +172,9 @@ namespace PayamBack.Controllers.Schedule
                 {
                     query = query.Where(x => x.ElmiTerm.UserId == currentUser.Id);
                 }
-                else if (codeRole == 3 && currentMarkaz != null)
+                else// if (codeRole == 3 && currentMarkaz != null)
                 {
+                    /*
                     var markazIdsInOstan = await _context.Markazes
                         .Where(m => m.CodeOstan == currentMarkaz.CodeOstan)
                         .Select(m => m.Id)
@@ -189,6 +190,7 @@ namespace PayamBack.Controllers.Schedule
                     query = query.Where(x =>
                         x.Ostad != null &&
                         x.Ostad.MarkazId == currentMarkaz.Id);
+                    */
                 }
 
                 if (!string.IsNullOrEmpty(search))
@@ -308,8 +310,8 @@ namespace PayamBack.Controllers.Schedule
 
                 if (!isOstad && item.UserId.HasValue)
                 {
-                    if (!await _accessService.CanAccessTargetUserAsync(item.UserId.Value, codeRole.Value, currentMarkaz?.Id))
-                        return Forbid();
+                    //if (!await _accessService.CanAccessTargetUserAsync(item.UserId.Value, codeRole.Value, currentMarkaz?.Id))
+                    //    return Forbid();
                 }
 
                 var dto = new ElmiTermDetailDto
