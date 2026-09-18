@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.DTOs.Core.Markaz;
 using PayamBack.Models.Core;
+using PayamBack.Services.Interfaces;
 
 namespace PayamBack.Controllers.Core
 {
@@ -13,23 +14,37 @@ namespace PayamBack.Controllers.Core
     public class MarkazController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IMarkazCacheService _markazCacheService;
 
-        public MarkazController(AppDbContext context)
+        public MarkazController(AppDbContext context,
+            IMarkazCacheService markazCacheService)
         {
             _context = context;
+            _markazCacheService = markazCacheService;
         }
 
         // ============================================================
         // 1️⃣ دریافت لیست همه مراکز (فعال)
         // ============================================================
+        // ============================================================
+        // 1️⃣ دریافت لیست مراکز
+        // ============================================================
         [HttpGet("list")]
-        public async Task<IActionResult> GetList()
+        public async Task<IActionResult> GetList([FromQuery] bool all = false)
         {
             try
             {
-                var markazes = await _context.Markazes
-                    .Where(m => m.Vazeeyat == true)
-                    .OrderBy(m => m.NaamMarkaz)
+                var query = _context.Markazes.AsQueryable();
+
+                // 🔥 اگه all=true → همه؛ وگرنه فقط فعال‌ها
+                if (!all)
+                {
+                    query = query.Where(m => m.Vazeeyat == true);
+                }
+
+                var markazes = await query
+                    .OrderBy(m => m.NaamOstan)
+                    .ThenBy(m => m.NaamMarkaz)
                     .Select(m => new MarkazListDto
                     {
                         Id = m.Id,
@@ -38,8 +53,8 @@ namespace PayamBack.Controllers.Core
                         CodeOstan = m.CodeOstan ?? "",
                         NaamOstan = m.NaamOstan ?? "",
                         Vazeeyat = m.Vazeeyat ?? false,
-                        Level = m.Level ?? 4, // ← اضافه شد
-                        NoeMarkaz=m.NoeMarkaz ?? 1 //1=حضوری
+                        Level = m.Level ?? 4,
+                        NoeMarkaz = m.NoeMarkaz ?? 1
                     })
                     .ToListAsync();
 
@@ -162,6 +177,9 @@ namespace PayamBack.Controllers.Core
                 await _context.Markazes.AddAsync(markaz);
                 await _context.SaveChangesAsync();
 
+                // 🔥 پاک کردن کش مراکز
+                _markazCacheService.ClearCache();
+
                 return Ok(new
                 {
                     success = true,
@@ -217,6 +235,9 @@ namespace PayamBack.Controllers.Core
 
                 await _context.SaveChangesAsync();
 
+                // 🔥 پاک کردن کش مراکز
+                _markazCacheService.ClearCache();
+
                 return Ok(new
                 {
                     success = true,
@@ -269,6 +290,9 @@ namespace PayamBack.Controllers.Core
 
                 _context.Markazes.Remove(markaz);
                 await _context.SaveChangesAsync();
+
+                // 🔥 پاک کردن کش مراکز
+                _markazCacheService.ClearCache();
 
                 return Ok(new
                 {

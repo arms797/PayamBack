@@ -14,6 +14,9 @@ namespace PayamBack.Services.Implementations
 
         private const string AllMarkazListKey = "AllMarkazList";
         private const string AllMarkazDictionaryKey = "AllMarkazDictionary";
+        // 🔥 کش جدید (همه مراکز - فعال + غیرفعال)
+        private const string AllMarkazIncludingInactiveListKey = "AllMarkazIncludingInactiveList";
+        private const string AllMarkazIncludingInactiveDictionaryKey = "AllMarkazIncludingInactiveDictionary";
 
         public MarkazCacheService(AppDbContext context, IMemoryCache cache)
         {
@@ -58,10 +61,67 @@ namespace PayamBack.Services.Implementations
             return dictionary;
         }
 
+        // ============================================================
+        // 🔴 متدهای جدید (همه مراکز - فعال + غیرفعال)
+        // ============================================================
+
+        /// <summary>
+        /// دریافت همه مراکز (فعال + غیرفعال) از کش
+        /// </summary>
+        public async Task<List<Markaz>> GetAllIncludingInactiveAsync()
+        {
+            if (_cache.TryGetValue(AllMarkazIncludingInactiveListKey, out List<Markaz>? markazList) && markazList != null)
+                return markazList;
+
+            markazList = await _context.Markazes
+                .OrderBy(m => m.NaamMarkaz)
+                .ToListAsync();
+
+            _cache.Set(AllMarkazIncludingInactiveListKey, markazList, TimeSpan.FromHours(6));
+            return markazList;
+        }
+
+        /// <summary>
+        /// دریافت یک مرکز با Id (شامل غیرفعال‌ها)
+        /// </summary>
+        public async Task<Markaz?> GetByIdIncludingInactiveAsync(int id)
+        {
+            var dictionary = await GetIncludingInactiveDictionaryAsync();
+            return dictionary.TryGetValue(id, out var markaz) ? markaz : null;
+        }
+
+        /// <summary>
+        /// دریافت نام مرکز (شامل غیرفعال‌ها)
+        /// </summary>
+        public async Task<string?> GetNameByIdIncludingInactiveAsync(int id)
+        {
+            var markaz = await GetByIdIncludingInactiveAsync(id);
+            return markaz?.NaamMarkaz;
+        }
+
+        /// <summary>
+        /// دریافت Dictionary همه مراکز (فعال + غیرفعال)
+        /// </summary>
+        public async Task<Dictionary<int, Markaz>> GetIncludingInactiveDictionaryAsync()
+        {
+            if (_cache.TryGetValue(AllMarkazIncludingInactiveDictionaryKey, out Dictionary<int, Markaz>? dictionary) && dictionary != null)
+                return dictionary;
+
+            var list = await GetAllIncludingInactiveAsync();
+            dictionary = list.ToDictionary(m => m.Id);
+            _cache.Set(AllMarkazIncludingInactiveDictionaryKey, dictionary, TimeSpan.FromHours(6));
+            return dictionary;
+        }
+
+        // ============================================================
+        // 🔥 پاک کردن کش (همه کش‌ها)
+        // ============================================================
         public void ClearCache()
         {
             _cache.Remove(AllMarkazListKey);
             _cache.Remove(AllMarkazDictionaryKey);
+            _cache.Remove(AllMarkazIncludingInactiveListKey);
+            _cache.Remove(AllMarkazIncludingInactiveDictionaryKey);
         }
     }
 }

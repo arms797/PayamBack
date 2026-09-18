@@ -10,6 +10,7 @@ using PayamBack.Services.Implementations;
 using PayamBack.Services.Interfaces;
 using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -84,6 +85,15 @@ builder.Services.AddControllers(options =>
 // ============================================================
 // 6️⃣ سرویس‌های پروژه
 // ============================================================
+builder.Services.AddSingleton<TrackingMemoryCache>(sp =>
+{
+    var innerCache = new MemoryCache(new MemoryCacheOptions());
+    return new TrackingMemoryCache(innerCache);
+});
+
+builder.Services.AddSingleton<IMemoryCache>(sp =>
+    sp.GetRequiredService<TrackingMemoryCache>());
+
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -93,6 +103,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IMarkazCacheService, MarkazCacheService>();
 builder.Services.AddScoped<IAccessService, AccessService>();
 builder.Services.AddScoped<ICacheManager, CacheManager>();
+builder.Services.AddSingleton<CacheVersionManager>(); //  به صورت Singleton
 builder.Services.AddScoped<IPermissionCacheService, PermissionCacheService>();
 builder.Services.AddScoped<ILookupCacheService, LookupCacheService>();
 

@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.DTOs.Core.Ostad;
+using PayamBack.DTOs.Ostad;
+using PayamBack.Filters;
 using PayamBack.Models.Core;
 using PayamBack.Models.Identity;
 using PayamBack.Services.Implementations;
@@ -62,17 +64,55 @@ namespace PayamBack.Controllers.Core
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                var accessibleMarkazIds = await _accessService.GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
+                // ============================================================
+                // 🔥 بررسی ادمین سامانه
+                // ============================================================
+                var isAdmin = codeRole.Value == 1;
 
-                if (!accessibleMarkazIds.Any())
-                    return Ok(new { success = true, message = "شما دسترسی به هیچ مرکزی ندارید", data = new List<object>(), pagination = new { page, pageSize, totalCount = 0, totalPages = 0 } });
+                // ============================================================
+                // 🔥 اگر ادمین نیست، مراکز قابل دسترس را بگیر
+                // ============================================================
+                List<int> accessibleMarkazIds = new();
+                if (!isAdmin)
+                {
+                    accessibleMarkazIds = await _accessService.GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
 
+                    if (!accessibleMarkazIds.Any())
+                    {
+                        return Ok(new
+                        {
+                            success = true,
+                            message = "شما دسترسی به هیچ مرکزی ندارید",
+                            data = new List<object>(),
+                            pagination = new { page, pageSize, totalCount = 0, totalPages = 0 }
+                        });
+                    }
+                }
+
+                // ============================================================
+                // 🔥 Query پایه
+                // ============================================================
                 var query = from o in _context.Ostads
                             join u in _context.Users on o.Id equals u.OstadId into userJoin
                             from u in userJoin.DefaultIfEmpty()
-                            where o.MarkazId.HasValue
                             select new { Ostad = o, User = u };
 
+                // ============================================================
+                // 🔥 فیلتر دسترسی به مراکز (فقط برای غیر ادمین)
+                // ============================================================
+                if (!isAdmin)
+                {
+                    // فقط اساتیدی که مرکزشان در لیست مراکز قابل دسترس است
+                    query = query.Where(x =>
+                        x.Ostad.MarkazId.HasValue &&
+                        accessibleMarkazIds.Contains(x.Ostad.MarkazId.Value));
+                }
+                // برای ادمین: هیچ فیلتری روی مرکز اعمال نمیشه
+                // یعنی حتی اساتید بدون مرکز هم نمایش داده میشن
+
+                // ============================================================
+                // فیلتر جستجو
+                // ============================================================
                 if (!string.IsNullOrEmpty(search))
                 {
                     if (int.TryParse(search, out _))
@@ -87,6 +127,9 @@ namespace PayamBack.Controllers.Core
                     }
                 }
 
+                // ============================================================
+                // فیلتر رشته
+                // ============================================================
                 if (!string.IsNullOrEmpty(reshteh))
                 {
                     query = query.Where(x =>
@@ -94,6 +137,9 @@ namespace PayamBack.Controllers.Core
                             .Any(m => m.OstadId == x.Ostad.Id && m.Reshteh != null && m.Reshteh.Contains(reshteh)));
                 }
 
+                // ============================================================
+                // فیلتر استان / مرکز
+                // ============================================================
                 if (ostanId.HasValue && !markazId.HasValue)
                 {
                     var markazIdsInOstan = await _context.Markazes
@@ -110,11 +156,17 @@ namespace PayamBack.Controllers.Core
                     query = query.Where(x => x.Ostad.MarkazId == markazId.Value);
                 }
 
+                // ============================================================
+                // فیلتر نوع همکاری
+                // ============================================================
                 if (noeHamkari.HasValue)
                 {
                     query = query.Where(x => x.Ostad.NoeHamkari == (NoeHamkariEnum)noeHamkari.Value);
                 }
 
+                // ============================================================
+                // فیلتر وضعیت
+                // ============================================================
                 if (vazeeat == 1)
                 {
                     query = query.Where(x => x.User != null &&
@@ -130,8 +182,14 @@ namespace PayamBack.Controllers.Core
                     query = query.Where(x => x.User != null);
                 }
 
+                // ============================================================
+                // شمارش کل
+                // ============================================================
                 var totalCount = await query.CountAsync();
 
+                // ============================================================
+                // دریافت لیست
+                // ============================================================
                 var ostads = await query
                     .OrderBy(x => x.Ostad.NaamKhanevadegi)
                     .ThenBy(x => x.Ostad.Naam)
@@ -145,10 +203,7 @@ namespace PayamBack.Controllers.Core
                         Naam = x.Ostad.Naam ?? "",
                         NaamKhanevadegi = x.Ostad.NaamKhanevadegi ?? "",
                         MarkazId = x.Ostad.MarkazId ?? 0,
-                        MarkazName = _context.Markazes
-                            .Where(m => m.Id == x.Ostad.MarkazId)
-                            .Select(m => m.NaamMarkaz ?? "")
-                            .FirstOrDefault() ?? "",
+                        // MarkazName اینجا پر نمیشه
                         NoeHamkari = (int)(x.Ostad.NoeHamkari ?? 0),
                         MartabeElmi = x.Ostad.MartabeElmi ?? "",
                         Vazeeat = x.User != null ? x.User.Vazeeyat ?? true : true,
@@ -157,8 +212,29 @@ namespace PayamBack.Controllers.Core
                             .Where(m => m.OstadId == x.Ostad.Id && m.PishFarz == true)
                             .Select(m => m.Reshteh)
                             .FirstOrDefault() ?? ""
-                    })
-                    .ToListAsync();
+                            })
+                            .ToListAsync();
+
+                        // ============================================================
+                        // 🔥 پر کردن MarkazName از کش (سریع!)
+                        // ============================================================
+                        if (ostads.Any())
+                        {
+                            var markazDict = await _markazCacheService.GetDictionaryAsync();
+
+                            foreach (var ostad in ostads)
+                            {
+                                if (ostad.MarkazId > 0 &&
+                                    markazDict.TryGetValue(ostad.MarkazId, out var markaz))
+                                {
+                                    ostad.MarkazName = markaz.NaamMarkaz ?? "";
+                                }
+                                else
+                                {
+                                    ostad.MarkazName = "";  // یا "بدون مرکز"
+                                }
+                            }
+                        }
 
                 return Ok(new
                 {
@@ -189,19 +265,58 @@ namespace PayamBack.Controllers.Core
         // 2️⃣ دریافت یک استاد
         // ============================================================
         [HttpGet("{id}")]
-        [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
         {
             try
             {
+                var (currentUser, _, _, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
+                if (currentUser == null)
+                    return Unauthorized(new { success = false, message = "کاربر احراز هویت نشده است" });
+
+                var isAdmin = codeRole == 1;
+
+                // 🔥 استاد رو بدون Include مراکز بگیر
                 var ostad = await _context.Ostads
-                    .Include(o => o.Markaz)
-                    .Include(o => o.MarkazAsli)
                     .Include(o => o.OstadMadraks)
                     .FirstOrDefaultAsync(o => o.Id == id);
 
                 if (ostad == null)
                     return NotFound(new { success = false, message = "استاد یافت نشد" });
+
+                // 🔥 نام مراکز رو از کش بگیر
+                string markazName = "";
+                string markazAsliName = "";
+
+                if (isAdmin)
+                {
+                    // ادمین: از کش همه مراکز (شامل غیرفعال‌ها)
+                    if (ostad.MarkazId.HasValue)
+                    {
+                        var markaz = await _markazCacheService.GetByIdIncludingInactiveAsync(ostad.MarkazId.Value);
+                        markazName = markaz?.NaamMarkaz ?? "";
+                    }
+
+                    if (ostad.MarkazAsliId.HasValue)
+                    {
+                        var markazAsli = await _markazCacheService.GetByIdIncludingInactiveAsync(ostad.MarkazAsliId.Value);
+                        markazAsliName = markazAsli?.NaamMarkaz ?? "";
+                    }
+                }
+                else
+                {
+                    // بقیه: از کش معمولی (فقط فعال‌ها)
+                    if (ostad.MarkazId.HasValue)
+                    {
+                        var markaz = await _markazCacheService.GetByIdAsync(ostad.MarkazId.Value);
+                        markazName = markaz?.NaamMarkaz ?? "";
+                    }
+
+                    if (ostad.MarkazAsliId.HasValue)
+                    {
+                        var markazAsli = await _markazCacheService.GetByIdAsync(ostad.MarkazAsliId.Value);
+                        markazAsliName = markazAsli?.NaamMarkaz ?? "";
+                    }
+                }
 
                 var dto = new OstadDetailDto
                 {
@@ -210,9 +325,9 @@ namespace PayamBack.Controllers.Core
                     Naam = ostad.Naam ?? "",
                     NaamKhanevadegi = ostad.NaamKhanevadegi ?? "",
                     MarkazId = ostad.MarkazId ?? 0,
-                    MarkazName = ostad.Markaz?.NaamMarkaz ?? "",
+                    MarkazName = markazName,
                     MarkazAsliId = ostad.MarkazAsliId ?? 0,
-                    MarkazAsliName = ostad.MarkazAsli?.NaamMarkaz ?? "",
+                    MarkazAsliName = markazAsliName,
                     Jens = ostad.Jens ?? "",
                     NaamPedar = ostad.NaamPedar ?? "",
                     TarikhTavalod = ostad.TarikhTavalod ?? "",
@@ -755,8 +870,8 @@ namespace PayamBack.Controllers.Core
 
                 ostad.Naam = dto.Naam ?? ostad.Naam;
                 ostad.NaamKhanevadegi = dto.NaamKhanevadegi ?? ostad.NaamKhanevadegi;
-                ostad.MarkazId = dto.MarkazId ?? ostad.MarkazId;
-                ostad.MarkazAsliId = dto.MarkazAsliId ?? ostad.MarkazAsliId;
+                //ostad.MarkazId = dto.MarkazId ?? ostad.MarkazId;
+                //ostad.MarkazAsliId = dto.MarkazAsliId ?? ostad.MarkazAsliId;
                 ostad.Jens = dto.Jens ?? ostad.Jens;
                 ostad.Email = dto.Email ?? ostad.Email;
                 ostad.Mobile = dto.Mobile ?? ostad.Mobile;
@@ -982,6 +1097,439 @@ namespace PayamBack.Controllers.Core
             }
         }
 
+        // ============================================================
+        // تغییر مرکز خدمتی و مرکز اصلی استاد
+        // ============================================================        
+        [HttpPatch("{id}/change-markaz")]
+        public async Task<IActionResult> ChangeMarkaz(int id, [FromBody] ChangeOstadMarkazDto dto)
+        {
+            try
+            {
+                // ============================================================
+                // 1️⃣ بررسی ورودی
+                // ============================================================
+                if (!dto.MarkazId.HasValue && !dto.MarkazAsliId.HasValue)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "حداقل یکی از فیلدهای مرکز خدمتی یا مرکز اصلی باید ارسال شود"
+                    });
+                }
+
+                // ============================================================
+                // 2️⃣ بررسی وجود استاد
+                // ============================================================
+                var ostad = await _context.Ostads.FirstOrDefaultAsync(o => o.Id == id);
+                if (ostad == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "استاد مورد نظر یافت نشد"
+                    });
+                }
+
+                // ============================================================
+                // 3️⃣ دریافت نقش کاربر فعلی
+                // ============================================================
+                var (currentUser, _, _, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
+                if (currentUser == null)
+                {
+                    return Unauthorized(new
+                    {
+                        success = false,
+                        message = "کاربر احراز هویت نشده است"
+                    });
+                }
+
+                var isAdmin = codeRole == 1;
+
+                // ============================================================
+                // 4️⃣ اعتبارسنجی مرکز خدمتی
+                // ============================================================
+                Markaz? markaz = null;
+                if (dto.MarkazId.HasValue)
+                {
+                    markaz = await _markazCacheService.GetByIdAsync(dto.MarkazId.Value);
+                    if (markaz == null)
+                        return BadRequest(new { success = false, message = "مرکز خدمتی مورد نظر یافت نشد" });
+
+                    if (!isAdmin && markaz.Vazeeyat != true)
+                        return BadRequest(new { success = false, message = "فقط ادمین سامانه می‌تواند به مراکز غیرفعال تغییر دهد" });
+                }
+
+                // ============================================================
+                // 5️⃣ اعتبارسنجی مرکز اصلی
+                // ============================================================
+                Markaz? markazAsli = null;
+                if (dto.MarkazAsliId.HasValue)
+                {
+                    markazAsli = await _markazCacheService.GetByIdAsync(dto.MarkazAsliId.Value);
+                    if (markazAsli == null)
+                        return BadRequest(new { success = false, message = "مرکز اصلی مورد نظر یافت نشد" });
+
+                    if (!isAdmin && markazAsli.Vazeeyat != true)
+                        return BadRequest(new { success = false, message = "فقط ادمین سامانه می‌تواند به مراکز غیرفعال تغییر دهد" });
+                }
+
+                // ============================================================
+                // 6️⃣ ذخیره مقادیر قبلی + تشخیص تغییرات
+                // ============================================================
+                var oldMarkazId = ostad.MarkazId;
+                var oldMarkazAsliId = ostad.MarkazAsliId;
+
+                bool markazChanged = dto.MarkazId.HasValue && oldMarkazId != dto.MarkazId.Value;
+                bool markazAsliChanged = dto.MarkazAsliId.HasValue && oldMarkazAsliId != dto.MarkazAsliId.Value;
+
+                if (!markazChanged && !markazAsliChanged)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "هیچ تغییری اعمال نشد (مقادیر یکسان هستند)"
+                    });
+                }
+
+                // ============================================================
+                // 7️⃣ شروع تراکنش
+                // ============================================================
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // ============================================================
+                    // 8️⃣ اعمال تغییر روی Ostad
+                    // ============================================================
+                    if (markazChanged)
+                        ostad.MarkazId = dto.MarkazId!.Value;
+
+                    if (markazAsliChanged)
+                        ostad.MarkazAsliId = dto.MarkazAsliId!.Value;
+
+                    //ostad.UpdatedAt = DateTime.Now;
+
+                    // ============================================================
+                    // 9️⃣ 🔥 به‌روزرسانی AppUserRole
+                    // ============================================================
+                    if (markazChanged)
+                    {
+                        var user = await _context.Users
+                            .FirstOrDefaultAsync(u => u.OstadId == ostad.Id);
+
+                        if (user != null)
+                        {
+                            var ostadRoleId = await _context.Roles
+                                .Where(r => r.Name == "استاد")
+                                .Select(r => r.Id)
+                                .FirstOrDefaultAsync();
+
+                            if (ostadRoleId > 0)
+                            {
+                                var ostadUserRole = await _context.UserRoles
+                                    .FirstOrDefaultAsync(ur =>
+                                        ur.UserId == user.Id &&
+                                        ur.RoleId == ostadRoleId &&
+                                        ur.MarkazId == oldMarkazId);
+
+                                if (ostadUserRole != null)
+                                {
+                                    ostadUserRole.MarkazId = dto.MarkazId!.Value;
+                                }
+                            }
+                        }
+                    }
+
+                    // ============================================================
+                    // 🔟 ذخیره
+                    // ============================================================
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    // ============================================================
+                    // 1️⃣1️⃣ پاسخ
+                    // ============================================================
+                    var finalMarkaz = markaz ?? (ostad.MarkazId.HasValue
+                        ? await _markazCacheService.GetByIdAsync(ostad.MarkazId.Value)
+                        : null);
+
+                    var finalMarkazAsli = markazAsli ?? (ostad.MarkazAsliId.HasValue
+                        ? await _markazCacheService.GetByIdAsync(ostad.MarkazAsliId.Value)
+                        : null);
+
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "مراکز استاد با موفقیت به‌روزرسانی شد",
+                        data = new
+                        {
+                            ostadId = ostad.Id,
+                            markazId = ostad.MarkazId,
+                            markazName = finalMarkaz?.NaamMarkaz,
+                            markazAsliId = ostad.MarkazAsliId,
+                            markazAsliName = finalMarkazAsli?.NaamMarkaz,
+                            //updatedAt = ostad.UpdatedAt
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در به‌روزرسانی مراکز استاد",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // ============================================================
+        // جستجوی استاد با کد استادی (فقط ادمین سامانه)
+        // ============================================================
+        [HttpGet("search-by-code/{code}")]
+        [NoPermission]
+        public async Task<IActionResult> SearchByCode(string code)
+
+        {
+            try
+            {
+                // 🔥 فقط ادمین سامانه (codeRole = 1)
+                var (currentUser, _, _, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
+                if (currentUser == null)
+                    return Unauthorized(new { success = false, message = "کاربر احراز هویت نشده است" });
+
+                if (codeRole != 1)
+                    return StatusCode(403, new { success = false, message = "این عملیات فقط برای ادمین سامانه مجاز است" });
+
+                if (string.IsNullOrWhiteSpace(code))
+                    return BadRequest(new { success = false, message = "کد استادی را وارد کنید" });
+
+                // 🔥 جستجو بر اساس کد استادی (بدون IgnoreQueryFilters چون Ostad فیلتری نداره)
+                var ostad = await _context.Ostads
+                    .Where(o => o.CodeOstadi == code.Trim())
+                    .Select(o => new
+                    {
+                        o.Id,
+                        o.CodeOstadi,
+                        o.Naam,
+                        o.NaamKhanevadegi,
+                        o.MarkazId,
+                        o.MarkazAsliId
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (ostad == null)
+                    return NotFound(new { success = false, message = $"استادی با کد «{code}» یافت نشد" });
+
+                // 🔥 نام مراکز رو از کش بگیر (شامل غیرفعال‌ها چون ادمین هستیم)
+                string? markazName = null;
+                string? markazAsliName = null;
+
+                if (ostad.MarkazId.HasValue)
+                {
+                    var markaz = await _markazCacheService.GetByIdIncludingInactiveAsync(ostad.MarkazId.Value);
+                    markazName = markaz?.NaamMarkaz;
+                }
+
+                if (ostad.MarkazAsliId.HasValue)
+                {
+                    var markazAsli = await _markazCacheService.GetByIdIncludingInactiveAsync(ostad.MarkazAsliId.Value);
+                    markazAsliName = markazAsli?.NaamMarkaz;
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "استاد یافت شد",
+                    data = new OstadSearchByCodeDto
+                    {
+                        Id = ostad.Id,
+                        CodeOstadi = ostad.CodeOstadi ?? "",
+                        Naam = ostad.Naam ?? "",
+                        NaamKhanevadegi = ostad.NaamKhanevadegi ?? "",
+                        FullName = $"{ostad.Naam} {ostad.NaamKhanevadegi}".Trim(),
+                        MarkazId = ostad.MarkazId,
+                        MarkazName = markazName,
+                        MarkazAsliId = ostad.MarkazAsliId,
+                        MarkazAsliName = markazAsliName
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در جستجوی استاد",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // ============================================================
+        // تغییر مراکز استاد با کد استادی (فقط ادمین سامانه)
+        // ============================================================
+        [HttpPatch("change-markaz-by-code")]
+        public async Task<IActionResult> ChangeMarkazByCodeOstadi([FromBody] ChangeMarkazByCodeDto dto)
+        {
+            try
+            {
+                // ============================================================
+                // 1️⃣ بررسی دسترسی (فقط ادمین سامانه)
+                // ============================================================
+                var (currentUser, _, _, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
+                if (currentUser == null)
+                    return Unauthorized(new { success = false, message = "کاربر احراز هویت نشده است" });
+
+                if (codeRole != 1)
+                    return StatusCode(403, new { success = false, message = "این عملیات فقط برای ادمین سامانه مجاز است" });
+
+                // ============================================================
+                // 2️⃣ اعتبارسنجی ورودی
+                // ============================================================
+                if (string.IsNullOrWhiteSpace(dto.CodeOstadi))
+                    return BadRequest(new { success = false, message = "کد استادی الزامی است" });
+
+                if (!ModelState.IsValid)
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "اطلاعات ورودی نامعتبر است",
+                        errors = ModelState.Values
+                            .SelectMany(v => v.Errors)
+                            .Select(e => e.ErrorMessage)
+                            .ToList()
+                    });
+
+                // ============================================================
+                // 3️⃣ پیدا کردن استاد با کد استادی
+                // ============================================================
+                var ostad = await _context.Ostads
+                    .FirstOrDefaultAsync(o => o.CodeOstadi == dto.CodeOstadi.Trim());
+
+                if (ostad == null)
+                    return NotFound(new { success = false, message = $"استادی با کد «{dto.CodeOstadi}» یافت نشد" });
+
+                // ============================================================
+                // 4️⃣ بررسی وجود مراکز (از کش - شامل غیرفعال‌ها چون ادمین هستیم)
+                // ============================================================
+                var markaz = await _markazCacheService.GetByIdIncludingInactiveAsync(dto.MarkazId);
+                if (markaz == null)
+                    return BadRequest(new { success = false, message = "مرکز خدمتی مورد نظر یافت نشد" });
+
+                Markaz? markazAsli = null;
+                if (dto.MarkazAsliId.HasValue)
+                {
+                    markazAsli = await _markazCacheService.GetByIdIncludingInactiveAsync(dto.MarkazAsliId.Value);
+                    if (markazAsli == null)
+                        return BadRequest(new { success = false, message = "مرکز اصلی مورد نظر یافت نشد" });
+                }
+
+                // ============================================================
+                // 5️⃣ تشخیص تغییرات + ذخیره مقادیر قبلی
+                // ============================================================
+                var oldMarkazId = ostad.MarkazId;
+                bool markazChanged = oldMarkazId != dto.MarkazId;
+
+                if (!markazChanged)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "مرکز خدمتی استاد قبلاً همین مقدار بوده است"
+                    });
+                }
+
+                // ============================================================
+                // 6️⃣ شروع تراکنش
+                // ============================================================
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // ============================================================
+                    // 7️⃣ به‌روزرسانی Ostad
+                    // ============================================================
+                    ostad.MarkazId = dto.MarkazId;
+                    ostad.MarkazAsliId = dto.MarkazAsliId;
+                    //ostad.UpdatedAt = DateTime.Now;
+
+                    // ============================================================
+                    // 8️⃣ به‌روزرسانی AppUserRole (نقش استاد در مرکز قبلی)
+                    // ============================================================
+                    var user = await _context.Users
+                        .FirstOrDefaultAsync(u => u.OstadId == ostad.Id);
+
+                    if (user != null)
+                    {
+                        var ostadRoleId = await _context.Roles
+                            .Where(r => r.Name == "استاد")
+                            .Select(r => r.Id)
+                            .FirstOrDefaultAsync();
+
+                        if (ostadRoleId > 0)
+                        {
+                            // 🔥 فقط نقش استاد در مرکز خدمتی قبلی
+                            var ostadUserRole = await _context.UserRoles
+                                .FirstOrDefaultAsync(ur =>
+                                    ur.UserId == user.Id &&
+                                    ur.RoleId == ostadRoleId );
+
+                            if (ostadUserRole != null)
+                            {
+                                ostadUserRole.MarkazId = dto.MarkazId;
+                            }
+                        }
+                    }
+
+                    // ============================================================
+                    // 9️⃣ ذخیره
+                    // ============================================================
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    // ============================================================
+                    // 🔟 پاسخ
+                    // ============================================================
+                    return Ok(new
+                    {
+                        success = true,
+                        message = $"مراکز استاد «{ostad.Naam} {ostad.NaamKhanevadegi}» با موفقیت به‌روزرسانی شد",
+                        data = new
+                        {
+                            ostadId = ostad.Id,
+                            codeOstadi = ostad.CodeOstadi,
+                            fullName = $"{ostad.Naam} {ostad.NaamKhanevadegi}".Trim(),
+                            markazId = ostad.MarkazId,
+                            markazName = markaz.NaamMarkaz,
+                            markazAsliId = ostad.MarkazAsliId,
+                            markazAsliName = markazAsli?.NaamMarkaz,
+                           // updatedAt = ostad.UpdatedAt
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در به‌روزرسانی مراکز استاد",
+                    error = ex.Message
+                });
+            }
+        }
         // ============================================================
         // 🔥 متدهای کمکی
         // ============================================================

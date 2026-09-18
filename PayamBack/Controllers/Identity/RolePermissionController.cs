@@ -5,21 +5,27 @@ using Microsoft.Extensions.Caching.Memory;
 using PayamBack.Data;
 using PayamBack.DTOs.Identity.RolePermission;
 using PayamBack.Models.Identity;
+using PayamBack.Services.Implementations;
+using PayamBack.Services.Interfaces;
 
 namespace PayamBack.Controllers.Identity
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "ادمین سامانه")]
+    //[Authorize(Roles = "ادمین سامانه")]
     public class RolePermissionController : ControllerBase
     {
         private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
+        private readonly IPermissionCacheService _permissionCacheService;
 
-        public RolePermissionController(AppDbContext context, IMemoryCache cache)
+
+        public RolePermissionController(AppDbContext context, IMemoryCache cache,
+                                        IPermissionCacheService permissionCacheService)
         {
             _context = context;
             _cache = cache;
+            _permissionCacheService = permissionCacheService;
         }
 
         // ============================================================
@@ -226,7 +232,9 @@ namespace PayamBack.Controllers.Identity
                 // ============================================================
                 // برای سادگی، همه کش را پاک می‌کنیم
                 // (در یک پروژه واقعی، کلیدهای خاص را حذف کنید)
-                _cache.Remove($"Permission_{dto.RoleId}_*");
+                //_cache.Remove($"Permission_{dto.RoleId}_*");
+
+                _permissionCacheService.ClearRoleCache(dto.RoleId);
 
                 return Ok(new
                 {
@@ -278,7 +286,9 @@ namespace PayamBack.Controllers.Identity
                 // ============================================================
                 // 🔥 پاک کردن کش مربوط به این نقش
                 // ============================================================
-                _cache.Remove($"Permission_{dto.RoleId}_*");
+                //_cache.Remove($"Permission_{dto.RoleId}_*");
+                _permissionCacheService.ClearRoleCache(dto.RoleId);
+
 
                 return Ok(new
                 {
@@ -323,7 +333,9 @@ namespace PayamBack.Controllers.Identity
                 // ============================================================
                 // 🔥 پاک کردن کش مربوط به این نقش
                 // ============================================================
-                _cache.Remove($"Permission_{dto.RoleId}_*");
+                //_cache.Remove($"Permission_{dto.RoleId}_*");
+                _permissionCacheService.ClearRoleCache(dto.RoleId);
+
 
                 return Ok(new
                 {

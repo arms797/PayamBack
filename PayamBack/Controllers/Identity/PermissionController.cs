@@ -10,7 +10,7 @@ namespace PayamBack.Controllers.Identity
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "ادمین سامانه")]
+    //[Authorize(Roles = "ادمین سامانه")]
     public class PermissionController : ControllerBase
     {
         private readonly AppDbContext _context;

@@ -2451,7 +2451,8 @@ namespace PayamBack.Controllers.Schedule
                 {
                     program.IsLocked = false;          // باز کردن قفل برای ویرایش
                     program.NazarElmi = 0;             // برگرداندن به پیش‌نویس استاد
-                    program.TarikhElmi = null;         // پاک کردن تاریخ تأیید استاد
+                    //program.TarikhElmi = null;         // پاک کردن تاریخ تأیید استاد
+                    program.NazarRaeisMarkaz = 0;        
                     program.NazarModirGrooh = 0;
                     //program.TarikhModirGrooh = 0;
                    
@@ -2518,6 +2519,8 @@ namespace PayamBack.Controllers.Schedule
 
                 if (program.NazarRaeisMarkaz != null && program.NazarRaeisMarkaz != 0)
                     return BadRequest(new { success = false, message = "این برنامه قبلاً توسط رئیس مرکز بررسی شده است" });
+                if(program.NazarMoaven>=1 || program.NazarModirGrooh>=1)
+                    return BadRequest(new { success = false, message = "این برنامه قبلاً توسط معاون آموزشی و یا مدیرگروه بررسی شده است" });
 
                 // ۵. ثبت نظر رئیس مرکز
                 program.NazarRaeisMarkaz = dto.ApproveStatus;
@@ -2534,7 +2537,8 @@ namespace PayamBack.Controllers.Schedule
                     program.NazarElmi = 0;
                     //program.TarikhElmi = null;
                     // در صورت نیاز، نظر مدیر گروه و رئیس مرکز نیز پاک می‌شوند
-                    program.NazarModirGrooh = 0;
+                    program.NazarRaeisMarkaz = 0;
+                    //program.NazarModirGrooh = 0;
                     //program.TarikhModirGrooh = null;
                 }
 
@@ -2612,6 +2616,7 @@ namespace PayamBack.Controllers.Schedule
                 {
                     program.IsLocked = false;          // باز کردن قفل برای ویرایش
                     program.NazarElmi = 0;             // برگرداندن به پیش‌نویس استاد
+                    program.NazarRaeisMarkaz = 0;       //پاک کردن نظر رییس مرکز
                     program.NazarModirGrooh = 0;       // پاک کردن نظر مدیرگروه
                     //program.TarikhElmi = null;         // پاک کردن تاریخ تأیید استاد
                     //program.TarikhModirGrooh = null;   // پاک کردن تاریخ نظر مدیرگروه

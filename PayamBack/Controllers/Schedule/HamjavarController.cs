@@ -1444,6 +1444,91 @@ namespace PayamBack.Controllers.Schedule
             }
         }
 
+        //  ریست درخواست تدریس به پیش نویس
+        [HttpPatch("reset/{id}")]
+        public async Task<IActionResult> ResetToPishnevis(int id)
+        {
+            try
+            {
+                var (currentUser, currentRole, currentMarkaz, codeRole) = await _currentUserService.GetCurrentUserInfoAsync();
+                if (currentUser == null || codeRole == null)
+                    return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
+
+                var entity = await _context.Set<Hamjavar>()
+                    .Include(h => h.Hamjavar1s)
+                    .FirstOrDefaultAsync(h => h.Id == id);
+
+                if (entity == null)
+                    return NotFound(new { success = false, message = "درخواست یافت نشد" });
+
+                entity.NazarElmi = 1;
+                entity.NazarRaeis = 0;
+                entity.NazarKhadamat = 0;
+                entity.NazarMoaven = 0;
+
+                await _context.SaveChangesAsync();
+                return Ok(new
+                {
+                    success = true,
+                    message = "درخواست با موفقیت ریست شد"
+                });
+
+                /*
+                 using var transaction = await _context.Database.BeginTransactionAsync();
+
+                 try
+                 {
+                     if (!string.IsNullOrEmpty(entity.UploadElmi))
+                         DeleteFile(entity.UploadElmi);
+
+                     if (!string.IsNullOrEmpty(entity.UploadRaeis))
+                         DeleteFile(entity.UploadRaeis);
+
+                     if (!string.IsNullOrEmpty(entity.UploadKhadamat))
+                         DeleteFile(entity.UploadKhadamat);
+
+                     if (!string.IsNullOrEmpty(entity.UploadMoaven))
+                         DeleteFile(entity.UploadMoaven);
+
+                     entity.NazarElmi = 1;
+                     entity.NazarRaeis = 0;
+                     entity.NazarKhadamat = 0;
+                     entity.NazarMoaven = 0;
+
+                     await _context.SaveChangesAsync();
+                     await transaction.CommitAsync();
+
+                     return Ok(new
+                     {
+                         success = true,
+                         message = "درخواست و تمام زیرمجموعه‌های آن با موفقیت حذف شد"
+                     });
+                 }
+                 catch (Exception ex)
+                 {
+                     await transaction.RollbackAsync();
+                     return StatusCode(500, new
+                     {
+                         success = false,
+                         message = "خطا در حذف درخواست",
+                         error = ex.Message
+                     });
+                 }
+                */
+
+            }
+               
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در ریست درخواست",
+                    error = ex.Message
+                });
+            }
+        }
+
         // ============================================================
         // 9️⃣ حذف کامل درخواست هم‌جاوری
         // ============================================================
