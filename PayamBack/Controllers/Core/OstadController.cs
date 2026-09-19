@@ -48,6 +48,7 @@ namespace PayamBack.Controllers.Core
         // 1️⃣ دریافت لیست اساتید با صفحه‌بندی و فیلتر
         // ============================================================
         [HttpGet("list")]
+        [NoPermission]
         public async Task<IActionResult> GetList(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 50,
@@ -265,6 +266,7 @@ namespace PayamBack.Controllers.Core
         // 2️⃣ دریافت یک استاد
         // ============================================================
         [HttpGet("{id}")]
+        [NoPermission]
         public async Task<IActionResult> GetById(int id)
         {
             try
@@ -357,6 +359,7 @@ namespace PayamBack.Controllers.Core
         // 3️⃣ ایجاد استاد جدید
         // ============================================================
         [HttpPost("create")]
+
         public async Task<IActionResult> Create([FromBody] OstadCreateDto dto)
         {
             try
