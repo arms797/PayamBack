@@ -1759,6 +1759,17 @@ namespace PayamBack.Controllers.Schedule
                 if (program == null)
                     return NotFound(new { success = false, message = "برنامه یافت نشد" });
 
+
+                bool canDelete = (program.NazarMoaven == 0 || !program.NazarMoaven.HasValue) &&
+                    (program.NazarModirGrooh == 0 || !program.NazarModirGrooh.HasValue) &&
+                    (program.NazarRaeisMarkaz == 0 || !program.NazarRaeisMarkaz.HasValue) &&
+                    (program.NazarElmi == 0 || !program.NazarElmi.HasValue);
+                if(!canDelete)
+                {
+                    return Unauthorized(new { success = false, message =
+                        "بدلیل عدم قرار داشتن برنامه در حالت پیش نویس امکان حذف برنامه میسر نمی باشد" });
+                }
+
                 // ============================================================
                 // 2️⃣ بررسی دسترسی
                 // ============================================================
