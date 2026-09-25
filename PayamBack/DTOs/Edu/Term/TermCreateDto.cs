@@ -9,6 +9,10 @@ public class TermCreateDto
     [Required]
     [MaxLength(100)]
     public string OnvanTerm { get; set; } = string.Empty;
+    [MaxLength(50)]
+    public string? Nimsal { get; set; }
+    [MaxLength(50)]
+    public string? SalTahsili { get; set; }
 
     public DateOnly? TermJariShoroo { get; set; }
 

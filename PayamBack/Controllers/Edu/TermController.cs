@@ -82,6 +82,8 @@ namespace PayamBack.Controllers.Edu
                     {
                         CodeTerm = t.CodeTerm ?? "",
                         OnvanTerm = t.OnvanTerm ?? "",
+                        Nimsal=t.Nimsal ?? "",
+                        SalTahsili = t.SalTahsili ?? "",
                         TermJariShoroo = t.TermJariShoroo,
                         TermJariPayan = t.TermJariPayan,
                         TarikheDastrasi = t.TarikheDastrasi,
@@ -151,6 +153,8 @@ namespace PayamBack.Controllers.Edu
                 {
                     CodeTerm = dto.CodeTerm,
                     OnvanTerm = dto.OnvanTerm,
+                    Nimsal=dto.Nimsal,
+                    SalTahsili=dto.SalTahsili,
                     TermJariShoroo = dto.TermJariShoroo,
                     TermJariPayan = dto.TermJariPayan,
                     TarikheDastrasi = dto.TarikheDastrasi,
@@ -213,6 +217,8 @@ namespace PayamBack.Controllers.Edu
 
                 // به‌روزرسانی فیلدها
                 term.OnvanTerm = dto.OnvanTerm ?? term.OnvanTerm;
+                term.Nimsal=dto.Nimsal ?? term.Nimsal;
+                term.SalTahsili = dto.SalTahsili ?? term.SalTahsili;
                 term.TermJariShoroo = dto.TermJariShoroo ?? term.TermJariShoroo;
                 term.TermJariPayan = dto.TermJariPayan ?? term.TermJariPayan;
                 term.TarikheDastrasi = dto.TarikheDastrasi ?? term.TarikheDastrasi;
@@ -325,6 +331,8 @@ namespace PayamBack.Controllers.Edu
                     {
                         CodeTerm = t.CodeTerm ?? "",
                         OnvanTerm = t.OnvanTerm ?? "",
+                        Nimsal=t.Nimsal ?? "",
+                        SalTahsili = t.SalTahsili ?? "",
                         TermJariShoroo = t.TermJariShoroo,
                         TermJariPayan = t.TermJariPayan,
                         TarikheDastrasi = t.TarikheDastrasi,
