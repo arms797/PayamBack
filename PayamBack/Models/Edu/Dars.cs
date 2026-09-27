@@ -95,7 +95,7 @@ namespace PayamBack.Models.Edu
         // Navigation Properties
         // ============================================================
         // 🔥 منابع درسی این درس
-        // public virtual ICollection<ManabehDarsi>? ManabehDarsis { get; set; }
+         public virtual ICollection<ManbaDars>? ManbaDarsList { get; set; }
 
         // 🔥 دروس ارائه شده این درس
         // public virtual ICollection<DoroushAraehShode>? DoroushAraehShodes { get; set; }

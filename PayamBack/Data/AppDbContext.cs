@@ -55,6 +55,9 @@ namespace PayamBack.Data
         public DbSet<WeekDay> WeekDays { get; set; }
         public DbSet<HaftegiException> HaftegiExceptions {  get; set; }
         public DbSet<SakhtemanKelass> SakhtemanKelasses { get; set; }
+        public DbSet<Dars> Dars { get; set; }
+        public DbSet<DarsEraeh> DarsEraehs { get; set; }
+        public DbSet<DarsEraehOstad> DarsEraehOstads { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -517,9 +520,7 @@ namespace PayamBack.Data
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
-            // ============================================================
-            // تنظیمات جدول SakhtemanKelass
-            // ============================================================
+            // ======== SakhtemanKelass ========
             builder.Entity<SakhtemanKelass>(entity =>
             {
                 entity.ToTable("SakhtemanKelass");
@@ -544,7 +545,8 @@ namespace PayamBack.Data
                 entity.HasIndex(e => e.Vazeeyat)
                     .HasDatabaseName("IX_SakhtemanKelass_Vazeeyat");
             });
-            // تنظیمات جدول Dars
+
+            // ======== Dars ========
             builder.Entity<Dars>(entity =>
             {
                 entity.ToTable("Dars");
@@ -555,13 +557,21 @@ namespace PayamBack.Data
                     .HasForeignKey(e => e.ReshtehId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                // ============================================================
                 // ایندکس‌ها
-                entity.HasIndex(e => e.CodeDars)
+                // ============================================================
+
+                // 🔥 یکتا: ترکیب کد درس + رشته
+                // یعنی یه کد درس توی یه رشته فقط یه بار می‌تونه ثبت بشه
+                entity.HasIndex(e => new { e.CodeDars, e.ReshtehId })
                     .IsUnique()
-                    .HasDatabaseName("IX_Dars_CodeDars_Unique");
+                    .HasDatabaseName("IX_Dars_CodeDars_ReshtehId_Unique");
 
                 entity.HasIndex(e => e.ReshtehId)
                     .HasDatabaseName("IX_Dars_ReshtehId");
+
+                entity.HasIndex(e => e.NaamDars)
+                    .HasDatabaseName("IX_Dars_NaamDars");
 
                 entity.HasIndex(e => e.TermAkhz)
                     .HasDatabaseName("IX_Dars_TermAkhz");
@@ -569,6 +579,143 @@ namespace PayamBack.Data
                 entity.HasIndex(e => new { e.ReshtehId, e.TermAkhz })
                     .HasDatabaseName("IX_Dars_Reshteh_Term");
             });
+
+            // ======== ManbaDars ========
+            builder.Entity<ManbaDars>(entity =>
+            {
+                entity.ToTable("ManbaDars");
+
+                // رابطه با Dars
+                entity.HasOne(e => e.Dars)
+                    .WithMany(d => d.ManbaDarsList)
+                    .HasForeignKey(e => e.DarsId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                // ⚠️ Cascade چون اگه درس حذف بشه، منابعش هم حذف می‌شن
+
+                // ایندکس‌ها
+                entity.HasIndex(e => e.DarsId)
+                    .HasDatabaseName("IX_ManbaDars_DarsId");
+
+                entity.HasIndex(e => e.Onvan)
+                    .HasDatabaseName("IX_ManbaDars_Onvan");
+
+                entity.HasIndex(e => new { e.DarsId, e.ShomareManba })
+                    .HasDatabaseName("IX_ManbaDars_Dars_Shomare");
+
+                entity.HasIndex(e => e.Vazeeyat)
+                    .HasDatabaseName("IX_ManbaDars_Vazeeyat");
+            });
+
+            // ======== DarsEraeh ========
+            builder.Entity<DarsEraeh>(entity =>
+            {
+                entity.ToTable("DarsEraeh");
+
+                // ============================================================
+                // روابط (FKها)
+                // ============================================================
+                entity.HasOne(e => e.Markaz)
+                    .WithMany()
+                    .HasForeignKey(e => e.MarkazId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Reshteh)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReshtehId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Dars)
+                    .WithMany()
+                    .HasForeignKey(e => e.DarsId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.DarsEraehAsli)
+                    .WithMany(e => e.ZirMajmooeh)
+                    .HasForeignKey(e => e.ErtebatDehiId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // ============================================================
+                // 🔥 ایندکس‌ها - بر اساس الگوهای کوئری
+                // ============================================================
+
+                // ۱. ترم + مرکز (پرکاربردترین)
+                entity.HasIndex(e => new { e.CodeTerm, e.MarkazId })
+                    .HasDatabaseName("IX_DarsEraeh_Term_Markaz");
+
+                // ۲. ترم + رشته (گزارش دانشجو)
+                entity.HasIndex(e => new { e.CodeTerm, e.ReshtehId })
+                    .HasDatabaseName("IX_DarsEraeh_Term_Reshteh");
+
+                // ۳. ترم + مرکز + رشته (برنامه‌ریزی ترکیبی)
+                entity.HasIndex(e => new { e.CodeTerm, e.MarkazId, e.ReshtehId })
+                    .HasDatabaseName("IX_DarsEraeh_Term_Markaz_Reshteh");
+
+                // ۴. ترم + درس
+                entity.HasIndex(e => new { e.CodeTerm, e.DarsId })
+                    .HasDatabaseName("IX_DarsEraeh_Term_Dars");
+
+                // ۵. ارتباط خودارجاعی
+                entity.HasIndex(e => e.ErtebatDehiId)
+                    .HasDatabaseName("IX_DarsEraeh_ErtebatDehiId");
+
+                // ۶. ترم + وضعیت برنامه‌ریزی
+                entity.HasIndex(e => new { e.CodeTerm, e.BarnamehRizi })
+                    .HasDatabaseName("IX_DarsEraeh_Term_BarnamehRizi");
+
+                // ۷. گروه یکتا
+                entity.HasIndex(e => new { e.CodeTerm, e.MarkazId, e.DarsId, e.Grooh })
+                    .IsUnique()
+                    .HasDatabaseName("IX_DarsEraeh_Unique_Grooh");
+
+                // ۸. ترم + مرکز + وضعیت
+                entity.HasIndex(e => new { e.CodeTerm, e.MarkazId, e.VazeeyatDars })
+                    .HasDatabaseName("IX_DarsEraeh_Term_Markaz_Vazeeyat");
+
+                // ------------------------------------------------------------
+                // 🔥 ایندکس: جستجو بر اساس کد درس (پرکاربرد)
+                // ------------------------------------------------------------
+                entity.HasIndex(e => new { e.CodeTerm, e.CodeDars })
+                    .HasDatabaseName("IX_DarsEraeh_Term_CodeDars");
+
+                entity.HasIndex(e => new { e.CodeTerm, e.CodeDars, e.Grooh })
+                    .HasDatabaseName("IX_DarsEraeh_Term_CodeDars_Grooh");
+            });
+
+            // ======== OstadDars ========
+            builder.Entity<DarsEraehOstad>(entity =>
+            {
+                entity.ToTable("DarsEraehOstad");
+
+                // ============================================================
+                // روابط
+                // ============================================================
+                entity.HasOne(e => e.Ostad)
+                    .WithMany()
+                    .HasForeignKey(e => e.OstadId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.DarsEraeh)
+                    .WithMany(e => e.Ostads)              // 🔥 این خط تغییر کرد
+                    .HasForeignKey(e => e.DarsEraehId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // ============================================================
+                // ایندکس‌ها
+                // ============================================================
+                entity.HasIndex(e => e.DarsEraehId)
+                    .HasDatabaseName("IX_OstadDars_DarsEraehId");
+
+                entity.HasIndex(e => e.OstadId)
+                    .HasDatabaseName("IX_OstadDars_OstadId");
+
+                entity.HasIndex(e => new { e.DarsEraehId, e.OstadId })
+                    .IsUnique()
+                    .HasDatabaseName("IX_OstadDars_Unique_Dars_Ostad");
+
+                entity.HasIndex(e => new { e.DarsEraehId, e.Asli })
+                    .HasDatabaseName("IX_OstadDars_Dars_Asli");
+            });
+
         }
 
         /*
