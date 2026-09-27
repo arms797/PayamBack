@@ -54,6 +54,7 @@ namespace PayamBack.Data
         public DbSet<ModirGrooh> ModirGroohs { get; set; }
         public DbSet<WeekDay> WeekDays { get; set; }
         public DbSet<HaftegiException> HaftegiExceptions {  get; set; }
+        public DbSet<SakhtemanKelass> SakhtemanKelasses { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -417,7 +418,6 @@ namespace PayamBack.Data
             });
 
             // ======== Faaliat ========
-            // ======== Faaliat ========
             builder.Entity<Faaliat>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -515,6 +515,59 @@ namespace PayamBack.Data
                     .WithMany()
                     .HasForeignKey(mg => mg.GrooheAmoozeshiId)
                     .OnDelete(DeleteBehavior.NoAction);
+            });
+
+            // ============================================================
+            // تنظیمات جدول SakhtemanKelass
+            // ============================================================
+            builder.Entity<SakhtemanKelass>(entity =>
+            {
+                entity.ToTable("SakhtemanKelass");
+
+                // روابط
+                entity.HasOne(e => e.Markaz)
+                    .WithMany(m => m.SakhtemanKelasses)
+                    .HasForeignKey(e => e.MarkazId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // ایندکس‌ها (برای کوئری‌های سریع)
+                entity.HasIndex(e => e.MarkazId)
+                    .HasDatabaseName("IX_SakhtemanKelass_MarkazId");
+
+                entity.HasIndex(e => new { e.MarkazId, e.CodeSakhteman })
+                    .HasDatabaseName("IX_SakhtemanKelass_Markaz_CodeSakhteman");
+
+                entity.HasIndex(e => new { e.MarkazId, e.CodeSakhteman, e.CodeClass })
+                    .IsUnique()
+                    .HasDatabaseName("IX_SakhtemanKelass_Markaz_Sakhteman_Class_Unique");
+
+                entity.HasIndex(e => e.Vazeeyat)
+                    .HasDatabaseName("IX_SakhtemanKelass_Vazeeyat");
+            });
+            // تنظیمات جدول Dars
+            builder.Entity<Dars>(entity =>
+            {
+                entity.ToTable("Dars");
+
+                // روابط
+                entity.HasOne(e => e.Reshteh)
+                    .WithMany(r => r.DarsList)
+                    .HasForeignKey(e => e.ReshtehId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // ایندکس‌ها
+                entity.HasIndex(e => e.CodeDars)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Dars_CodeDars_Unique");
+
+                entity.HasIndex(e => e.ReshtehId)
+                    .HasDatabaseName("IX_Dars_ReshtehId");
+
+                entity.HasIndex(e => e.TermAkhz)
+                    .HasDatabaseName("IX_Dars_TermAkhz");
+
+                entity.HasIndex(e => new { e.ReshtehId, e.TermAkhz })
+                    .HasDatabaseName("IX_Dars_Reshteh_Term");
             });
         }
 

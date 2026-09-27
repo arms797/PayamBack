@@ -60,5 +60,7 @@ namespace PayamBack.Models.Edu
 
         /// <summary>دانشجویان مرتبط با این رشته</summary>
         public virtual ICollection<Daneshjoo>? Daneshjoos { get; set; }
+        /// <summary>درس‌های این رشته</summary>
+        public virtual ICollection<Dars>? DarsList { get; set; }
     }
 }

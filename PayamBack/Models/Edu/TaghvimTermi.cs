@@ -47,5 +47,7 @@ namespace PayamBack.Models.Edu
 
         /// <summary>وضعیت روز (فعال/غیرفعال)</summary>
         public bool? Vazeeyat { get; set; }
+        // چندمین روز ترم
+        public int? RoozTerm {  get; set; }
     }
 }

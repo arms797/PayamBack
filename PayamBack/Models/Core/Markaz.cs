@@ -1,4 +1,5 @@
-﻿using PayamBack.Models.Identity;
+﻿using PayamBack.Models.Edu;
+using PayamBack.Models.Identity;
 using PayamBack.Models.Schedule;
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -96,5 +97,7 @@ namespace PayamBack.Models.Core
 
         /// <summary>برنامه ترمی اساتید مرتبط با این مرکز</summary>
         public virtual ICollection<BarnamehTermiOstad>? BarnamehTermiOstads { get; set; }
+        /// <summary>کلاس‌های این مرکز</summary>
+        public virtual ICollection<SakhtemanKelass>? SakhtemanKelasses { get; set; }
     }
 }
