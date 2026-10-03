@@ -2077,6 +2077,12 @@ namespace PayamBack.Controllers.Schedule
                     .Include(o => o.Markaz)
                     .Include(o => o.OstadMadraks.Where(m => m.PishFarz == true))
                     .AsQueryable();
+                //  فقط اساتیدی که کاربر فعال دارن
+                ostadQuery = ostadQuery.Where(o =>
+                    _context.Users.Any(u =>
+                        u.OstadId == o.Id &&
+                        u.Vazeeyat != false &&
+                        u.VazeeyatMovaghat != false));
 
                 // 3️⃣ محدودیت دسترسی
                 var isOstad = currentRole?.Name == "استاد";
