@@ -158,19 +158,32 @@ namespace PayamBack.Controllers.Identity
 
                 var targetUser = await _userManager.Users
                     .Include(u => u.Karmand)
+                    .Include(u=>u.Ostad)
+                    .Include(u=>u.Daneshjoo)
                     .FirstOrDefaultAsync(u => u.Id == userId);
 
                 if (targetUser == null)
                     return NotFound(new { success = false, message = "کاربر یافت نشد" });
 
-                // بررسی دسترسی به مرکز کاربر
+                // 🔥 استخراج MarkazId از هر کدوم که موجود باشه
+                int? targetMarkazId = null;
+
                 if (targetUser.Karmand?.MarkazId != null)
+                    targetMarkazId = targetUser.Karmand.MarkazId;
+                else if (targetUser.Ostad?.MarkazId != null)
+                    targetMarkazId = targetUser.Ostad.MarkazId;
+                else if (targetUser.Daneshjoo?.MarkazId != null)
+                    targetMarkazId = targetUser.Daneshjoo.MarkazId;
+
+                // بررسی دسترسی
+                if (targetMarkazId != null)
                 {
-                    if (!await _accessService.CanAccessTargetMarkazAsync(targetUser.Karmand.MarkazId.Value, codeRole.Value, currentMarkaz?.Id))
+                    if (!await _accessService.CanAccessTargetMarkazAsync(targetMarkazId.Value, codeRole.Value, currentMarkaz?.Id))
                         return Forbid();
                 }
                 else
                 {
+                    // اگه کاربر به هیچ مرکزی وصل نیست، فقط ادمین سامانه می‌تونه تغییر بده
                     if (codeRole != 1)
                         return Forbid();
                 }
