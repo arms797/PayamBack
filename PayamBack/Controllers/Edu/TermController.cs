@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.Models.Edu;
+using PayamBack.Services.Interfaces;
 
 namespace PayamBack.Controllers.Edu
 {
@@ -12,10 +13,12 @@ namespace PayamBack.Controllers.Edu
     public class TermController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILookupCacheService _lookupCache;
 
-        public TermController(AppDbContext context)
+        public TermController(AppDbContext context,ILookupCacheService lookupCache)
         {
             _context = context;
+            _lookupCache=lookupCache;
         }
 
         // ============================================================
@@ -177,6 +180,7 @@ namespace PayamBack.Controllers.Edu
                 await _context.Terms.AddAsync(term);
                 await _context.SaveChangesAsync();
 
+                _lookupCache.ClearCache();
                 return Ok(new
                 {
                     success = true,
@@ -248,6 +252,7 @@ namespace PayamBack.Controllers.Edu
                 }
 
                 await _context.SaveChangesAsync();
+                _lookupCache.ClearCache();
 
                 return Ok(new
                 {
@@ -298,6 +303,7 @@ namespace PayamBack.Controllers.Edu
 
                 _context.Terms.Remove(term);
                 await _context.SaveChangesAsync();
+                _lookupCache.ClearCache();
 
                 return Ok(new
                 {

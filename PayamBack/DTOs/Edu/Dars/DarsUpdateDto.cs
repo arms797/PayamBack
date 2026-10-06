@@ -2,6 +2,5 @@
 {
     public class DarsUpdateDto : DarsCreateDto
     {
-        // همه فیلدها ارث‌بری می‌شن
     }
 }

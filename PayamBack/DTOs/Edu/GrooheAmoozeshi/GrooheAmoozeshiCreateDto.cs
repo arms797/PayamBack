@@ -4,20 +4,18 @@ namespace PayamBack.DTOs.Edu.GrooheAmoozeshi
 {
     public class GrooheAmoozeshiCreateDto
     {
-        [Required(ErrorMessage = "کد دانشکده الزامی است")]
         [MaxLength(50)]
-        public string CodeDaneshkade { get; set; } = string.Empty;
+        public string? CodeDaneshkade { get; set; }
 
-        [Required(ErrorMessage = "نام دانشکده الزامی است")]
         [MaxLength(200)]
-        public string NaamDaneshkadeh { get; set; } = string.Empty;
+        public string? NaamDaneshkadeh { get; set; }
 
-        [Required(ErrorMessage = "کد گروه آموزشی الزامی است")]
         [MaxLength(50)]
-        public string CodeGrooheAmoozeshi { get; set; } = string.Empty;
+        public string? CodeGrooheAmoozeshi { get; set; }
 
         [Required(ErrorMessage = "عنوان گروه آموزشی الزامی است")]
         [MaxLength(200)]
         public string OnvanGrooheAmoozeshi { get; set; } = string.Empty;
+        public bool? Vazeeat { get; set; }
     }
 }

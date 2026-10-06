@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PayamBack.Data;
 
@@ -11,9 +12,11 @@ using PayamBack.Data;
 namespace PayamBack.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261004140829_DarsManbaEraeh")]
+    partial class DarsManbaEraeh
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -744,9 +747,6 @@ namespace PayamBack.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<bool?>("Vazeeat")
-                        .HasColumnType("bit");
-
                     b.HasKey("Id");
 
                     b.ToTable("GrooheAmoozeshis");
@@ -930,9 +930,6 @@ namespace PayamBack.Migrations
                     b.Property<string>("TermVorood")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
-
-                    b.Property<bool?>("Vazeeat")
-                        .HasColumnType("bit");
 
                     b.HasKey("Id");
 

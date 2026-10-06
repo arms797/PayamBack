@@ -13,7 +13,9 @@ namespace PayamBack.DTOs.Edu.GrooheAmoozeshi
         [MaxLength(50)]
         public string? CodeGrooheAmoozeshi { get; set; }
 
+        [Required(ErrorMessage = "عنوان گروه آموزشی الزامی است")]
         [MaxLength(200)]
-        public string? OnvanGrooheAmoozeshi { get; set; }
+        public string OnvanGrooheAmoozeshi { get; set; } = string.Empty;
+        public bool? Vazeeat { get; set; }
     }
 }

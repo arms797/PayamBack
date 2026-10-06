@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using PayamBack.Data;
 using PayamBack.DTOs.Schedule.Faaliat;
 using PayamBack.Models.Schedule;
+using PayamBack.Services.Implementations;
+using PayamBack.Services.Interfaces;
 
 namespace PayamBack.Controllers.Schedule
 {
@@ -13,10 +15,12 @@ namespace PayamBack.Controllers.Schedule
     public class FaaliatController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILookupCacheService _lookupCache;
 
-        public FaaliatController(AppDbContext context)
+        public FaaliatController(AppDbContext context,ILookupCacheService lookupCache)
         {
             _context = context;
+            _lookupCache = lookupCache;
         }
 
         // ============================================================
@@ -195,11 +199,13 @@ namespace PayamBack.Controllers.Schedule
                     MaxDayDarHafteh = dto.MaxDayDarHafteh,
                     IsMadove = dto.IsMadove ?? false,
                     Color = dto.Color,
-                    Vazeeat = dto.Vazeeat ?? true
+                    Vazeeat = dto.Vazeeat ?? true,                                        
                 };
 
                 await _context.Set<Faaliat>().AddAsync(faaliat);
                 await _context.SaveChangesAsync();
+
+                _lookupCache.ClearCache();
 
                 return Ok(new
                 {
@@ -257,6 +263,7 @@ namespace PayamBack.Controllers.Schedule
                 if (dto.Vazeeat.HasValue) faaliat.Vazeeat = dto.Vazeeat;
 
                 await _context.SaveChangesAsync();
+                _lookupCache.ClearCache();
 
                 return Ok(new
                 {
@@ -303,11 +310,12 @@ namespace PayamBack.Controllers.Schedule
                     return BadRequest(new
                     {
                         success = false,
-                        message = "این فعالیت در درخواست‌های هم‌جاوری استفاده شده است و قابل حذف نیست"
+                        message = "این فعالیت در درخواست‌های هم‌جواری استفاده شده است و قابل حذف نیست"
                     });
 
                 _context.Set<Faaliat>().Remove(faaliat);
                 await _context.SaveChangesAsync();
+                _lookupCache.ClearCache();
 
                 return Ok(new
                 {

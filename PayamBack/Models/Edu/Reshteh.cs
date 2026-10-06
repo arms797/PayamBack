@@ -51,6 +51,7 @@ namespace PayamBack.Models.Edu
         /// <summary>ترم اعمال</summary>
         [MaxLength(10)]
         public string? TermEamal { get; set; }
+        public bool? Vazeeat { get; set; } = true;
 
         // ======== Navigation Properties ========
 

@@ -28,6 +28,7 @@ namespace PayamBack.Models.Edu
         /// <summary>عنوان گروه آموزشی</summary>
         [MaxLength(200)]
         public string? OnvanGrooheAmoozeshi { get; set; }
+        public bool? Vazeeat { get; set; } = true;
 
         /// <summary>رشته‌های تحصیلی مرتبط با این گروه آموزشی</summary>
         public virtual ICollection<Reshteh>? Reshtehs { get; set; }

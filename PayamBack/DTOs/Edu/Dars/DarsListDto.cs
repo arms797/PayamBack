@@ -16,6 +16,11 @@
         public string? NoeAzmoon { get; set; }
         public int? ReshtehId { get; set; }
         public string? ReshtehName { get; set; }
+        public int? GrooheAmoozeshiId { get; set; }
+        public string? GrooheName { get; set; }
         public int? Zarfiat { get; set; }
+        public List<ManbaDarsSimpleDto> ManbaList { get; set; } = new();
+        /// <summary>تعداد منابع</summary>
+        public int ManbaCount { get; set; }
     }
 }

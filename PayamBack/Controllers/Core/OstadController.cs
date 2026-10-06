@@ -50,14 +50,14 @@ namespace PayamBack.Controllers.Core
         [HttpGet("list")]
         [NoPermission]
         public async Task<IActionResult> GetList(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 50,
-            [FromQuery] string? search = null,
-            [FromQuery] string? reshteh = null,
-            [FromQuery] int? ostanId = null,
-            [FromQuery] int? markazId = null,
-            [FromQuery] int? noeHamkari = null,
-            [FromQuery] int? vazeeat = null)
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 50,
+    [FromQuery] string? search = null,
+    [FromQuery] string? reshteh = null,
+    [FromQuery] int? ostanId = null,
+    [FromQuery] int? markazId = null,
+    [FromQuery] int? noeHamkari = null,
+    [FromQuery] int? vazeeat = null)
         {
             try
             {
@@ -66,50 +66,12 @@ namespace PayamBack.Controllers.Core
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
                 // ============================================================
-                // 🔥 بررسی ادمین سامانه
-                // ============================================================
-                var isAdmin = codeRole.Value == 1;
-
-                // ============================================================
-                // 🔥 اگر ادمین نیست، مراکز قابل دسترس را بگیر
-                // ============================================================
-                List<int> accessibleMarkazIds = new();
-                if (!isAdmin)
-                {
-                    accessibleMarkazIds = await _accessService.GetAccessibleMarkazIdsAsync(codeRole.Value, currentMarkaz?.Id);
-
-                    if (!accessibleMarkazIds.Any())
-                    {
-                        return Ok(new
-                        {
-                            success = true,
-                            message = "شما دسترسی به هیچ مرکزی ندارید",
-                            data = new List<object>(),
-                            pagination = new { page, pageSize, totalCount = 0, totalPages = 0 }
-                        });
-                    }
-                }
-
-                // ============================================================
-                // 🔥 Query پایه
+                // 🔥 Query پایه - بدون محدودیت مرکز
                 // ============================================================
                 var query = from o in _context.Ostads
                             join u in _context.Users on o.Id equals u.OstadId into userJoin
                             from u in userJoin.DefaultIfEmpty()
                             select new { Ostad = o, User = u };
-
-                // ============================================================
-                // 🔥 فیلتر دسترسی به مراکز (فقط برای غیر ادمین)
-                // ============================================================
-                if (!isAdmin)
-                {
-                    // فقط اساتیدی که مرکزشان در لیست مراکز قابل دسترس است
-                    query = query.Where(x =>
-                        x.Ostad.MarkazId.HasValue &&
-                        accessibleMarkazIds.Contains(x.Ostad.MarkazId.Value));
-                }
-                // برای ادمین: هیچ فیلتری روی مرکز اعمال نمیشه
-                // یعنی حتی اساتید بدون مرکز هم نمایش داده میشن
 
                 // ============================================================
                 // فیلتر جستجو
@@ -204,7 +166,6 @@ namespace PayamBack.Controllers.Core
                         Naam = x.Ostad.Naam ?? "",
                         NaamKhanevadegi = x.Ostad.NaamKhanevadegi ?? "",
                         MarkazId = x.Ostad.MarkazId ?? 0,
-                        // MarkazName اینجا پر نمیشه
                         NoeHamkari = (int)(x.Ostad.NoeHamkari ?? 0),
                         MartabeElmi = x.Ostad.MartabeElmi ?? "",
                         Vazeeat = x.User != null ? x.User.Vazeeyat ?? true : true,
@@ -213,29 +174,29 @@ namespace PayamBack.Controllers.Core
                             .Where(m => m.OstadId == x.Ostad.Id && m.PishFarz == true)
                             .Select(m => m.Reshteh)
                             .FirstOrDefault() ?? ""
-                            })
-                            .ToListAsync();
+                    })
+                    .ToListAsync();
 
-                        // ============================================================
-                        // 🔥 پر کردن MarkazName از کش (سریع!)
-                        // ============================================================
-                        if (ostads.Any())
+                // ============================================================
+                // 🔥 پر کردن MarkazName از کش (سریع!)
+                // ============================================================
+                if (ostads.Any())
+                {
+                    var markazDict = await _markazCacheService.GetDictionaryAsync();
+
+                    foreach (var ostad in ostads)
+                    {
+                        if (ostad.MarkazId > 0 &&
+                            markazDict.TryGetValue(ostad.MarkazId, out var markaz))
                         {
-                            var markazDict = await _markazCacheService.GetDictionaryAsync();
-
-                            foreach (var ostad in ostads)
-                            {
-                                if (ostad.MarkazId > 0 &&
-                                    markazDict.TryGetValue(ostad.MarkazId, out var markaz))
-                                {
-                                    ostad.MarkazName = markaz.NaamMarkaz ?? "";
-                                }
-                                else
-                                {
-                                    ostad.MarkazName = "";  // یا "بدون مرکز"
-                                }
-                            }
+                            ostad.MarkazName = markaz.NaamMarkaz ?? "";
                         }
+                        else
+                        {
+                            ostad.MarkazName = "";
+                        }
+                    }
+                }
 
                 return Ok(new
                 {

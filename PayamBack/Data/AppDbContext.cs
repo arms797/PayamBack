@@ -56,6 +56,7 @@ namespace PayamBack.Data
         public DbSet<HaftegiException> HaftegiExceptions {  get; set; }
         public DbSet<SakhtemanKelass> SakhtemanKelasses { get; set; }
         public DbSet<Dars> Dars { get; set; }
+        public DbSet<ManbaDars> ManbaDars { get; set; }
         public DbSet<DarsEraeh> DarsEraehs { get; set; }
         public DbSet<DarsEraehOstad> DarsEraehOstads { get; set; }
 

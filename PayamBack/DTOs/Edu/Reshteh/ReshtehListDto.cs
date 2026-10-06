@@ -9,5 +9,8 @@
         public string? Maghta { get; set; }
         public string? CodeReshte { get; set; }
         public string? OnvanReshte { get; set; }
+        public string? TermVorood { get; set; }
+        public string? TermEamal { get; set; }
+        public bool? Vazeeat { get; set; }
     }
 }

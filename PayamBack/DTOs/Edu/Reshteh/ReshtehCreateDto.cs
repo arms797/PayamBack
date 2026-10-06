@@ -25,5 +25,6 @@ namespace PayamBack.DTOs.Edu.Reshteh
 
         [MaxLength(10)]
         public string? TermEamal { get; set; }
+        public bool? Vazeeat { get; set; }
     }
 }

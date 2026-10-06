@@ -11,5 +11,6 @@
         public string? OnvanReshte { get; set; }
         public string? TermVorood { get; set; }
         public string? TermEamal { get; set; }
+        public bool? Vazeeat { get; set; }
     }
 }

@@ -52,12 +52,13 @@ namespace PayamBack.Controllers.Edu
                         g.CodeDaneshkade,
                         g.NaamDaneshkadeh,
                         g.CodeGrooheAmoozeshi,
-                        g.OnvanGrooheAmoozeshi
+                        g.OnvanGrooheAmoozeshi,
+                        g.Vazeeat
                     })
                     .ToListAsync();
 
                 // 🔥 ذخیره در کش به مدت ۱ ساعت
-                _cache.Set(AllGrooheCacheKey, list, TimeSpan.FromHours(1));
+                _cache.Set(AllGrooheCacheKey, list, TimeSpan.FromHours(6));
 
                 return Ok(new
                 {
@@ -92,13 +93,14 @@ namespace PayamBack.Controllers.Edu
                 var list = await _context.GrooheAmoozeshis
                     .Where(g => g.CodeDaneshkade == codeDaneshkade)
                     .OrderBy(g => g.CodeGrooheAmoozeshi)
-                    .Select(g => new
+                    .Select(g => new 
                     {
                         g.Id,
                         g.CodeDaneshkade,
                         g.NaamDaneshkadeh,
                         g.CodeGrooheAmoozeshi,
-                        g.OnvanGrooheAmoozeshi
+                        g.OnvanGrooheAmoozeshi,
+                        g.Vazeeat
                     })
                     .ToListAsync();
 
@@ -131,13 +133,14 @@ namespace PayamBack.Controllers.Edu
             {
                 var item = await _context.GrooheAmoozeshis
                     .Where(g => g.Id == id)
-                    .Select(g => new
+                    .Select(g => new 
                     {
                         g.Id,
                         g.CodeDaneshkade,
                         g.NaamDaneshkadeh,
                         g.CodeGrooheAmoozeshi,
-                        g.OnvanGrooheAmoozeshi
+                        g.OnvanGrooheAmoozeshi,
+                        g.Vazeeat
                     })
                     .FirstOrDefaultAsync();
 
@@ -225,7 +228,8 @@ namespace PayamBack.Controllers.Edu
                     CodeDaneshkade = dto.CodeDaneshkade,
                     NaamDaneshkadeh = dto.NaamDaneshkadeh,
                     CodeGrooheAmoozeshi = dto.CodeGrooheAmoozeshi,
-                    OnvanGrooheAmoozeshi = dto.OnvanGrooheAmoozeshi
+                    OnvanGrooheAmoozeshi = dto.OnvanGrooheAmoozeshi,
+                    Vazeeat=dto.Vazeeat
                 };
 
                 await _context.GrooheAmoozeshis.AddAsync(item);
@@ -283,6 +287,7 @@ namespace PayamBack.Controllers.Edu
                 item.NaamDaneshkadeh = dto.NaamDaneshkadeh ?? item.NaamDaneshkadeh;
                 item.CodeGrooheAmoozeshi = dto.CodeGrooheAmoozeshi ?? item.CodeGrooheAmoozeshi;
                 item.OnvanGrooheAmoozeshi = dto.OnvanGrooheAmoozeshi ?? item.OnvanGrooheAmoozeshi;
+                item.Vazeeat = dto.Vazeeat;
 
                 await _context.SaveChangesAsync();
 
@@ -358,7 +363,7 @@ namespace PayamBack.Controllers.Edu
         // 8️⃣ پاک کردن کش (برای مواقع ضروری)
         // ============================================================
         [HttpDelete("clear-cache")]
-        [Authorize(Roles = "ادمین سامانه")]
+        [Authorize]
         public IActionResult ClearCache()
         {
             _cache.Remove(AllGrooheCacheKey);

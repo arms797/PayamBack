@@ -71,7 +71,7 @@ namespace PayamBack.Services.Implementations
                     ur => ur.RoleId,
                     r => r.Id,
                     (ur, r) => new { ur, r })
-                .Join(_context.Markazes.Where(m => m.Vazeeyat == true),
+                .Join(_context.Markazes,
                     ur => ur.ur.MarkazId,
                     m => m.Id,
                     (ur, m) => new RoleDto
