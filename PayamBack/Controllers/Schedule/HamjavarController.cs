@@ -25,6 +25,9 @@ namespace PayamBack.Controllers.Schedule
         private readonly ISignatureService _signatureService;
         private readonly ICurrentUserService _currentUserService;
         private readonly IAccessService _accessService;
+        private readonly IPermittedMarkazCacheService _permittedMarkazCache;
+        private readonly IMarkazCacheService _markazCacheService;
+
 
         public HamjavarController(
             AppDbContext context,
@@ -33,7 +36,9 @@ namespace PayamBack.Controllers.Schedule
             IWebHostEnvironment webHostEnvironment,
             ISignatureService signatureService,
             ICurrentUserService currentUserService,
-            IAccessService accessService)
+            IAccessService accessService,
+            IPermittedMarkazCacheService permittedMarkazCache,
+            IMarkazCacheService markazCacheService)
         {
             _context = context;
             _userManager = userManager;
@@ -42,6 +47,8 @@ namespace PayamBack.Controllers.Schedule
             _signatureService = signatureService;
             _currentUserService = currentUserService;
             _accessService = accessService;
+            _permittedMarkazCache = permittedMarkazCache;
+            _markazCacheService = markazCacheService;
         }
 
         // ============================================================
@@ -658,6 +665,50 @@ namespace PayamBack.Controllers.Schedule
                     return BadRequest(new { success = false, message = "حداقل یک مورد تقاضا باید ثبت شود" });
                 }
 
+                // ============================================================
+                // 🔥 اعتبارسنجی Hamjavar1s
+                // ============================================================
+
+                // 1️⃣ مرکز خود استاد نباید در لیست درخواست باشد
+                if (ostad.MarkazId.HasValue)
+                {
+                    var ownMarkazRequest = hamjavar1s.FirstOrDefault(h => h.MarkazId == ostad.MarkazId.Value);
+                    if (ownMarkazRequest != null)
+                    {
+                        var ownMarkazName = await _markazCacheService.GetNameByIdIncludingInactiveAsync(ostad.MarkazId.Value)
+                                            ?? $"مرکز {ostad.MarkazId.Value}";
+
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = $"برای مرکز خودتان ({ownMarkazName}) لازم نیست درخواست بدهید"
+                        });
+                    }
+                }
+
+                // 2️⃣ مرکز تکراری در لیست Hamjavar1s نباید وجود داشته باشد
+                var duplicateMarkazIds = hamjavar1s
+                    .GroupBy(h => h.MarkazId)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .ToList();
+
+                if (duplicateMarkazIds.Any())
+                {
+                    var markazDict = await _markazCacheService.GetIncludingInactiveDictionaryAsync();
+
+                    var duplicateNames = duplicateMarkazIds
+                        .Select(id => markazDict.TryGetValue(id, out var m) ? (m.NaamMarkaz ?? $"مرکز {id}") : $"مرکز {id}")
+                        .ToList();
+
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = $"مراکز تکراری در درخواست وجود دارد: {string.Join(" ، ", duplicateNames)}. هر مرکز فقط یک بار می‌تواند درخواست داده شود",
+                        duplicateMarkazIds
+                    });
+                }
+
                 var roleMarkaz = GetRoleMarkazDisplay(currentRole, currentMarkaz);
 
                 using var transaction = await _context.Database.BeginTransactionAsync();
@@ -836,6 +887,9 @@ namespace PayamBack.Controllers.Schedule
                     return Forbid();
                 }
 
+
+
+
                 using var transaction = await _context.Database.BeginTransactionAsync();
 
                 string? uploadElmiPath = null;
@@ -898,6 +952,64 @@ namespace PayamBack.Controllers.Schedule
                         {
                             Console.WriteLine($"❌ خطا در دسریالایز Hamjavar1s: {ex.Message}");
                             return BadRequest(new { success = false, message = "خطا در پردازش اطلاعات موارد تقاضا" });
+                        }
+                    }
+
+                    // ============================================================
+                    // 🔥 اعتبارسنجی Hamjavar1s
+                    // ============================================================
+                    if (hamjavar1s != null && hamjavar1s.Any())
+                    {
+                        // دریافت مرکز استاد (چون در Update به ostad مستقیم دسترسی نداریم)
+                        var ostadMarkazId = await _context.Ostads
+                            .Where(o => o.Id == entity.OstadId)
+                            .Select(o => o.MarkazId)
+                            .FirstOrDefaultAsync();
+
+                        // 1️⃣ مرکز خود استاد نباید در لیست درخواست باشد
+                        if (ostadMarkazId.HasValue)
+                        {
+                            var ownMarkazRequest = hamjavar1s
+                                .FirstOrDefault(h => h.MarkazId.HasValue && h.MarkazId.Value == ostadMarkazId.Value);
+
+                            if (ownMarkazRequest != null)
+                            {
+                                var ownMarkazName = await _markazCacheService
+                                    .GetNameByIdIncludingInactiveAsync(ostadMarkazId.Value)
+                                    ?? $"مرکز {ostadMarkazId.Value}";
+
+                                return BadRequest(new
+                                {
+                                    success = false,
+                                    message = $"برای مرکز خودتان ({ownMarkazName}) لازم نیست درخواست بدهید"
+                                });
+                            }
+                        }
+
+                        // 2️⃣ مرکز تکراری در لیست نباید وجود داشته باشد
+                        var duplicateMarkazIds = hamjavar1s
+                            .Where(h => h.MarkazId.HasValue)
+                            .GroupBy(h => h.MarkazId!.Value)
+                            .Where(g => g.Count() > 1)
+                            .Select(g => g.Key)
+                            .ToList();
+
+                        if (duplicateMarkazIds.Any())
+                        {
+                            var markazDict = await _markazCacheService.GetIncludingInactiveDictionaryAsync();
+
+                            var duplicateNames = duplicateMarkazIds
+                                .Select(id => markazDict.TryGetValue(id, out var m)
+                                    ? (m.NaamMarkaz ?? $"مرکز {id}")
+                                    : $"مرکز {id}")
+                                .ToList();
+
+                            return BadRequest(new
+                            {
+                                success = false,
+                                message = $"مراکز تکراری در درخواست وجود دارد: {string.Join(" ، ", duplicateNames)}. هر مرکز فقط یک بار می‌تواند درخواست داده شود",
+                                duplicateMarkazIds
+                            });
                         }
                     }
 
@@ -973,6 +1085,8 @@ namespace PayamBack.Controllers.Schedule
 
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+                    _permittedMarkazCache.Clear(entity.OstadId, entity.TermCode);
+
 
                     return Ok(new
                     {
@@ -1409,6 +1523,8 @@ namespace PayamBack.Controllers.Schedule
 
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+                    // 🔥 پاکسازی کش مراکز مجاز استاد بلافاصله بعد از ثبت نظر معاون
+                    _permittedMarkazCache.Clear(hamjavar.OstadId, hamjavar.TermCode);
 
                     return Ok(new
                     {
@@ -1467,6 +1583,8 @@ namespace PayamBack.Controllers.Schedule
                 entity.NazarMoaven = 0;
 
                 await _context.SaveChangesAsync();
+                _permittedMarkazCache.Clear(entity.OstadId, entity.TermCode);
+
                 return Ok(new
                 {
                     success = true,
@@ -1594,6 +1712,8 @@ namespace PayamBack.Controllers.Schedule
 
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+                    _permittedMarkazCache.Clear(entity.OstadId, entity.TermCode);
+
 
                     return Ok(new
                     {

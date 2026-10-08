@@ -27,6 +27,7 @@ namespace PayamBack.Controllers.Core
         private readonly ICurrentUserService _currentUserService;
         private readonly IAccessService _accessService;
         private readonly IMarkazCacheService _markazCacheService;
+        private readonly IPermittedMarkazCacheService _permittedMarkazCache;
 
         public OstadController(
             AppDbContext context,
@@ -34,7 +35,8 @@ namespace PayamBack.Controllers.Core
             RoleManager<AppRole> roleManager,
             ICurrentUserService currentUserService,
             IAccessService accessService,
-            IMarkazCacheService markazCacheService)
+            IMarkazCacheService markazCacheService,
+            IPermittedMarkazCacheService permittedMarkazCache)
         {
             _context = context;
             _userManager = userManager;
@@ -42,6 +44,7 @@ namespace PayamBack.Controllers.Core
             _currentUserService = currentUserService;
             _accessService = accessService;
             _markazCacheService = markazCacheService;
+            _permittedMarkazCache = permittedMarkazCache;
         }
 
         // ============================================================
@@ -1209,6 +1212,7 @@ namespace PayamBack.Controllers.Core
                     // ============================================================
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+                    _permittedMarkazCache.ClearAllForOstad(ostad.Id);
 
                     // ============================================================
                     // 1️⃣1️⃣ پاسخ
@@ -1457,6 +1461,7 @@ namespace PayamBack.Controllers.Core
                     // ============================================================
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+                    _permittedMarkazCache.ClearAllForOstad(ostad.Id);
 
                     // ============================================================
                     // 🔟 پاسخ

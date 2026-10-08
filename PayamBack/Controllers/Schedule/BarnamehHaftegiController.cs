@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using PayamBack.Data;
+using PayamBack.DTOs.Schedule.BarnamehHaftegi;
+using PayamBack.DTOs.Schedule.Hamjavar;
 using PayamBack.Models.Core;
 using PayamBack.Models.Edu;
 using PayamBack.Models.Identity;
@@ -11,6 +13,7 @@ using PayamBack.Models.Schedule;
 using PayamBack.Services.Implementations;
 using PayamBack.Services.Interfaces;
 using System.ComponentModel.DataAnnotations;
+
 
 namespace PayamBack.Controllers.Schedule
 {
@@ -29,6 +32,9 @@ namespace PayamBack.Controllers.Schedule
         //private readonly IFaaliatCacheService _faaliatCacheService;
         //private readonly ISaatBargozariCacheService _saatBargozariCacheService;
         private readonly ILookupCacheService _lookupCache;
+        private readonly IPermittedMarkazCacheService _permittedMarkazCache;
+        private readonly ISignatureService _signatureService;
+
 
         public BarnamehHaftegiController(
             AppDbContext context,
@@ -40,7 +46,9 @@ namespace PayamBack.Controllers.Schedule
             IMemoryCache cache,
             //IFaaliatCacheService faaliatCacheService,
             //ISaatBargozariCacheService saatBargozariCacheService
-            ILookupCacheService lookupCacheService)
+            ILookupCacheService lookupCacheService,
+            IPermittedMarkazCacheService permittedMarkazCache,
+            ISignatureService signatureService)
         {
             _context = context;
             _userManager = userManager;
@@ -52,6 +60,8 @@ namespace PayamBack.Controllers.Schedule
             //_faaliatCacheService = faaliatCacheService;
             //_saatBargozariCacheService = saatBargozariCacheService;
             _lookupCache = lookupCacheService;
+            _permittedMarkazCache = permittedMarkazCache;
+            _signatureService = signatureService;
         }
 
         // ============================================================
@@ -111,7 +121,7 @@ namespace PayamBack.Controllers.Schedule
         /// دریافت مراکز مجاز برای یک استاد در ترم مشخص
         /// مرکز اصلی + مراکزی که در Hamjavar1 مجوز گرفته‌اند
         /// </summary>
-        private async Task<List<PermittedMarkazInfo>> GetPermittedMarkazInfoAsync(int ostadId, string termCode)
+        /*private async Task<List<PermittedMarkazInfo>> GetPermittedMarkazInfoAsync(int ostadId, string termCode)
         {
             var cacheKey = $"PermittedMarkazInfo_{ostadId}_{termCode}";
             if (_cache.TryGetValue(cacheKey, out List<PermittedMarkazInfo>? cached) && cached != null)
@@ -206,9 +216,122 @@ namespace PayamBack.Controllers.Schedule
             _cache.Set(cacheKey, result, TimeSpan.FromHours(1));
             return result;
         }
+        */
 
+        /// <summary>
+        /// دریافت مراکز مجاز استاد (با استفاده از کش متمرکز)
+        /// </summary>
+        private async Task<List<PermittedMarkazInfo>> GetPermittedMarkazInfoAsync(int ostadId, string termCode)
+        {
+            return await _permittedMarkazCache.GetAsync(
+                ostadId,
+                termCode,
+                () => BuildPermittedMarkazInfoInternalAsync(ostadId, termCode));
+        }
 
-       
+        /// <summary>
+        /// ساخت لیست مراکز مجاز (بدون کش - فقط برای اولین بار یا بعد از invalidate)
+        /// </summary>
+        private async Task<List<PermittedMarkazInfo>> BuildPermittedMarkazInfoInternalAsync(int ostadId, string termCode)
+        {
+            var result = new List<PermittedMarkazInfo>();
+
+            var ostad = await _context.Ostads
+                .Include(o => o.Markaz)
+                .FirstOrDefaultAsync(o => o.Id == ostadId);
+
+            if (ostad == null) return result;
+
+            // ============================================================
+            // حالت ۱: استاد هیات علمی پیام نور نیست (مدرس مدعو، غیرپیام نور، ...)
+            // ============================================================
+            if (ostad.NoeHamkari != NoeHamkariEnum.HeyatElmiPayamNoor)
+            {
+                var (_, _, currentMarkaz, _) = await _currentUserService.GetCurrentUserInfoAsync();
+                if (currentMarkaz == null) return result;
+
+                var allMarkazs = await _markazCache.GetAllAsync();
+                var filteredMarkazs = allMarkazs
+                    .Where(m => m.Vazeeyat == true
+                                && m.CodeOstan == currentMarkaz.CodeOstan
+                                && m.Level == 4)
+                    .Select(m => new PermittedMarkazInfo
+                    {
+                        MarkazId = m.Id,
+                        IsMainMarkaz = m.Id == currentMarkaz.Id,
+                        MaxDays = null,
+                        AllowedFaaliatIds = new List<int>(),
+                        NoeMarkaz = m.NoeMarkaz ?? 1
+                    })
+                    .ToList();
+
+                result.AddRange(filteredMarkazs);
+                return result;
+            }
+
+            // ============================================================
+            // حالت ۲: استاد هیات علمی پیام نور
+            // ============================================================
+
+            // 🔥 HashSet برای جلوگیری از تکرار مراکز
+            var seenMarkazIds = new HashSet<int>();
+
+            // 2-1) مرکز اصلی استاد
+            if (ostad.MarkazId != null && ostad.Markaz != null)
+            {
+                result.Add(new PermittedMarkazInfo
+                {
+                    MarkazId = ostad.MarkazId.Value,
+                    IsMainMarkaz = true,
+                    MaxDays = null,
+                    AllowedFaaliatIds = new List<int>(),
+                    NoeMarkaz = ostad.Markaz.NoeMarkaz ?? 1
+                });
+                seenMarkazIds.Add(ostad.MarkazId.Value);   // ← 🔥 اضافه شد
+            }
+
+            // 2-2) مراکز مجاز از Hamjavar1
+            var hamjavarData = await _context.Hamjavar1s
+                .Where(h => h.Hamjavar.OstadId == ostadId
+                            && h.Hamjavar.TermCode == termCode
+                            && (h.Hamjavar.NazarMoaven == 2 || h.Hamjavar.NazarMoaven == 4)
+                            && h.TedadRoozMoaven.HasValue
+                            && h.TedadRoozMoaven.Value > 0)
+                .Select(h => new
+                {
+                    h.MarkazId,
+                    h.TedadRoozMoaven,
+                    FaaliatIds = h.FaaliatIds ?? "",
+                    h.Markaz.NoeMarkaz
+                })
+                .ToListAsync();
+
+            foreach (var item in hamjavarData)
+            {
+                if (!item.MarkazId.HasValue) continue;
+
+                // 🔥 چک واحد: هم مرکز اصلی، هم تکرار بین Hamjavar1 ها
+                if (!seenMarkazIds.Add(item.MarkazId.Value)) continue;
+
+                var faaliatIds = string.IsNullOrEmpty(item.FaaliatIds)
+                    ? new List<int>()
+                    : item.FaaliatIds.Split('|', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(int.Parse)
+                        .ToList();
+
+                result.Add(new PermittedMarkazInfo
+                {
+                    MarkazId = item.MarkazId.Value,
+                    IsMainMarkaz = false,
+                    MaxDays = item.TedadRoozMoaven,
+                    AllowedFaaliatIds = faaliatIds,
+                    NoeMarkaz = item.NoeMarkaz ?? 1
+                });
+            }
+
+            return result;
+        }
+
         private async Task<string> GetMarkazNameAsync(int markazId)
         {
             var markaz = await _markazCache.GetByIdAsync(markazId);
@@ -763,7 +886,7 @@ namespace PayamBack.Controllers.Schedule
         }
 
         /// <summary>
-        /// دریافت وضعیت ترکیبی برنامه برای نمایش در لیست
+        /// دریافت وضعیت تایید برنامه برای نمایش در لیست
         /// </summary>
         private string GetApproveStatus(BarnamehHaftegiOstad program)
         {
@@ -957,7 +1080,7 @@ namespace PayamBack.Controllers.Schedule
 
                     // قانون ۲: فعالیت مجازی → مرکز باید قابلیت مجازی داشته باشد
                     if (isVirtualActivity && !virtualMarkazIds.Contains(markazIdX.Value))
-                        return (false, $"مرکز {GetMarkazName(markazIdX.Value, allMarkaz)} قابلیت مجازی ندارد");
+                        return (false, $"مرکز {GetMarkazName(markazIdX.Value, allMarkaz)} قابلیت فعالیت مجازی ندارد");
 
                     // قانون ۳: اگر مرکز غیراصلی است، فعالیت‌های حضوری باید در لیست مجاز باشند
                     if (!isMainMarkaz && isHozooriActivity)
@@ -1339,27 +1462,6 @@ namespace PayamBack.Controllers.Schedule
         {
            try
             {
-                /*
-                // اعتبارسنجی ورودی
-                if (ostadId <= 0 || string.IsNullOrEmpty(termCode))
-                {
-                    return BadRequest(new { success = false, message = "ostadId و termCode اجباری هستند" });
-                }
-
-                // دریافت لیست مراکز مجاز
-                var permitted = await GetPermittedMarkazInfoAsync(ostadId, termCode);
-
-                // تبدیل به DTO مناسب برای فرانت‌اند
-                var result = permitted.Select(p => new
-                {
-                    p.MarkazId,
-                    p.IsMainMarkaz,
-                    p.MaxDays,
-                    AllowedFaaliatIds = p.AllowedFaaliatIds,
-                    p.NoeMarkaz
-                });
-                
-                */
                 var result = await GetPermittedMarkazInfoAsync(ostadId, termCode);
                 return Ok(new
                 {
@@ -1706,7 +1808,7 @@ namespace PayamBack.Controllers.Schedule
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
-                    _cache.Remove($"PermittedMarkaz_{program.OstadId}_{program.CodeTerm}");
+                    //_permittedMarkazCache.Clear(program.OstadId, program.CodeTerm);
 
                     var response = new
                     {
@@ -1808,7 +1910,7 @@ namespace PayamBack.Controllers.Schedule
                     await transaction.CommitAsync();
 
                     // پاک کردن کش
-                    _cache.Remove($"PermittedMarkaz_{program.OstadId}_{program.CodeTerm}");
+                    //_permittedMarkazCache.Clear(program.OstadId, program.CodeTerm);
 
                     return Ok(new
                     {
@@ -1930,6 +2032,26 @@ namespace PayamBack.Controllers.Schedule
                 var modirGroohName = await GetUserFullNameAsync(program.UserIdModirGrooh);
                 var raeisMarkazName = await GetUserFullNameAsync(program.UserIdRaeisMarkaz);
                 var moavenName = await GetUserFullNameAsync(program.UserIdMoaven);
+
+                // 🔥 1) پیدا کردن ostadUserId
+                int? ostadUserId = null;
+                if (program.OstadId > 0)
+                {
+                    ostadUserId = await _context.Users
+                        .Where(u => u.OstadId == program.OstadId)
+                        .Select(u => (int?)u.Id)
+                        .FirstOrDefaultAsync();
+                }
+
+                // 🔥 2) جمع‌آوری userIdها
+                var userIds = new List<int>();
+                if (ostadUserId.HasValue) userIds.Add(ostadUserId.Value);
+                if (program.UserIdModirGrooh.HasValue) userIds.Add(program.UserIdModirGrooh.Value);
+                if (program.UserIdRaeisMarkaz.HasValue) userIds.Add(program.UserIdRaeisMarkaz.Value);
+                if (program.UserIdMoaven.HasValue) userIds.Add(program.UserIdMoaven.Value);
+
+                // 🔥 3) دریافت امضاها
+                var signatures = await _signatureService.GetSignaturesByUserIdsAsync(userIds);
                 // ============================================================
                 // 6️⃣ ساخت خروجی
                 // ============================================================
@@ -1983,6 +2105,20 @@ namespace PayamBack.Controllers.Schedule
                     RequiredSessions = requiredSessions,
                     RequiredHours = requiredHours,
                     IsComplete = isComplete,
+
+                    OstadUserId = ostadUserId,
+                    UserIdModirGrooh = program.UserIdModirGrooh,
+                    UserIdRaeisMarkaz = program.UserIdRaeisMarkaz,
+                    UserIdMoaven = program.UserIdMoaven,
+
+                    SignatureOstad = (ostadUserId.HasValue && signatures.TryGetValue(ostadUserId.Value, out var s1))
+                        ? new SignatureDto { Data = s1.Signature, Position = s1.Position } : null,
+                    SignatureModirGrooh = (program.UserIdModirGrooh.HasValue && signatures.TryGetValue(program.UserIdModirGrooh.Value, out var s2))
+                        ? new SignatureDto { Data = s2.Signature, Position = s2.Position } : null,
+                    SignatureRaeisMarkaz = (program.UserIdRaeisMarkaz.HasValue && signatures.TryGetValue(program.UserIdRaeisMarkaz.Value, out var s3))
+                        ? new SignatureDto { Data = s3.Signature, Position = s3.Position } : null,
+                    SignatureMoaven = (program.UserIdMoaven.HasValue && signatures.TryGetValue(program.UserIdMoaven.Value, out var s4))
+                        ? new SignatureDto { Data = s4.Signature, Position = s4.Position } : null,
 
                     Details = program.BarnamehHaftegiOstad1s
                         .OrderBy(d => d.RoozeHafteh)
@@ -2350,7 +2486,7 @@ namespace PayamBack.Controllers.Schedule
 
                 await _context.SaveChangesAsync();
 
-                _cache.Remove($"PermittedMarkaz_{program.OstadId}_{program.CodeTerm}");
+                //_permittedMarkazCache.Clear(program.OstadId, program.CodeTerm);
 
                 return Ok(new
                 {
@@ -2712,7 +2848,7 @@ namespace PayamBack.Controllers.Schedule
                 await _context.SaveChangesAsync();
 
                 // پاک کردن کش مراکز مجاز
-                _cache.Remove($"PermittedMarkaz_{program.OstadId}_{program.CodeTerm}");
+                //_permittedMarkazCache.Clear(program.OstadId, program.CodeTerm);
 
                 return Ok(new
                 {
@@ -3056,6 +3192,16 @@ namespace PayamBack.Controllers.Schedule
         public int RequiredHours { get; set; }
         public bool IsComplete { get; set; }
 
+        public int? OstadUserId { get; set; }
+        public int? UserIdModirGrooh { get; set; }
+        public int? UserIdRaeisMarkaz { get; set; }
+        public int? UserIdMoaven { get; set; }
+
+        public SignatureDto? SignatureOstad { get; set; }
+        public SignatureDto? SignatureModirGrooh { get; set; }
+        public SignatureDto? SignatureRaeisMarkaz { get; set; }
+        public SignatureDto? SignatureMoaven { get; set; }
+
         public List<BarnamehHaftegiDetailItemDto> Details { get; set; } = new();
     }
 
@@ -3147,12 +3293,5 @@ namespace PayamBack.Controllers.Schedule
         public string? TermCode { get; set; }
     }
 
-    public class PermittedMarkazInfo
-    {
-        public int MarkazId { get; set; }
-        public bool IsMainMarkaz { get; set; }
-        public int? MaxDays { get; set; }           // فقط برای مراکز غیراصلی
-        public List<int> AllowedFaaliatIds { get; set; } = new();
-        public int NoeMarkaz { get; set; }          // نوع مرکز: 1=حضوری, 2=مجازی, 3=ترکیبی
-    }
+   
 }

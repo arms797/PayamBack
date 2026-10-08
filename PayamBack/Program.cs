@@ -106,6 +106,8 @@ builder.Services.AddScoped<ICacheManager, CacheManager>();
 builder.Services.AddSingleton<CacheVersionManager>(); //  به صورت Singleton
 builder.Services.AddScoped<IPermissionCacheService, PermissionCacheService>();
 builder.Services.AddScoped<ILookupCacheService, LookupCacheService>();
+builder.Services.AddScoped<IPermittedMarkazCacheService, PermittedMarkazCacheService>();
+
 
 builder.Services.AddHttpContextAccessor();
 
