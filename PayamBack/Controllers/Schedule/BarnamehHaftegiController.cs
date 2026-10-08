@@ -1365,8 +1365,16 @@ namespace PayamBack.Controllers.Schedule
             List<PermittedMarkazInfo> permittedMarkazInfo)
         {
             var errors = new List<string>();
-            var (userInfo,_,_,_)=await _currentUserService.GetCurrentUserInfoAsync();
-            if(userInfo.Ostad.NoeHamkari==NoeHamkariEnum.HeyatElmiPayamNoor)
+            var noeHamkari = await _context.Ostads
+                .Where(o => o.Id == program.OstadId)
+                .Select(o => (NoeHamkariEnum?)o.NoeHamkari)
+                .FirstOrDefaultAsync();
+            // اگر استاد هیات علمی پیام نور نیست، نیازی به این اعتبارسنجی نیست
+            if (noeHamkari != NoeHamkariEnum.HeyatElmiPayamNoor)
+                return errors;
+
+            //var (userInfo,_,_,_)=await _currentUserService.GetCurrentUserInfoAsync();
+            if(/*userInfo.Ostad.NoeHamkari*/noeHamkari==NoeHamkariEnum.HeyatElmiPayamNoor)
             {           
             
                 var nonMainMarkazInfo = permittedMarkazInfo
