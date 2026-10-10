@@ -19,7 +19,9 @@ namespace PayamBack
 
             try
             {
-                await context.Database.EnsureCreatedAsync();
+                //await context.Database.EnsureCreatedAsync();
+                await context.Database.MigrateAsync();
+
 
                 // ============================================================
                 // 1️⃣ ایجاد مرکز پیش‌فرض (اگر وجود نداشت)
