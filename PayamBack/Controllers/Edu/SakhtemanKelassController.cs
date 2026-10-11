@@ -130,12 +130,23 @@ namespace PayamBack.Controllers.Edu
                         Id = s.Id,
                         MarkazId = s.MarkazId,
                         MarkazName = s.Markaz != null ? s.Markaz.NaamMarkaz : "",
+                        CodeSakhteman = s.CodeSakhteman,
                         NaamSakhteman = s.NaamSakhteman,
+                        CodeClass = s.CodeClass,
                         NaamClass = s.NaamClass,
-                        Amoozeshi = s.Amoozeshi,
+                        NoeClass = s.NoeClass,
                         Vazeeyat = s.Vazeeyat,
+                        Zarfiat = s.Zarfiat,
+                        Tabagheh = s.Tabagheh,
+                        ZarfiatEmtahani = s.ZarfiatEmtahani,
+                        TedadWhiteboard = s.TedadWhiteboard,
                         Projector = s.Projector,
-                        TedadWhiteboard = s.TedadWhiteboard
+                        Emkanat = s.Emkanat,
+                        Tozihat = s.Tozihat,
+                        Telephon = s.Telephon,
+                        Amoozeshi = s.Amoozeshi,
+                        CreatedAt = s.CreatedAt,
+                        UpdatedAt = s.UpdatedAt
                     })
                     .ToListAsync();
 
@@ -580,12 +591,15 @@ namespace PayamBack.Controllers.Edu
                 // ============================================================
                 // 3️⃣ گرفتن مراکز از کش
                 // ============================================================
+                // ============================================================
+                // 3️⃣ گرفتن مراکز از کش (فقط Level 4 = مراکز اصلی)
+                // ============================================================
                 var allMarkazes = await _markazCache.GetAllIncludingInactiveAsync();
 
-                // دیکشنری: CodeMarkaz → MarkazId
+                // 🔥 دیکشنری: CodeMarkaz → MarkazId (فقط از مراکز Level 4)
                 var markazDict = allMarkazes
-                    .Where(m => !string.IsNullOrEmpty(m.CodeMarkaz))
-                    .GroupBy(m => m.CodeMarkaz!)
+                    .Where(m => m.Level == 4 && !string.IsNullOrEmpty(m.CodeMarkaz))
+                    .GroupBy(m => m.CodeMarkaz!.Trim())
                     .ToDictionary(g => g.Key, g => g.First().Id);
 
                 // ============================================================
@@ -644,24 +658,29 @@ namespace PayamBack.Controllers.Edu
                     }
 
                     // 4️⃣ Parse وضعیت (ستون 7): 1=فعال, 0=غیرفعال
+                    // 4️⃣ Parse وضعیت (ستون 7): «قابل استفاده» = فعال، «غیر قابل استفاده» = غیرفعال
                     bool vazeeyat;
                     if (string.IsNullOrEmpty(row.VazeeyatRaw))
                     {
-                        vazeeyat = true; // پیش‌فرض فعال
-                    }
-                    else if (row.VazeeyatRaw.Trim() == "1")
-                    {
-                        vazeeyat = true;
-                    }
-                    else if (row.VazeeyatRaw.Trim() == "0")
-                    {
-                        vazeeyat = false;
+                        vazeeyat = true; // پیش‌فرض: قابل استفاده
                     }
                     else
                     {
-                        rejectedRows.Add((row.RowNumber, GetRowData(row),
-                            $"وضعیت «{row.VazeeyatRaw}» باید 0 یا 1 باشد"));
-                        continue;
+                        var vazeeyatText = row.VazeeyatRaw.Trim();
+                        if (vazeeyatText == "قابل استفاده")
+                        {
+                            vazeeyat = true;
+                        }
+                        else if (vazeeyatText == "غیر قابل استفاده")
+                        {
+                            vazeeyat = false;
+                        }
+                        else
+                        {
+                            rejectedRows.Add((row.RowNumber, GetRowData(row),
+                                $"وضعیت «{row.VazeeyatRaw}» باید «قابل استفاده» یا «غیر قابل استفاده» باشد"));
+                            continue;
+                        }
                     }
 
                     // 5️⃣ Parse ویدئو پروژکتور (ستون 12): 1=دارد, 0=ندارد
@@ -833,7 +852,7 @@ namespace PayamBack.Controllers.Edu
             var lastRow = worksheet.LastRowUsed()?.RowNumber() ?? 0;
 
             // شروع از ردیف 1 (چون هدر نداره)
-            for (int row = 1; row <= lastRow; row++)
+            for (int row = 2; row <= lastRow; row++)
             {
                 var importRow = new SakhtemanKelassImportRow
                 {
