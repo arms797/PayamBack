@@ -984,6 +984,9 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool?>("Amoozeshi")
+                        .HasColumnType("bit");
+
                     b.Property<int>("CodeClass")
                         .HasColumnType("int");
 
@@ -1000,12 +1003,12 @@ namespace PayamBack.Migrations
                     b.Property<int>("MarkazId")
                         .HasColumnType("int");
 
-                    b.Property<string>("NaamSakhteman")
+                    b.Property<string>("NaamClass")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("NammClass")
+                    b.Property<string>("NaamSakhteman")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");

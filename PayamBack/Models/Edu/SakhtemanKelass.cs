@@ -50,7 +50,7 @@ namespace PayamBack.Models.Edu
         /// <summary>نام کلاس</summary>
         [Required(ErrorMessage = "نام کلاس الزامی است")]
         [StringLength(100)]
-        public string NammClass { get; set; } = string.Empty;
+        public string NaamClass { get; set; } = string.Empty;
 
         /// <summary>نوع کلاس (مثلاً: درس، آزمایشگاه، کنفرانس و ...)</summary>
         [StringLength(50)]
@@ -94,7 +94,8 @@ namespace PayamBack.Models.Edu
         /// <summary>شماره تلفن مسئول</summary>
         [StringLength(20)]
         public string? Telephon { get; set; }
-
+        //صرفا کلاس آموزشی =1 ، فقط اداری =0
+        public bool? Amoozeshi {  get; set; }
         // ============================================================
         // فیلدهای سیستمی (اختیاری - پیشنهاد من)
         // ============================================================
