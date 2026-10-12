@@ -37,7 +37,7 @@
         // ============================================================
         public string? Emkanat { get; set; }
         public string? Tozihat { get; set; }
-        public string? Telephon { get; set; }
+       // public string? Telephon { get; set; }
         public bool? Amoozeshi { get; set; }
 
         // ============================================================

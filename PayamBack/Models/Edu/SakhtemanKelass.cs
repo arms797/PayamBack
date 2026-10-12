@@ -92,8 +92,8 @@ namespace PayamBack.Models.Edu
         // اطلاعات تماس
         // ============================================================
         /// <summary>شماره تلفن مسئول</summary>
-        [StringLength(20)]
-        public string? Telephon { get; set; }
+       // [StringLength(20)]
+        //public string? Telephon { get; set; }
         //صرفا کلاس آموزشی =1 ، فقط اداری =0
         public bool? Amoozeshi {  get; set; }
         // ============================================================

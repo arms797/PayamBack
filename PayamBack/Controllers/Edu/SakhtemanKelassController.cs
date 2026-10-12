@@ -35,6 +35,65 @@ namespace PayamBack.Controllers.Edu
         }
 
         // ============================================================
+        // 🔥 متد کمکی: بررسی دسترسی ویرایش/ایجاد روی یک مرکز هدف
+        //
+        // منطق:
+        // - CodeRole 1: همه مراکز (هر سطح)
+        // - CodeRole 2: فقط مراکز با Level == 2 (سازمان مرکزی)
+        // - CodeRole 3: فقط مراکز با Level == 3 و CodeOstan == استان کاربر
+        // - CodeRole 4: فقط مرکز خودش (Id == currentMarkaz.Id)
+        // ============================================================
+        private async Task<bool> CanEditTargetMarkazAsync(
+            int targetMarkazId,
+            int codeRole,
+            int? currentMarkazId)
+        {
+            // ادمین سامانه → همه جا
+            if (codeRole == 1) return true;
+
+            // دریافت همه مراکز (فعال + غیرفعال) از کش
+            var allMarkaz = await _markazCache.GetAllIncludingInactiveAsync();
+
+            var targetMarkaz = allMarkaz.FirstOrDefault(m => m.Id == targetMarkazId);
+            if (targetMarkaz == null) return false;
+
+            var currentMarkaz = currentMarkazId.HasValue
+                ? allMarkaz.FirstOrDefault(m => m.Id == currentMarkazId.Value)
+                : null;
+
+            // ============================================================
+            // CodeRole 2: فقط مراکز سطح 2 (سازمان مرکزی)
+            // ============================================================
+            if (codeRole == 2)
+            {
+                return targetMarkaz.Level == 2;
+            }
+
+            // ============================================================
+            // CodeRole 3: فقط مراکز سطح 3 و همون استان کاربر
+            // ============================================================
+            if (codeRole == 3)
+            {
+                if (currentMarkaz == null) return false;
+
+                return targetMarkaz.Level == 3
+                    && targetMarkaz.CodeOstan == currentMarkaz.CodeOstan;
+            }
+
+            // ============================================================
+            // CodeRole 4: فقط مرکز خودش
+            // ============================================================
+            if (codeRole == 4)
+            {
+                if (currentMarkaz == null) return false;
+
+                return targetMarkaz.Id == currentMarkaz.Id;
+            }
+
+            return false;
+        }
+
+        // ============================================================
         // 1️⃣ لیست با فیلتر و صفحه‌بندی
         // ============================================================
         [HttpGet("list")]
@@ -71,7 +130,7 @@ namespace PayamBack.Controllers.Edu
 
                 var query = _context.SakhtemanKelasses
                     .Include(s => s.Markaz)
-                    .Where(s => accessibleMarkazIds.Contains(s.MarkazId))
+                    //.Where(s => accessibleMarkazIds.Contains(s.MarkazId))
                     .AsQueryable();
 
                 // فیلتر استان
@@ -143,7 +202,7 @@ namespace PayamBack.Controllers.Edu
                         Projector = s.Projector,
                         Emkanat = s.Emkanat,
                         Tozihat = s.Tozihat,
-                        Telephon = s.Telephon,
+                        //Telephon = s.Telephon,
                         Amoozeshi = s.Amoozeshi,
                         CreatedAt = s.CreatedAt,
                         UpdatedAt = s.UpdatedAt
@@ -218,7 +277,7 @@ namespace PayamBack.Controllers.Edu
                     Projector = entity.Projector,
                     Emkanat = entity.Emkanat,
                     Tozihat = entity.Tozihat,
-                    Telephon = entity.Telephon,
+                    //Telephon = entity.Telephon,
                     Amoozeshi = entity.Amoozeshi
                 };
 
@@ -267,15 +326,29 @@ namespace PayamBack.Controllers.Edu
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
-                if (!await _accessService.CanAccessTargetMarkazAsync(
-                    dto.MarkazId, codeRole.Value, currentMarkaz?.Id))
-                    return Forbid();
+                // ============================================================
+                // 1️⃣ بررسی دسترسی بر اساس سطح مرکز هدف (مثل Update)
+                // ============================================================
+                if (!await CanEditTargetMarkazAsync(dto.MarkazId, codeRole.Value, currentMarkaz?.Id))
+                {
+                    return StatusCode(403, new
+                    {
+                        success = false,
+                        message = "شما مجوز ایجاد ساختمان/کلاس برای این مرکز را ندارید"
+                    });
+                }
 
+                // ============================================================
+                // 2️⃣ بررسی وجود مرکز
+                // ============================================================
                 var markazExists = await _context.Markazes
                     .AnyAsync(m => m.Id == dto.MarkazId);
                 if (!markazExists)
                     return BadRequest(new { success = false, message = "مرکز یافت نشد" });
 
+                // ============================================================
+                // 3️⃣ بررسی تکراری نبودن (مرکز + کد ساختمان + کد کلاس)
+                // ============================================================
                 var exists = await _context.SakhtemanKelasses
                     .AnyAsync(s =>
                         s.MarkazId == dto.MarkazId &&
@@ -291,36 +364,128 @@ namespace PayamBack.Controllers.Edu
                     });
                 }
 
-                var entity = new SakhtemanKelass
-                {
-                    MarkazId = dto.MarkazId,
-                    CodeSakhteman = dto.CodeSakhteman,
-                    NaamSakhteman = dto.NaamSakhteman.Trim(),
-                    CodeClass = dto.CodeClass,
-                    NaamClass = dto.NaamClass.Trim(),
-                    NoeClass = dto.NoeClass?.Trim(),
-                    Vazeeyat = dto.Vazeeyat,
-                    Zarfiat = dto.Zarfiat,
-                    Tabagheh = dto.Tabagheh,
-                    ZarfiatEmtahani = dto.ZarfiatEmtahani,
-                    TedadWhiteboard = dto.TedadWhiteboard,
-                    Projector = dto.Projector,
-                    Emkanat = dto.Emkanat?.Trim(),
-                    Tozihat = dto.Tozihat?.Trim(),
-                    Telephon = dto.Telephon?.Trim(),
-                    Amoozeshi = dto.Amoozeshi,
-                    CreatedAt = DateTime.Now
-                };
+                // ============================================================
+                // 4️⃣ 🔥 بررسی اینکه آیا ساختمان با این کد از قبل در این مرکز وجود دارد؟
+                // ============================================================
+                var existingBuildingRecords = await _context.SakhtemanKelasses
+                    .Where(s => s.MarkazId == dto.MarkazId && s.CodeSakhteman == dto.CodeSakhteman)
+                    .ToListAsync();
 
-                await _context.SakhtemanKelasses.AddAsync(entity);
-                await _context.SaveChangesAsync();
+                string finalNaamSakhteman;
+                //string? finalTelephon = dto.Telephon?.Trim();
+                int relatedUpdatedCount = 0;
 
-                return Ok(new
+                if (existingBuildingRecords.Any())
                 {
-                    success = true,
-                    message = "ساختمان/کلاس با موفقیت ایجاد شد",
-                    data = new { id = entity.Id }
-                });
+                    // ساختمان از قبل وجود دارد
+                    var existingBuilding = existingBuildingRecords.First();
+
+                    // ✅ نام ساختمان از رکورد موجود (نه از DTO) - جلوگیری از مغایرت
+                    finalNaamSakhteman = existingBuilding.NaamSakhteman;
+
+                    // ============================================================
+                    // 🔥 اگر تلفن جدید متفاوت با رکورد موجود باشد → همه رکوردهای
+                    //    هم‌مرکز و هم‌ساختمان رو با تلفن جدید آپدیت کن
+                    // ============================================================
+                    /*var existingTelephon = existingBuilding.Telephon;
+                    bool telephonChanged = !string.IsNullOrEmpty(finalTelephon)
+                        && finalTelephon != existingTelephon;
+                    */
+
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+
+                    try
+                    {
+                        /*if (telephonChanged)
+                        {
+                            foreach (var record in existingBuildingRecords)
+                            {
+                                record.Telephon = finalTelephon;
+                                record.UpdatedAt = DateTime.Now;
+                            }
+
+                            relatedUpdatedCount = existingBuildingRecords.Count;
+                        }*/
+
+                        // ============================================================
+                        // ساخت رکورد جدید کلاس
+                        // ============================================================
+                        var entity = new SakhtemanKelass
+                        {
+                            MarkazId = dto.MarkazId,
+                            CodeSakhteman = dto.CodeSakhteman,
+                            NaamSakhteman = finalNaamSakhteman,   // ← از رکورد موجود
+                            CodeClass = dto.CodeClass,
+                            NaamClass = dto.NaamClass.Trim(),
+                            NoeClass = dto.NoeClass?.Trim(),
+                            Vazeeyat = dto.Vazeeyat,
+                            Zarfiat = dto.Zarfiat,
+                            Tabagheh = dto.Tabagheh,
+                            ZarfiatEmtahani = dto.ZarfiatEmtahani,
+                            TedadWhiteboard = dto.TedadWhiteboard,
+                            Projector = dto.Projector,
+                            Emkanat = dto.Emkanat?.Trim(),
+                            Tozihat = dto.Tozihat?.Trim(),
+                            //Telephon = telephonChanged ? finalTelephon : (finalTelephon ?? existingTelephon),
+                            Amoozeshi = dto.Amoozeshi,
+                            CreatedAt = DateTime.Now
+                        };
+
+                        await _context.SakhtemanKelasses.AddAsync(entity);
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        return Ok(new
+                        {
+                            success = true,
+                            message =  "کلاس با موفقیت ایجاد شد (نام ساختمان از رکورد موجود گرفته شد)",
+                            data = new { id = entity.Id }
+                        });
+                    }
+                    catch
+                    {
+                        await transaction.RollbackAsync();
+                        throw;
+                    }
+                }
+                else
+                {
+                    // ============================================================
+                    // 5️⃣ ساختمان جدید است → همه چیز از DTO
+                    // ============================================================
+                    finalNaamSakhteman = dto.NaamSakhteman.Trim();
+
+                    var entity = new SakhtemanKelass
+                    {
+                        MarkazId = dto.MarkazId,
+                        CodeSakhteman = dto.CodeSakhteman,
+                        NaamSakhteman = finalNaamSakhteman,
+                        CodeClass = dto.CodeClass,
+                        NaamClass = dto.NaamClass.Trim(),
+                        NoeClass = dto.NoeClass?.Trim(),
+                        Vazeeyat = dto.Vazeeyat,
+                        Zarfiat = dto.Zarfiat,
+                        Tabagheh = dto.Tabagheh,
+                        ZarfiatEmtahani = dto.ZarfiatEmtahani,
+                        TedadWhiteboard = dto.TedadWhiteboard,
+                        Projector = dto.Projector,
+                        Emkanat = dto.Emkanat?.Trim(),
+                        Tozihat = dto.Tozihat?.Trim(),
+                        //Telephon = finalTelephon,
+                        Amoozeshi = dto.Amoozeshi,
+                        CreatedAt = DateTime.Now
+                    };
+
+                    await _context.SakhtemanKelasses.AddAsync(entity);
+                    await _context.SaveChangesAsync();
+
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "ساختمان و کلاس با موفقیت ایجاد شد",
+                        data = new { id = entity.Id }
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -366,71 +531,86 @@ namespace PayamBack.Controllers.Edu
                 if (entity == null)
                     return NotFound(new { success = false, message = "ساختمان/کلاس یافت نشد" });
 
-                if (!await _accessService.CanAccessTargetMarkazAsync(
-                    entity.MarkazId, codeRole.Value, currentMarkaz?.Id))
-                    return Forbid();
-
-                // بررسی تغییر مرکز
-                if (dto.MarkazId.HasValue && dto.MarkazId.Value != entity.MarkazId)
+                // ============================================================
+                // 🔥 بررسی دسترسی بر اساس سطح مرکز رکورد
+                // ============================================================
+                if (!await CanEditTargetMarkazAsync(entity.MarkazId, codeRole.Value, currentMarkaz?.Id))
                 {
-                    if (!await _accessService.CanAccessTargetMarkazAsync(
-                        dto.MarkazId.Value, codeRole.Value, currentMarkaz?.Id))
-                        return Forbid();
-
-                    var markazExists = await _context.Markazes
-                        .AnyAsync(m => m.Id == dto.MarkazId.Value);
-                    if (!markazExists)
-                        return BadRequest(new { success = false, message = "مرکز جدید یافت نشد" });
-                }
-
-                // بررسی تکراری
-                var targetMarkazId = dto.MarkazId ?? entity.MarkazId;
-                var targetCodeSakhteman = dto.CodeSakhteman ?? entity.CodeSakhteman;
-                var targetCodeClass = dto.CodeClass ?? entity.CodeClass;
-
-                var exists = await _context.SakhtemanKelasses
-                    .AnyAsync(s =>
-                        s.Id != id &&
-                        s.MarkazId == targetMarkazId &&
-                        s.CodeSakhteman == targetCodeSakhteman &&
-                        s.CodeClass == targetCodeClass);
-
-                if (exists)
-                {
-                    return BadRequest(new
+                    return StatusCode(403, new
                     {
                         success = false,
-                        message = "کلاس دیگری با این کد در این ساختمان وجود دارد"
+                        message = "شما مجوز ویرایش ساختمان/کلاس این مرکز را ندارید"
                     });
                 }
 
-                // به‌روزرسانی فیلدها
-                if (dto.MarkazId.HasValue) entity.MarkazId = dto.MarkazId.Value;
-                if (dto.CodeSakhteman.HasValue) entity.CodeSakhteman = dto.CodeSakhteman.Value;
-                if (!string.IsNullOrWhiteSpace(dto.NaamSakhteman)) entity.NaamSakhteman = dto.NaamSakhteman.Trim();
-                if (dto.CodeClass.HasValue) entity.CodeClass = dto.CodeClass.Value;
-                if (!string.IsNullOrWhiteSpace(dto.NaamClass)) entity.NaamClass = dto.NaamClass.Trim();
-                if (dto.NoeClass != null) entity.NoeClass = dto.NoeClass.Trim();
-                if (dto.Vazeeyat.HasValue) entity.Vazeeyat = dto.Vazeeyat.Value;
-                if (dto.Zarfiat.HasValue) entity.Zarfiat = dto.Zarfiat;
-                if (dto.Tabagheh.HasValue) entity.Tabagheh = dto.Tabagheh;
-                if (dto.ZarfiatEmtahani.HasValue) entity.ZarfiatEmtahani = dto.ZarfiatEmtahani;
-                if (dto.TedadWhiteboard.HasValue) entity.TedadWhiteboard = dto.TedadWhiteboard;
-                if (dto.Projector.HasValue) entity.Projector = dto.Projector.Value;
-                if (dto.Emkanat != null) entity.Emkanat = dto.Emkanat.Trim();
-                if (dto.Tozihat != null) entity.Tozihat = dto.Tozihat.Trim();
-                if (dto.Telephon != null) entity.Telephon = dto.Telephon.Trim();
-                if (dto.Amoozeshi.HasValue) entity.Amoozeshi = dto.Amoozeshi.Value;
+                // ============================================================
+                // 🔥 بررسی تغییر تلفن
+                // ============================================================
+                //var oldTelephon = entity.Telephon;
+                //var newTelephon = dto.Telephon?.Trim();
+                //bool telephonChanged = newTelephon != oldTelephon;
+                //int relatedCount = 0;
 
-                entity.UpdatedAt = DateTime.Now;
+                // ============================================================
+                // 🔥 شروع تراکنش
+                // ============================================================
+                using var transaction = await _context.Database.BeginTransactionAsync();
 
-                await _context.SaveChangesAsync();
-
-                return Ok(new
+                try
                 {
-                    success = true,
-                    message = "ساختمان/کلاس با موفقیت ویرایش شد"
-                });
+                    // ============================================================
+                    // به‌روزرسانی فیلدهای رکورد فعلی
+                    // ============================================================
+                    if (dto.Vazeeyat.HasValue) entity.Vazeeyat = dto.Vazeeyat.Value;
+                    if (dto.Zarfiat.HasValue) entity.Zarfiat = dto.Zarfiat;
+                    if (dto.ZarfiatEmtahani.HasValue) entity.ZarfiatEmtahani = dto.ZarfiatEmtahani;
+                    if (dto.TedadWhiteboard.HasValue) entity.TedadWhiteboard = dto.TedadWhiteboard;
+                    if (dto.Projector.HasValue) entity.Projector = dto.Projector.Value;
+                    if (dto.Emkanat != null) entity.Emkanat = dto.Emkanat.Trim();
+                    if (dto.Tozihat != null) entity.Tozihat = dto.Tozihat.Trim();
+                    //if (dto.Telephon != null) entity.Telephon = newTelephon;
+                    if (dto.Amoozeshi.HasValue) entity.Amoozeshi = dto.Amoozeshi.Value;
+
+                    entity.UpdatedAt = DateTime.Now;
+
+                    // ============================================================
+                    // 🔥 اگر تلفن تغییر کرده → همه رکوردهای هم‌مرکز و هم‌ساختمان رو آپدیت کن
+                    // ============================================================
+                    /*if (telephonChanged)
+                    {
+                        var relatedEntities = await _context.SakhtemanKelasses
+                            .Where(s =>
+                                s.Id != id &&
+                                s.MarkazId == entity.MarkazId &&
+                                s.CodeSakhteman == entity.CodeSakhteman)
+                            .ToListAsync();
+
+                        relatedCount = relatedEntities.Count;
+
+                        foreach (var related in relatedEntities)
+                        {
+                            related.Telephon = newTelephon;
+                            related.UpdatedAt = DateTime.Now;
+                        }
+                    }*/
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    // ============================================================
+                    // 🔥 پاسخ نهایی
+                    // ============================================================
+                    return Ok(new
+                    {
+                        success = true,
+                        message =  "ساختمان/کلاس با موفقیت ویرایش شد"
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
             }
             catch (Exception ex)
             {
@@ -444,7 +624,7 @@ namespace PayamBack.Controllers.Edu
         }
 
         // ============================================================
-        // 5️⃣ حذف ساختمان/کلاس
+        // 5️⃣ حذف ساختمان/کلاس (فقط ادمین سامانه - CodeRole = 1)
         // ============================================================
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> Delete(int id)
@@ -457,15 +637,21 @@ namespace PayamBack.Controllers.Edu
                 if (currentUser == null || codeRole == null)
                     return Unauthorized(new { success = false, message = "کاربر یا نقش معتبر نیست" });
 
+                // 🔥 فقط ادمین سامانه
+                if (codeRole != 1)
+                {
+                    return StatusCode(403, new
+                    {
+                        success = false,
+                        message = "حذف ساختمان/کلاس فقط توسط ادمین سامانه مجاز است"
+                    });
+                }
+
                 var entity = await _context.SakhtemanKelasses
                     .FirstOrDefaultAsync(s => s.Id == id);
 
                 if (entity == null)
                     return NotFound(new { success = false, message = "ساختمان/کلاس یافت نشد" });
-
-                if (!await _accessService.CanAccessTargetMarkazAsync(
-                    entity.MarkazId, codeRole.Value, currentMarkaz?.Id))
-                    return Forbid();
 
                 _context.SakhtemanKelasses.Remove(entity);
                 await _context.SaveChangesAsync();
@@ -760,7 +946,7 @@ namespace PayamBack.Controllers.Edu
                         Projector = projector,
                         Emkanat = string.IsNullOrWhiteSpace(row.Emkanat) ? null : row.Emkanat.Trim(),
                         Tozihat = string.IsNullOrWhiteSpace(row.Tozihat) ? null : row.Tozihat.Trim(),
-                        Telephon = string.IsNullOrWhiteSpace(row.ResponsiblePhone) ? null : row.ResponsiblePhone.Trim(),
+                        //Telephon = string.IsNullOrWhiteSpace(row.ResponsiblePhone) ? null : row.ResponsiblePhone.Trim(),
                         Amoozeshi = amoozeshi,
                         CreatedAt = DateTime.Now
                     };
@@ -837,9 +1023,6 @@ namespace PayamBack.Controllers.Edu
         // 🔥 متدهای کمکی BulkUpload
         // ============================================================
 
-        /// <summary>
-        /// خواندن فایل اکسل و تبدیل به لیست ردیف‌ها
-        /// </summary>
         /// <summary>
         /// خواندن فایل اکسل و تبدیل به لیست ردیف‌ها
         /// </summary>
@@ -932,9 +1115,6 @@ namespace PayamBack.Controllers.Edu
             };
         }
 
-        /// <summary>
-        /// ساخت فایل اکسل خطاها
-        /// </summary>
         /// <summary>
         /// ساخت فایل اکسل خطاها
         /// </summary>

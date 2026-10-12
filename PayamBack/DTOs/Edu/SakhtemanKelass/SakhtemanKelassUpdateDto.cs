@@ -32,8 +32,8 @@ namespace PayamBack.DTOs.Edu.SakhtemanKelass
         [StringLength(500)]
         public string? Tozihat { get; set; }
 
-        [StringLength(20)]
-        public string? Telephon { get; set; }
+        //[StringLength(20)]
+        //public string? Telephon { get; set; }
 
         public bool? Amoozeshi { get; set; }
     }
