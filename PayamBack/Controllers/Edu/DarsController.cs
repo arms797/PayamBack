@@ -6,8 +6,6 @@ using Microsoft.Extensions.Caching.Memory;
 using PayamBack.Data;
 using PayamBack.DTOs.Edu.Dars;
 using PayamBack.Models.Edu;
-using System.Linq.Expressions;
-
 
 namespace PayamBack.Controllers.Edu
 {
@@ -18,6 +16,7 @@ namespace PayamBack.Controllers.Edu
         private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
         private const string AllDarsCacheKey = "AllDarsList";
+        private const int BulkBatchSize = 300;
 
         public DarsController(AppDbContext context, IMemoryCache cache)
         {
@@ -25,9 +24,6 @@ namespace PayamBack.Controllers.Edu
             _cache = cache;
         }
 
-        // ============================================================
-        // 1️⃣ دریافت لیست درس‌ها (عمومی) - با فیلتر و صفحه‌بندی
-        // ============================================================
         // ============================================================
         // 1️⃣ دریافت لیست درس‌ها (عمومی) - با فیلتر و صفحه‌بندی
         // ============================================================
@@ -48,9 +44,6 @@ namespace PayamBack.Controllers.Edu
         {
             try
             {
-                // ============================================================
-                // تشخیص وجود فیلتر
-                // ============================================================
                 bool hasAnyFilter = !string.IsNullOrEmpty(search) ||
                                    (reshtehIds?.Length > 0) ||
                                    (grooheAmoozeshiIds?.Length > 0) ||
@@ -61,33 +54,20 @@ namespace PayamBack.Controllers.Edu
                                    (noeDarsList?.Length > 0) ||
                                    !string.IsNullOrEmpty(manbaSearch);
 
-                // ============================================================
-                // 🔥 متغیر برای نگه‌داری کل داده‌ها (نه فقط یه صفحه)
-                // ============================================================
                 List<DarsListDto> allData;
 
-                // ============================================================
-                // حالت ۱: بدون فیلتر → از کش بخون یا از DB
-                // ============================================================
                 if (!hasAnyFilter)
                 {
                     if (_cache.TryGetValue(AllDarsCacheKey, out List<DarsListDto>? cachedData) && cachedData != null)
                     {
-                        // ✅ از کش خوندیم - کل لیست
                         allData = cachedData;
                     }
                     else
                     {
-                        // ❌ کش نداشتیم → کل لیست رو از DB بگیر
                         allData = await LoadAllDarsFromDbAsync();
-
-                        // 🔥 کل لیست رو کش کن (نه فقط یه صفحه!)
                         _cache.Set(AllDarsCacheKey, allData, TimeSpan.FromHours(6));
                     }
                 }
-                // ============================================================
-                // حالت ۲: با فیلتر → از DB بخون (فیلترشده)
-                // ============================================================
                 else
                 {
                     allData = await LoadFilteredDarsFromDbAsync(
@@ -96,9 +76,6 @@ namespace PayamBack.Controllers.Edu
                         termAkhzs, noeDarsList, manbaSearch);
                 }
 
-                // ============================================================
-                // 🔥 صفحه‌بندی توی حافظه
-                // ============================================================
                 var totalCount = allData.Count;
                 var pagedData = allData
                     .Skip((page - 1) * pageSize)
@@ -131,7 +108,7 @@ namespace PayamBack.Controllers.Edu
         }
 
         // ============================================================
-        // 🔥 متد کمکی ۱: دریافت کل لیست از DB (بدون فیلتر)
+        // متد کمکی: دریافت کل لیست از DB
         // ============================================================
         private async Task<List<DarsListDto>> LoadAllDarsFromDbAsync()
         {
@@ -139,7 +116,6 @@ namespace PayamBack.Controllers.Edu
                 .Include(d => d.Reshteh)
                     .ThenInclude(r => r.GrooheAmoozeshi)
                 .OrderBy(d => d.CodeDars)
-//                .ThenBy(d => d.NaamDars)
                 .Select(d => new
                 {
                     Dars = d,
@@ -192,7 +168,7 @@ namespace PayamBack.Controllers.Edu
         }
 
         // ============================================================
-        // 🔥 متد کمکی ۲: دریافت لیست فیلترشده از DB
+        // متد کمکی: دریافت لیست فیلترشده از DB
         // ============================================================
         private async Task<List<DarsListDto>> LoadFilteredDarsFromDbAsync(
             string? search,
@@ -210,7 +186,6 @@ namespace PayamBack.Controllers.Edu
                     .ThenInclude(r => r.GrooheAmoozeshi)
                 .AsQueryable();
 
-            // 🔍 جستجو
             if (!string.IsNullOrEmpty(search))
             {
                 search = search.Trim();
@@ -219,41 +194,28 @@ namespace PayamBack.Controllers.Edu
                     d.NaamDars.Contains(search));
             }
 
-            // 🔍 فیلتر رشته
             if (reshtehIds != null && reshtehIds.Length > 0)
-            {
                 query = query.Where(d => d.ReshtehId.HasValue && reshtehIds.Contains(d.ReshtehId.Value));
-            }
 
-            // 🔍 فیلتر گروه آموزشی
             if (grooheAmoozeshiIds != null && grooheAmoozeshiIds.Length > 0)
-            {
                 query = query.Where(d =>
                     d.Reshteh != null &&
                     d.Reshteh.GrooheAmoozeshiId.HasValue &&
                     grooheAmoozeshiIds.Contains(d.Reshteh.GrooheAmoozeshiId.Value));
-            }
 
-            // 🔍 فیلتر مقطع
             if (maghtas != null && maghtas.Length > 0)
-            {
                 query = query.Where(d =>
                     d.Reshteh != null &&
                     d.Reshteh.CodeMaghta != null &&
                     maghtas.Contains(d.Reshteh.CodeMaghta));
-            }
 
-            // 🔍 فیلتر دانشکده
             if (daneshkades != null && daneshkades.Length > 0)
-            {
                 query = query.Where(d =>
                     d.Reshteh != null &&
                     d.Reshteh.GrooheAmoozeshi != null &&
                     d.Reshteh.GrooheAmoozeshi.CodeDaneshkade != null &&
                     daneshkades.Contains(d.Reshteh.GrooheAmoozeshi.CodeDaneshkade));
-            }
 
-            // 🔍 فیلتر واحد درس
             if (vahedTypes != null && vahedTypes.Length > 0)
             {
                 query = query.Where(d =>
@@ -265,11 +227,9 @@ namespace PayamBack.Controllers.Edu
                         (d.VahedTeori ?? 0) == 0) ||
                     (vahedTypes.Contains("teori_amali") &&
                         (d.VahedTeori ?? 0) > 0 &&
-                        (d.VahedAmali ?? 0) > 0)
-                );
+                        (d.VahedAmali ?? 0) > 0));
             }
 
-            // 🔍 فیلتر ترم اخذ
             if (termAkhzs != null && termAkhzs.Length > 0)
             {
                 var includeNull = termAkhzs.Contains("null");
@@ -285,13 +245,9 @@ namespace PayamBack.Controllers.Edu
                     (d.TermAkhz.HasValue && termValues.Contains(d.TermAkhz.Value)));
             }
 
-            // 🔍 فیلتر نوع درس
             if (noeDarsList != null && noeDarsList.Length > 0)
-            {
                 query = query.Where(d => d.NoeDars != null && noeDarsList.Contains(d.NoeDars));
-            }
 
-            // 🔍 فیلتر منبع
             if (!string.IsNullOrEmpty(manbaSearch))
             {
                 manbaSearch = manbaSearch.Trim();
@@ -302,10 +258,8 @@ namespace PayamBack.Controllers.Edu
                          (m.Onvan != null && m.Onvan.Contains(manbaSearch)))));
             }
 
-            // 🔥 کل لیست فیلترشده رو بگیر (بدون Skip/Take)
             var darsList = await query
                 .OrderBy(d => d.CodeDars)
-                //.ThenBy(d => d.CodeDars)
                 .Select(d => new
                 {
                     Dars = d,
@@ -357,7 +311,9 @@ namespace PayamBack.Controllers.Edu
             }).ToList();
         }
 
-        //نوع درس
+        // ============================================================
+        // نوع درس
+        // ============================================================
         [HttpGet("noedars-list")]
         [AllowAnonymous]
         public async Task<IActionResult> GetNoeDarsList()
@@ -366,9 +322,7 @@ namespace PayamBack.Controllers.Edu
             {
                 const string cacheKey = "NoeDarsList";
                 if (_cache.TryGetValue(cacheKey, out List<string>? cached) && cached != null)
-                {
                     return Ok(new { success = true, data = cached });
-                }
 
                 var list = await _context.Dars
                     .Where(d => d.NoeDars != null && d.NoeDars != "")
@@ -378,7 +332,6 @@ namespace PayamBack.Controllers.Edu
                     .ToListAsync();
 
                 _cache.Set(cacheKey, list, TimeSpan.FromHours(6));
-
                 return Ok(new { success = true, data = list });
             }
             catch (Exception ex)
@@ -392,7 +345,9 @@ namespace PayamBack.Controllers.Edu
             }
         }
 
-        //منبع درس
+        // ============================================================
+        // منبع درس
+        // ============================================================
         [HttpGet("manba-list")]
         [AllowAnonymous]
         public async Task<IActionResult> GetManbaList([FromQuery] string? search = null)
@@ -434,7 +389,6 @@ namespace PayamBack.Controllers.Edu
             }
         }
 
-
         // ============================================================
         // 2️⃣ دریافت یک درس با شناسه
         // ============================================================
@@ -447,7 +401,7 @@ namespace PayamBack.Controllers.Edu
                 var dars = await _context.Dars
                     .Include(d => d.Reshteh)
                         .ThenInclude(r => r.GrooheAmoozeshi)
-                    .Include(d => d.ManbaDarsList)   // 🔥 منابع
+                    .Include(d => d.ManbaDarsList)
                     .FirstOrDefaultAsync(d => d.Id == id);
 
                 if (dars == null)
@@ -474,8 +428,6 @@ namespace PayamBack.Controllers.Edu
                     Zarfiat = dars.Zarfiat,
                     CreatedAt = dars.CreatedAt,
                     UpdatedAt = dars.UpdatedAt,
-
-                    // 🔥 منابع
                     ManbaList = dars.ManbaDarsList?.Select(m => new ManbaDarsDetailDto
                     {
                         Id = m.Id,
@@ -518,7 +470,7 @@ namespace PayamBack.Controllers.Edu
         }
 
         // ============================================================
-        // 3️⃣ ایجاد درس جدید
+        // 3️⃣ ایجاد درس جدید (تکی)
         // ============================================================
         [HttpPost("create")]
         [Authorize]
@@ -539,7 +491,6 @@ namespace PayamBack.Controllers.Edu
                     });
                 }
 
-                // بررسی وجود رشته
                 if (dto.ReshtehId.HasValue)
                 {
                     var reshtehExists = await _context.Reshtehs
@@ -549,7 +500,6 @@ namespace PayamBack.Controllers.Edu
                         return BadRequest(new { success = false, message = "رشته یافت نشد" });
                 }
 
-                // بررسی تکراری بودن (کد درس + رشته)
                 var exists = await _context.Dars
                     .AnyAsync(d =>
                         d.CodeDars == dto.CodeDars &&
@@ -562,13 +512,11 @@ namespace PayamBack.Controllers.Edu
                         message = "درسی با این کد در این رشته قبلاً ثبت شده است"
                     });
 
-                // 🔥 گرفتن ترم جاری
                 var currentTerm = await _context.Terms
                     .Where(t => t.Vazeeyat == true)
                     .Select(t => t.CodeTerm)
                     .FirstOrDefaultAsync();
 
-                // 🔥 ساخت درس با منابع
                 var dars = new Dars
                 {
                     CodeDars = dto.CodeDars,
@@ -600,7 +548,7 @@ namespace PayamBack.Controllers.Edu
                         Vazeeyat = m.Vazeeyat,
                         CodePeyvast = m.CodePeyvast,
                         SharhPeyvast = m.SharhPeyvast,
-                        TermUpdate = currentTerm,          // 🔥 از ترم جاری
+                        TermUpdate = currentTerm,
                         CreatedAt = DateTime.Now
                     }).ToList() ?? new List<ManbaDars>()
                 };
@@ -629,7 +577,7 @@ namespace PayamBack.Controllers.Edu
         }
 
         // ============================================================
-        // 4️⃣ ویرایش درس
+        // 4️⃣ ویرایش درس (تکی)
         // ============================================================
         [HttpPut("update/{id}")]
         [Authorize]
@@ -650,7 +598,6 @@ namespace PayamBack.Controllers.Edu
                     });
                 }
 
-                // 🔥 Include منابع
                 var dars = await _context.Dars
                     .Include(d => d.ManbaDarsList)
                     .FirstOrDefaultAsync(d => d.Id == id);
@@ -658,7 +605,6 @@ namespace PayamBack.Controllers.Edu
                 if (dars == null)
                     return NotFound(new { success = false, message = "درس یافت نشد" });
 
-                // بررسی وجود رشته
                 if (dto.ReshtehId.HasValue)
                 {
                     var reshtehExists = await _context.Reshtehs
@@ -668,7 +614,6 @@ namespace PayamBack.Controllers.Edu
                         return BadRequest(new { success = false, message = "رشته یافت نشد" });
                 }
 
-                // بررسی تکراری
                 var targetCodeDars = !string.IsNullOrEmpty(dto.CodeDars) ? dto.CodeDars : dars.CodeDars;
                 var targetReshtehId = dto.ReshtehId ?? dars.ReshtehId;
 
@@ -688,7 +633,6 @@ namespace PayamBack.Controllers.Edu
                         });
                 }
 
-                // 🔄 به‌روزرسانی فیلدهای درس
                 dars.CodeDars = dto.CodeDars ?? dars.CodeDars;
                 dars.NaamDars = dto.NaamDars ?? dars.NaamDars;
                 dars.VahedTeori = dto.VahedTeori ?? dars.VahedTeori;
@@ -704,45 +648,34 @@ namespace PayamBack.Controllers.Edu
                 dars.Zarfiat = dto.Zarfiat ?? dars.Zarfiat;
                 dars.UpdatedAt = DateTime.Now;
 
-                // ============================================================
-                // 🔥 منابع: Smart Diff (Update موجودها + Insert جدیدها + Delete حذف‌شده‌ها)
-                // ============================================================
                 var existingManbas = dars.ManbaDarsList?.ToList() ?? new List<ManbaDars>();
 
-                // گرفتن ترم جاری (فقط یک بار)
                 var currentTerm = await _context.Terms
                     .Where(t => t.Vazeeyat == true)
                     .Select(t => t.CodeTerm)
                     .FirstOrDefaultAsync();
 
-                // Idهای ارسال‌شده از فرانت
                 var incomingIds = dto.ManbaList?
                     .Where(m => m.Id > 0)
                     .Select(m => m.Id)
                     .ToHashSet() ?? new HashSet<int>();
 
-                // 1️⃣ حذف منابعی که توی DTO نیستن (کاربر حذفشون کرده)
                 var manbasToDelete = existingManbas
                     .Where(m => !incomingIds.Contains(m.Id))
                     .ToList();
 
                 if (manbasToDelete.Any())
-                {
                     _context.ManbaDars.RemoveRange(manbasToDelete);
-                }
 
-                // 2️⃣ به‌روزرسانی منابع موجود + درج منابع جدید
                 if (dto.ManbaList != null && dto.ManbaList.Any())
                 {
                     foreach (var manbaDto in dto.ManbaList)
                     {
                         if (manbaDto.Id > 0)
                         {
-                            // ✅ UPDATE: منبع موجود
                             var existingManba = existingManbas.FirstOrDefault(m => m.Id == manbaDto.Id);
                             if (existingManba != null)
                             {
-                                // 🔥 بررسی تغییر واقعی قبل از آپدیت
                                 bool hasChanged =
                                     existingManba.ShomareManba != manbaDto.ShomareManba ||
                                     existingManba.NoeManba != manbaDto.NoeManba ||
@@ -758,7 +691,6 @@ namespace PayamBack.Controllers.Edu
                                     existingManba.CodePeyvast != manbaDto.CodePeyvast ||
                                     existingManba.SharhPeyvast != manbaDto.SharhPeyvast;
 
-                                // 🔥 فقط اگه واقعاً تغییری بوده، آپدیت کن
                                 if (hasChanged)
                                 {
                                     existingManba.ShomareManba = manbaDto.ShomareManba;
@@ -774,8 +706,6 @@ namespace PayamBack.Controllers.Edu
                                     existingManba.Vazeeyat = manbaDto.Vazeeyat;
                                     existingManba.CodePeyvast = manbaDto.CodePeyvast;
                                     existingManba.SharhPeyvast = manbaDto.SharhPeyvast;
-
-                                    // 🔥 فقط وقتی تغییر واقعی بوده، TermUpdate و UpdatedAt رو به‌روز کن
                                     existingManba.TermUpdate = currentTerm;
                                     existingManba.UpdatedAt = DateTime.Now;
                                 }
@@ -783,7 +713,6 @@ namespace PayamBack.Controllers.Edu
                         }
                         else
                         {
-                            // ✅ INSERT: منبع جدید
                             var newManba = new ManbaDars
                             {
                                 DarsId = dars.Id,
@@ -842,10 +771,7 @@ namespace PayamBack.Controllers.Edu
                 if (dars == null)
                     return NotFound(new { success = false, message = "درس یافت نشد" });
 
-                // 🔍 بررسی وابستگی منابع درسی
-                var hasManba = await _context.ManbaDars
-                    .AnyAsync(m => m.DarsId == id);
-
+                var hasManba = await _context.ManbaDars.AnyAsync(m => m.DarsId == id);
                 if (hasManba)
                     return BadRequest(new
                     {
@@ -855,15 +781,9 @@ namespace PayamBack.Controllers.Edu
 
                 _context.Dars.Remove(dars);
                 await _context.SaveChangesAsync();
-
-                // 🔥 پاک کردن کش
                 _cache.Remove(AllDarsCacheKey);
 
-                return Ok(new
-                {
-                    success = true,
-                    message = "درس با موفقیت حذف شد"
-                });
+                return Ok(new { success = true, message = "درس با موفقیت حذف شد" });
             }
             catch (Exception ex)
             {
@@ -888,11 +808,11 @@ namespace PayamBack.Controllers.Edu
         }
 
         // ============================================================
-        // 7️⃣ آپلود گروهی درس‌ها و منابع از فایل اکسل (گزارش ۱۰۰۹)
+        // 7️⃣ آپلود گروهی درس‌ها و منابع از فایل اکسل
         // ============================================================
         [HttpPost("bulk-upload")]
         [Authorize]
-        [RequestSizeLimit(50_000_000)] // 50MB
+        [RequestSizeLimit(50_000_000)]
         public async Task<IActionResult> BulkUpload(IFormFile file)
         {
             if (file == null || file.Length == 0)
@@ -927,175 +847,173 @@ namespace PayamBack.Controllers.Edu
                     return BadRequest(new { success = false, message = "فایل خالی است" });
 
                 // ============================================================
-                // ۲. گروه‌بندی رکوردها بر اساس Reshteh
+                // ۲. گروه‌بندی به درس+منابع (هر درس یک آیتم، منابعهاش همراهش)
                 // ============================================================
-                var groupedByReshteh = GroupByReshteh(rows);
+                var allDarsWithManba = GroupIntoDarsWithManba(rows);
 
                 // ============================================================
-                // ۳. پردازش هر رشته جداگانه
+                // ۳. بارگذاری رشته‌ها و درس‌ها از دیتابیس (یک بار)
                 // ============================================================
-                var rejectedReshtehs = new List<RejectedReshtehDto>();
-                int totalDarsCreated = 0;
-                int totalManbaCreated = 0;
+                var allReshtehs = await _context.Reshtehs
+                    .AsNoTracking()
+                    .ToListAsync();
 
-                foreach (var reshtehGroup in groupedByReshteh)
+                // کلید یکتای رشته: (CodeReshte, CodeMaghta, TermVorood, TermEamal)
+                var reshtehLookup = allReshtehs
+                    .GroupBy(r => new ReshtehKey(
+                        r.CodeReshte ?? "",
+                        r.CodeMaghta ?? "",
+                        r.TermVorood ?? "",
+                        r.TermEamal ?? ""))
+                    .ToDictionary(g => g.Key, g => g.First());
+
+                // ترم جاری
+                var currentTerm = await _context.Terms
+                    .Where(t => t.Vazeeyat == true)
+                    .Select(t => t.CodeTerm)
+                    .FirstOrDefaultAsync();
+
+                // ============================================================
+                // ۴. آماده‌سازی نتیجه
+                // ============================================================
+                var result = new BulkUploadResultDto();
+
+                // ============================================================
+                // ۵. پردازش دسته‌ای — هر ۳۰۰ درس
+                // ============================================================
+                int batchCounter = 0;
+
+                foreach (var item in allDarsWithManba)
                 {
-                    using var transaction = await _context.Database.BeginTransactionAsync();
-
                     try
                     {
-                        // 🔍 پیدا کردن رشته
-                        var reshteh = await _context.Reshtehs
-                            .FirstOrDefaultAsync(r =>
-                                r.CodeReshte == reshtehGroup.CodeReshte &&
-                                r.CodeMaghta == reshtehGroup.CodeMaghta &&
-                                r.TermVorood == reshtehGroup.TermVorood &&
-                                r.TermEamal == reshtehGroup.TermEamal);
+                        // ---- 5.1) پیدا کردن رشته ----
+                        var reshtehKey = new ReshtehKey(
+                            item.CodeReshte ?? "",
+                            item.CodeMaghta ?? "",
+                            item.TermVorood ?? "",
+                            item.TermEamal ?? "");
 
-                        if (reshteh == null)
+                        if (!reshtehLookup.TryGetValue(reshtehKey, out var reshteh))
                         {
-                            await transaction.RollbackAsync();
-                            rejectedReshtehs.Add(new RejectedReshtehDto
+                            // رشته پیدا نشد → همه‌ی درس‌های این رشته (از این آیتم به بعد تا رشته عوض شه؟)
+                            // طبق سوال ۸: هر درس این رشته رو توی خطا بیار
+                            result.Errors.Add(new BulkUploadErrorDto
                             {
-                                ReshtehName = reshtehGroup.ReshtehName,
-                                CodeReshte = reshtehGroup.CodeReshte,
-                                CodeMaghta = reshtehGroup.CodeMaghta,
-                                TermVorood = reshtehGroup.TermVorood,
-                                TermEamal = reshtehGroup.TermEamal,
-                                Reason = "رشته در سیستم یافت نشد"
+                                RowNumber = item.FirstRowNumber,
+                                CodeReshte = item.CodeReshte,
+                                CodeMaghta = item.CodeMaghta,
+                                TermVorood = item.TermVorood,
+                                TermEamal = item.TermEamal,
+                                CodeDars = item.CodeDars,
+                                Stage = "Reshteh",
+                                ErrorMessage = $"رشته یافت نشد. کلید: ({item.CodeReshte}, {item.CodeMaghta}, {item.TermVorood}, {item.TermEamal})"
                             });
+                            result.ErrorCount++;
                             continue;
                         }
 
-                        // 🔍 چک تکراری بودن درس‌ها (توی همین رشته)
-                        var codeDarsList = reshtehGroup.DarsList
-                            .Select(d => d.CodeDars)
-                            .ToList();
-
+                        // ---- 5.2) پیدا کردن درس (توی DB) ----
                         var existingDars = await _context.Dars
-                            .Where(d => d.ReshtehId == reshteh.Id && codeDarsList.Contains(d.CodeDars))
-                            .Select(d => d.CodeDars)
-                            .ToListAsync();
+                            .Include(d => d.ManbaDarsList)
+                            .FirstOrDefaultAsync(d =>
+                                d.ReshtehId == reshteh.Id &&
+                                d.CodeDars == item.CodeDars);
 
-                        if (existingDars.Any())
+                        if (existingDars != null)
                         {
-                            await transaction.RollbackAsync();
-                            rejectedReshtehs.Add(new RejectedReshtehDto
-                            {
-                                ReshtehName = reshtehGroup.ReshtehName,
-                                CodeReshte = reshtehGroup.CodeReshte,
-                                CodeMaghta = reshtehGroup.CodeMaghta,
-                                TermVorood = reshtehGroup.TermVorood,
-                                TermEamal = reshtehGroup.TermEamal,
-                                Reason = $"دروس تکراری: {string.Join(", ", existingDars)}"
-                            });
-                            continue;
+                            // ==================== UPDATE ====================
+                            UpdateDarsFromImport(existingDars, item);
+                            SyncManbas(existingDars, item.ManbaList, currentTerm, item, result);
+                            result.UpdatedDars++;
                         }
-
-                        // ✅ ثبت درس‌ها و منابع
-                        int darsCreated = 0;
-                        int manbaCreated = 0;
-
-                        foreach (var darsGroup in reshtehGroup.DarsList)
+                        else
                         {
-                            // ساخت درس با منابع
-                            var dars = new Dars
-                            {
-                                CodeDars = darsGroup.CodeDars,
-                                NaamDars = darsGroup.NaamDars,
-                                VahedTeori = darsGroup.VahedTeori,
-                                VahedAmali = darsGroup.VahedAmali,
-                                SaatTeoriOrginal = darsGroup.SaatTeoriOrginal,
-                                SaatAmaliOrginal = darsGroup.SaatAmaliOrginal,
-                                SaatTeori = darsGroup.SaatTeori,
-                                SaatAmali = darsGroup.SaatAmali,
-                                TermAkhz = darsGroup.TermAkhz,
-                                NoeDars = darsGroup.NoeDars,
-                                NoeAzmoon = darsGroup.NoeAzmoon,
-                                ReshtehId = reshteh.Id,
-                                Zarfiat = darsGroup.Zarfiat,
-                                CreatedAt = DateTime.Now,
-                                ManbaDarsList = darsGroup.ManbaList.Select(m => new ManbaDars
-                                {
-                                    ShomareManba = m.ShomareManba,
-                                    NoeManba = m.NoeManba,
-                                    Onvan = m.Onvan ?? string.Empty,
-                                    Nevisandeh = m.Nevisandeh,
-                                    Motarjem = m.Motarjem,
-                                    SalEnteshar = m.SalEnteshar,
-                                    SalEntesharMiladi = m.SalEntesharMiladi,
-                                    Shabak = m.Shabak,
-                                    Nasher = m.Nasher,
-                                    NobateChap = m.NobateChap,
-                                    Vazeeyat = m.Vazeeyat,
-                                    CodePeyvast = m.CodePeyvast,
-                                    SharhPeyvast = m.SharhPeyvast,
-                                    TermUpdate = m.TermUpdate,
-                                    CreatedAt = DateTime.Now
-                                }).ToList()
-                            };
+                            // ==================== INSERT ====================
+                            var newDars = CreateDarsFromImport(item, reshteh.Id);
+                            _context.Dars.Add(newDars);
+                            await _context.SaveChangesAsync(); // برای گرفتن Id درس جدید
 
-                            await _context.Dars.AddAsync(dars);
-                            darsCreated++;
-                            manbaCreated += darsGroup.ManbaList.Count;
+                            SyncManbas(newDars, item.ManbaList, currentTerm, item, result);
+                            result.InsertedDars++;
                         }
 
                         await _context.SaveChangesAsync();
-                        await transaction.CommitAsync();
+                        batchCounter++;
 
-                        totalDarsCreated += darsCreated;
-                        totalManbaCreated += manbaCreated;
+                        // ---- 5.3) اگر دسته پر شد، ChangeTracker رو خالی کن ----
+                        if (batchCounter >= BulkBatchSize)
+                        {
+                            _context.ChangeTracker.Clear();
+                            batchCounter = 0;
+                        }
                     }
                     catch (Exception ex)
                     {
-                        await transaction.RollbackAsync();
-                        rejectedReshtehs.Add(new RejectedReshtehDto
+                        // خطا در یک درس → فقط همون skip، بقیه ادامه
+                        result.Errors.Add(new BulkUploadErrorDto
                         {
-                            ReshtehName = reshtehGroup.ReshtehName,
-                            CodeReshte = reshtehGroup.CodeReshte,
-                            CodeMaghta = reshtehGroup.CodeMaghta,
-                            TermVorood = reshtehGroup.TermVorood,
-                            TermEamal = reshtehGroup.TermEamal,
-                            Reason = $"خطای غیرمنتظره: {ex.Message}"
+                            RowNumber = item.FirstRowNumber,
+                            CodeReshte = item.CodeReshte,
+                            CodeMaghta = item.CodeMaghta,
+                            TermVorood = item.TermVorood,
+                            TermEamal = item.TermEamal,
+                            CodeDars = item.CodeDars,
+                            Stage = "Dars",
+                            ErrorMessage = ex.Message
                         });
+                        result.ErrorCount++;
+
+                        // اگه خطا باعث dirty شدن ChangeTracker شد، پاکش کن
+                        // ولی درس‌های قبلی که SaveChanges شدن، در DB باقی می‌مونن
+                        try { _context.ChangeTracker.Clear(); } catch { }
+                        batchCounter = 0;
                     }
                 }
 
                 // ============================================================
-                // ۴. پاک کردن کش
+                // ۶. پاک کردن کش — در هر شرایطی
                 // ============================================================
-                if (totalDarsCreated > 0)
-                {
-                    _cache.Remove(AllDarsCacheKey);
-                }
+                _cache.Remove(AllDarsCacheKey);
 
                 // ============================================================
-                // ۵. ساخت فایل اکسل خطاها (اگه رشته ردشده وجود داشت)
+                // ۷. ساخت فایل خطا (فقط اگه خطا بود)
                 // ============================================================
                 string? errorFileBase64 = null;
-                if (rejectedReshtehs.Any())
+                if (result.ErrorCount > 0)
                 {
-                    errorFileBase64 = GenerateErrorExcel(rejectedReshtehs);
+                    errorFileBase64 = GenerateErrorExcel(result);
                 }
 
                 return Ok(new
                 {
                     success = true,
-                    message = $"تعداد {totalDarsCreated} درس و {totalManbaCreated} منبع ثبت شد. " +
-                              $"{rejectedReshtehs.Count} رشته رد شد.",
+                    message = $"عملیات انجام شد. " +
+                              $"{result.InsertedDars} درس جدید، " +
+                              $"{result.UpdatedDars} درس آپدیت، " +
+                              $"{result.InsertedManba} منبع جدید، " +
+                              $"{result.UpdatedManba} منبع آپدیت، " +
+                              $"{result.DeletedManba} منبع حذف، " +
+                              $"{result.ErrorCount} خطا.",
                     data = new
                     {
-                        darsCreated = totalDarsCreated,
-                        manbaCreated = totalManbaCreated,
-                        rejectedReshtehCount = rejectedReshtehs.Count,
-                        rejectedReshtehs = rejectedReshtehs
+                        insertedDars = result.InsertedDars,
+                        updatedDars = result.UpdatedDars,
+                        insertedManba = result.InsertedManba,
+                        updatedManba = result.UpdatedManba,
+                        deletedManba = result.DeletedManba,
+                        errorCount = result.ErrorCount
                     },
+                    errors = result.Errors,
                     errorFile = errorFileBase64,
-                    errorFileName = rejectedReshtehs.Any() ? "rejected-reshtehs.xlsx" : null
+                    errorFileName = errorFileBase64 != null ? "bulk-upload-errors.xlsx" : null
                 });
             }
             catch (Exception ex)
             {
+                // خطای کلی (مثلاً فایل خرابه) — ولی کش رو در هر شرایطی پاک کن
+                try { _cache.Remove(AllDarsCacheKey); } catch { }
+
                 return StatusCode(500, new
                 {
                     success = false,
@@ -1105,6 +1023,13 @@ namespace PayamBack.Controllers.Edu
             }
         }
 
+        // ============================================================
+        // متدهای کمکی BulkUpload
+        // ============================================================
+
+        /// <summary>
+        /// خواندن فایل اکسل و تبدیل به لیست ردیف‌های خام.
+        /// </summary>
         private List<DarsImportRow> ParseExcelFile(Stream stream)
         {
             var rows = new List<DarsImportRow>();
@@ -1113,7 +1038,7 @@ namespace PayamBack.Controllers.Edu
             var worksheet = workbook.Worksheet(1);
             var lastRow = worksheet.LastRowUsed()?.RowNumber() ?? 0;
 
-            for (int row = 2; row <= lastRow; row++) // از ردیف ۲ (چون ۱ هدره)
+            for (int row = 2; row <= lastRow; row++)
             {
                 var importRow = new DarsImportRow
                 {
@@ -1122,10 +1047,11 @@ namespace PayamBack.Controllers.Edu
                     NaamDars = GetStringValue(worksheet, row, 5),
                     VahedTeori = GetDecimalValue(worksheet, row, 6),
                     VahedAmali = GetDecimalValue(worksheet, row, 7),
-                    SaatTeoriOrginal = GetIntValue(worksheet, row, 8),
-                    SaatAmaliOrginal = GetIntValue(worksheet, row, 9),
-                    SaatTeori = GetIntValue(worksheet, row, 8),
-                    SaatAmali = GetIntValue(worksheet, row, 9),
+
+                    // طبق توافق: یک سلول مشترک برای هر جفت
+                    SaatTeori_File = GetIntValue(worksheet, row, 8),
+                    SaatAmali_File = GetIntValue(worksheet, row, 9),
+
                     TermAkhz = GetIntValue(worksheet, row, 10),
                     NoeDars = GetStringValue(worksheet, row, 11),
                     NoeAzmoon = GetStringValue(worksheet, row, 12),
@@ -1161,7 +1087,6 @@ namespace PayamBack.Controllers.Edu
             return rows;
         }
 
-        // توابع کمکی برای خواندن مقادیر
         private string? GetStringValue(IXLWorksheet ws, int row, int col)
         {
             var cell = ws.Cell(row, col);
@@ -1186,71 +1111,59 @@ namespace PayamBack.Controllers.Edu
             return null;
         }
 
-        private List<ReshtehGroup> GroupByReshteh(List<DarsImportRow> rows)
+        /// <summary>
+        /// گروه‌بندی ردیف‌های خام به لیست درس‌های دارای منابع.
+        /// هر ردیف با CodeDars پر = شروع درس جدید
+        /// هر ردیف با CodeDars خالی = منبع اضافی برای درس قبلی
+        /// </summary>
+        private List<DarsWithManba> GroupIntoDarsWithManba(List<DarsImportRow> rows)
         {
-            var result = new List<ReshtehGroup>();
-            ReshtehGroup? currentReshteh = null;
+            var result = new List<DarsWithManba>();
             DarsWithManba? currentDars = null;
 
             foreach (var row in rows)
             {
-                // 🔍 آیا رشته جدید است؟
-                var isNewReshteh = currentReshteh == null ||
-                    currentReshteh.CodeReshte != row.CodeReshte ||
-                    currentReshteh.CodeMaghta != row.CodeMaghta ||
-                    currentReshteh.TermVorood != row.TermVorood ||
-                    currentReshteh.TermEamal != row.TermEamal;
+                // اگه کد درس خالیه و هیچ درس قبلی‌ای نیست، این ردیف بی‌ربطه
+                if (string.IsNullOrWhiteSpace(row.CodeDars) && currentDars == null)
+                    continue;
 
-                if (isNewReshteh)
+                if (!string.IsNullOrWhiteSpace(row.CodeDars))
                 {
-                    currentReshteh = new ReshtehGroup
+                    // شروع درس جدید
+                    currentDars = new DarsWithManba
                     {
+                        FirstRowNumber = row.RowNumber,
                         CodeReshte = row.CodeReshte,
                         CodeMaghta = row.CodeMaghta,
                         TermVorood = row.TermVorood,
                         TermEamal = row.TermEamal,
                         ReshtehName = row.ReshtehName,
-                        DarsList = new List<DarsWithManba>()
-                    };
-                    result.Add(currentReshteh);
-                    currentDars = null;
-                }
 
-                // 🔍 آیا درس جدید است؟ (ستون ۴ پر باشه)
-                if (!string.IsNullOrEmpty(row.CodeDars))
-                {
-                    currentDars = new DarsWithManba
-                    {
-                        CodeDars = row.CodeDars,
+                        CodeDars = row.CodeDars!,
                         NaamDars = row.NaamDars,
                         VahedTeori = row.VahedTeori,
                         VahedAmali = row.VahedAmali,
-                        SaatTeoriOrginal = row.SaatTeoriOrginal,
-                        SaatAmaliOrginal = row.SaatAmaliOrginal,
-                        SaatTeori = row.SaatTeori,
-                        SaatAmali = row.SaatAmali,
+                        SaatTeori_File = row.SaatTeori_File,
+                        SaatAmali_File = row.SaatAmali_File,
                         TermAkhz = row.TermAkhz,
                         NoeDars = row.NoeDars,
                         NoeAzmoon = row.NoeAzmoon,
                         Zarfiat = row.Zarfiat,
+
                         ManbaList = new List<ManbaImportRow>()
                     };
 
-                    // منبع اول (اگه هست)
-                    if (!string.IsNullOrEmpty(row.OnvanManba))
-                    {
+                    // منبع اول توی همون ردیف درس
+                    if (!string.IsNullOrEmpty(row.OnvanManba) || !string.IsNullOrEmpty(row.ShomareManba))
                         currentDars.ManbaList.Add(CreateManbaFromRow(row));
-                    }
 
-                    currentReshteh.DarsList.Add(currentDars);
+                    result.Add(currentDars);
                 }
-                // 🔍 منبع اضافی برای درس قبلی
                 else if (currentDars != null)
                 {
-                    if (!string.IsNullOrEmpty(row.OnvanManba))
-                    {
+                    // منبع اضافی برای درس قبلی
+                    if (!string.IsNullOrEmpty(row.OnvanManba) || !string.IsNullOrEmpty(row.ShomareManba))
                         currentDars.ManbaList.Add(CreateManbaFromRow(row));
-                    }
                 }
             }
 
@@ -1273,114 +1186,354 @@ namespace PayamBack.Controllers.Edu
                 NobateChap = row.NobateChap,
                 Vazeeyat = row.Vazeeyat,
                 CodePeyvast = row.CodePeyvast,
-                SharhPeyvast = row.SharhPeyvast,
-                TermUpdate = row.TermUpdate
+                SharhPeyvast = row.SharhPeyvast
             };
         }
 
-        private string GenerateErrorExcel(List<RejectedReshtehDto> rejectedReshtehs)
+        /// <summary>
+        /// ساخت درس جدید از آیتم ایمپورت.
+        /// </summary>
+        private Dars CreateDarsFromImport(DarsWithManba item, int reshtehId)
+        {
+            var saatTeori = item.SaatTeori_File ?? 0;
+            var saatAmali = item.SaatAmali_File ?? 0;
+
+            return new Dars
+            {
+                CodeDars = item.CodeDars,
+                NaamDars = item.NaamDars,
+                VahedTeori = item.VahedTeori,
+                VahedAmali = item.VahedAmali,
+
+                // برای درس جدید، هر دو از فایل (چون یکی هستن)
+                SaatTeori = saatTeori,
+                SaatTeoriOrginal = saatTeori,
+                SaatAmali = saatAmali,
+                SaatAmaliOrginal = saatAmali,
+
+                TermAkhz = item.TermAkhz,
+                NoeDars = item.NoeDars,
+                NoeAzmoon = item.NoeAzmoon,
+                ReshtehId = reshtehId,
+                Zarfiat = item.Zarfiat,
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now,
+                ManbaDarsList = new List<ManbaDars>()
+            };
+        }
+
+        /// <summary>
+        /// آپدیت درس موجود از آیتم ایمپورت.
+        /// </summary>
+        private void UpdateDarsFromImport(Dars dars, DarsWithManba item)
+        {
+            // فیلدهای ساده — همیشه از فایل
+            dars.NaamDars = item.NaamDars ?? dars.NaamDars;
+            dars.VahedTeori = item.VahedTeori ?? dars.VahedTeori;
+            dars.VahedAmali = item.VahedAmali ?? dars.VahedAmali;
+            dars.TermAkhz = item.TermAkhz ?? dars.TermAkhz;
+            dars.NoeDars = item.NoeDars ?? dars.NoeDars;
+            dars.NoeAzmoon = item.NoeAzmoon ?? dars.NoeAzmoon;
+            dars.Zarfiat = item.Zarfiat ?? dars.Zarfiat;
+
+            // منطق شرطی ساعت تئوری
+            var fileSaatTeori = item.SaatTeori_File ?? 0;
+
+            if (dars.SaatTeori == dars.SaatTeoriOrginal)
+            {
+                // کاربر دست نزده → هر دو از فایل
+                dars.SaatTeori = fileSaatTeori;
+                dars.SaatTeoriOrginal = fileSaatTeori;
+            }
+            else
+            {
+                // کاربر دست زده → فقط Orginal از فایل
+                dars.SaatTeoriOrginal = fileSaatTeori;
+            }
+
+            // منطق شرطی ساعت عملی
+            var fileSaatAmali = item.SaatAmali_File ?? 0;
+
+            if (dars.SaatAmali == dars.SaatAmaliOrginal)
+            {
+                dars.SaatAmali = fileSaatAmali;
+                dars.SaatAmaliOrginal = fileSaatAmali;
+            }
+            else
+            {
+                dars.SaatAmaliOrginal = fileSaatAmali;
+            }
+
+            dars.UpdatedAt = DateTime.Now;
+        }
+
+        /// <summary>
+        /// Sync منابع یک درس بر اساس کلید یکتا (DarsId, ShomareManba, CodePeyvast).
+        /// - موجود در فایل و DB → Update
+        /// - موجود در فایل، غایب در DB → Insert
+        /// - غایب در فایل، موجود در DB → Delete
+        /// </summary>
+        private void SyncManbas(
+            Dars dars,
+            List<ManbaImportRow> incomingManbas,
+            string? currentTerm,
+            DarsWithManba item,
+            BulkUploadResultDto result)
+        {
+            dars.ManbaDarsList ??= new List<ManbaDars>();
+
+            static string MakeKey(string? shomare, string? codePeyvast)
+                => $"{(shomare ?? "").Trim()}|{(codePeyvast ?? "").Trim()}";
+
+            // فقط منابع معتبر (حداقل یه ShomareManba یا Onvan داشته باشن)
+            var validIncoming = incomingManbas
+                .Where(m => !string.IsNullOrWhiteSpace(m.ShomareManba)
+                         || !string.IsNullOrWhiteSpace(m.Onvan))
+                .ToList();
+
+            var incomingKeys = validIncoming
+                .Select(m => MakeKey(m.ShomareManba, m.CodePeyvast))
+                .ToHashSet();
+
+            // ---- 1) حذف منابعی که توی فایل نیستن ----
+            var toDelete = dars.ManbaDarsList
+                .Where(m => !incomingKeys.Contains(MakeKey(m.ShomareManba, m.CodePeyvast)))
+                .ToList();
+
+            foreach (var manba in toDelete)
+            {
+                _context.ManbaDars.Remove(manba);
+                result.DeletedManba++;
+            }
+
+            // ---- 2) Insert / Update ----
+            var existingByKey = dars.ManbaDarsList
+                .Where(m => !toDelete.Contains(m))
+                .GroupBy(m => MakeKey(m.ShomareManba, m.CodePeyvast))
+                .ToDictionary(g => g.Key, g => g.First());
+
+            foreach (var row in validIncoming)
+            {
+                try
+                {
+                    var key = MakeKey(row.ShomareManba, row.CodePeyvast);
+
+                    if (existingByKey.TryGetValue(key, out var existing))
+                    {
+                        // --------- UPDATE ---------
+                        ApplyManbaUpdate(existing, row, currentTerm);
+                        result.UpdatedManba++;
+                    }
+                    else
+                    {
+                        // --------- INSERT ---------
+                        var newManba = CreateNewManba(row, dars.Id, currentTerm);
+                        dars.ManbaDarsList.Add(newManba);
+                        result.InsertedManba++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // خطای یک منبع، بقیه رو متوقف نکن
+                    result.Errors.Add(new BulkUploadErrorDto
+                    {
+                        RowNumber = item.FirstRowNumber,
+                        CodeReshte = item.CodeReshte,
+                        CodeMaghta = item.CodeMaghta,
+                        TermVorood = item.TermVorood,
+                        TermEamal = item.TermEamal,
+                        CodeDars = item.CodeDars,
+                        ShomareManba = row.ShomareManba,
+                        Stage = "Manba",
+                        ErrorMessage = ex.Message
+                    });
+                    result.ErrorCount++;
+                }
+            }
+        }
+
+        private void ApplyManbaUpdate(ManbaDars manba, ManbaImportRow row, string? currentTerm)
+        {
+            bool hasChanged =
+                manba.Onvan != (row.Onvan ?? string.Empty) ||
+                manba.NoeManba != row.NoeManba ||
+                manba.Nevisandeh != row.Nevisandeh ||
+                manba.Motarjem != row.Motarjem ||
+                manba.SalEnteshar != row.SalEnteshar ||
+                manba.SalEntesharMiladi != row.SalEntesharMiladi ||
+                manba.Shabak != row.Shabak ||
+                manba.Nasher != row.Nasher ||
+                manba.NobateChap != row.NobateChap ||
+                manba.Vazeeyat != row.Vazeeyat ||
+                manba.SharhPeyvast != row.SharhPeyvast;
+
+            manba.Onvan = row.Onvan ?? string.Empty;
+            manba.NoeManba = row.NoeManba;
+            manba.Nevisandeh = row.Nevisandeh;
+            manba.Motarjem = row.Motarjem;
+            manba.SalEnteshar = row.SalEnteshar;
+            manba.SalEntesharMiladi = row.SalEntesharMiladi;
+            manba.Shabak = row.Shabak;
+            manba.Nasher = row.Nasher;
+            manba.NobateChap = row.NobateChap;
+            manba.Vazeeyat = row.Vazeeyat;
+            manba.SharhPeyvast = row.SharhPeyvast;
+
+            if (hasChanged)
+            {
+                manba.TermUpdate = currentTerm;
+                manba.UpdatedAt = DateTime.Now;
+            }
+        }
+
+        private ManbaDars CreateNewManba(ManbaImportRow row, int darsId, string? currentTerm)
+        {
+            return new ManbaDars
+            {
+                DarsId = darsId,
+                ShomareManba = row.ShomareManba,
+                NoeManba = row.NoeManba,
+                Onvan = row.Onvan ?? string.Empty,
+                Nevisandeh = row.Nevisandeh,
+                Motarjem = row.Motarjem,
+                SalEnteshar = row.SalEnteshar,
+                SalEntesharMiladi = row.SalEntesharMiladi,
+                Shabak = row.Shabak,
+                Nasher = row.Nasher,
+                NobateChap = row.NobateChap,
+                Vazeeyat = row.Vazeeyat,
+                CodePeyvast = row.CodePeyvast,
+                SharhPeyvast = row.SharhPeyvast,
+                TermUpdate = currentTerm,
+                CreatedAt = DateTime.Now
+            };
+        }
+
+        /// <summary>
+        /// ساخت فایل اکسل خطاها.
+        /// </summary>
+        private string GenerateErrorExcel(BulkUploadResultDto result)
         {
             using var workbook = new XLWorkbook();
-            var worksheet = workbook.Worksheets.Add("ردشده‌ها");
+            var worksheet = workbook.Worksheets.Add("خطاها");
 
-            // هدر
             worksheet.Cell(1, 1).Value = "ردیف";
-            worksheet.Cell(1, 2).Value = "نام رشته";
+            worksheet.Cell(1, 2).Value = "شماره ردیف اکسل";
             worksheet.Cell(1, 3).Value = "کد رشته";
             worksheet.Cell(1, 4).Value = "کد مقطع";
             worksheet.Cell(1, 5).Value = "ترم ورود";
             worksheet.Cell(1, 6).Value = "ترم اعمال";
-            worksheet.Cell(1, 7).Value = "دلیل خطا";
+            worksheet.Cell(1, 7).Value = "کد درس";
+            worksheet.Cell(1, 8).Value = "شماره منبع";
+            worksheet.Cell(1, 9).Value = "مرحله";
+            worksheet.Cell(1, 10).Value = "پیام خطا";
 
-            // استایل هدر
-            var headerRange = worksheet.Range(1, 1, 1, 7);
+            var headerRange = worksheet.Range(1, 1, 1, 10);
             headerRange.Style.Font.Bold = true;
             headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
             headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
 
-            // داده‌ها
             int rowNum = 2;
-            foreach (var item in rejectedReshtehs)
+            foreach (var item in result.Errors)
             {
                 worksheet.Cell(rowNum, 1).Value = rowNum - 1;
-                worksheet.Cell(rowNum, 2).Value = item.ReshtehName ?? "-";
+                worksheet.Cell(rowNum, 2).Value = item.RowNumber?.ToString() ?? "-";
                 worksheet.Cell(rowNum, 3).Value = item.CodeReshte ?? "-";
                 worksheet.Cell(rowNum, 4).Value = item.CodeMaghta ?? "-";
                 worksheet.Cell(rowNum, 5).Value = item.TermVorood ?? "-";
                 worksheet.Cell(rowNum, 6).Value = item.TermEamal ?? "-";
-                worksheet.Cell(rowNum, 7).Value = item.Reason ?? "-";
+                worksheet.Cell(rowNum, 7).Value = item.CodeDars ?? "-";
+                worksheet.Cell(rowNum, 8).Value = item.ShomareManba ?? "-";
+                worksheet.Cell(rowNum, 9).Value = item.Stage ?? "-";
+                worksheet.Cell(rowNum, 10).Value = item.ErrorMessage ?? "-";
                 rowNum++;
             }
 
-            // تنظیم عرض ستون‌ها
             worksheet.Column(1).Width = 8;
-            worksheet.Column(2).Width = 25;
+            worksheet.Column(2).Width = 15;
             worksheet.Column(3).Width = 15;
             worksheet.Column(4).Width = 12;
             worksheet.Column(5).Width = 12;
             worksheet.Column(6).Width = 12;
-            worksheet.Column(7).Width = 50;
+            worksheet.Column(7).Width = 15;
+            worksheet.Column(8).Width = 15;
+            worksheet.Column(9).Width = 12;
+            worksheet.Column(10).Width = 60;
 
-            // تبدیل به Base64
             using var ms = new MemoryStream();
             workbook.SaveAs(ms);
             return Convert.ToBase64String(ms.ToArray());
         }
 
+        // ============================================================
+        // کلاس‌های کمکی داخلی (Private Nested)
+        // ============================================================
+
+        /// <summary>
+        /// کلید یکتای رشته.
+        /// </summary>
+        private record ReshtehKey(string CodeReshte, string CodeMaghta, string TermVorood, string TermEamal);
+
         private class DarsImportRow
         {
             public int RowNumber { get; set; }
-            public string? CodeDars { get; set; }       // ستون 4
-            public string? NaamDars { get; set; }        // ستون 5
-            public decimal? VahedTeori { get; set; }     // ستون 6
-            public decimal? VahedAmali { get; set; }     // ستون 7
-            public int? SaatTeoriOrginal { get; set; }   // ستون 8
-            public int? SaatAmaliOrginal { get; set; }   // ستون 9
-            public int? SaatTeori { get; set; }          // ستون 8
-            public int? SaatAmali { get; set; }          // ستون 9
-            public int? TermAkhz { get; set; }           // ستون 10
-            public string? NoeDars { get; set; }         // ستون 11
-            public string? NoeAzmoon { get; set; }       // ستون 12
-            public int? Zarfiat { get; set; }            // ستون 28
-            public string? TermUpdate { get; set; }      // ستون 3
-
-            // رشته
-            public string? CodeReshte { get; set; }      // ستون 26
-            public string? CodeMaghta { get; set; }      // ستون 27
-            public string? TermVorood { get; set; }      // ستون 37
-            public string? TermEamal { get; set; }       // ستون 38
-            public string? ReshtehName { get; set; }     // ستون 34
-
-            // منبع
-            public string? ShomareManba { get; set; }    // ستون 13
-            public string? NoeManba { get; set; }        // ستون 14
-            public string? OnvanManba { get; set; }      // ستون 15
-            public string? Nevisandeh { get; set; }      // ستون 16
-            public string? Motarjem { get; set; }        // ستون 17
-            public string? SalEnteshar { get; set; }     // ستون 18
-            public string? SalEntesharMiladi { get; set; } // ستون 19
-            public string? Shabak { get; set; }          // ستون 20
-            public string? Nasher { get; set; }          // ستون 21
-            public string? NobateChap { get; set; }      // ستون 29
-            public string? Vazeeyat { get; set; }        // ستون 22
-            public string? CodePeyvast { get; set; }     // ستون 23
-            public string? SharhPeyvast { get; set; }    // ستون 24
-        }
-
-        private class DarsWithManba
-        {
-            public string CodeDars { get; set; } = string.Empty;
+            public string? CodeDars { get; set; }
             public string? NaamDars { get; set; }
             public decimal? VahedTeori { get; set; }
             public decimal? VahedAmali { get; set; }
-            public int? SaatTeoriOrginal { get; set; }
-            public int? SaatAmaliOrginal { get; set; }
-            public int? SaatTeori { get; set; }
-            public int? SaatAmali { get; set; }
+            public int? SaatTeori_File { get; set; }
+            public int? SaatAmali_File { get; set; }
             public int? TermAkhz { get; set; }
             public string? NoeDars { get; set; }
             public string? NoeAzmoon { get; set; }
             public int? Zarfiat { get; set; }
+            public string? TermUpdate { get; set; }
+
+            public string? CodeReshte { get; set; }
+            public string? CodeMaghta { get; set; }
+            public string? TermVorood { get; set; }
+            public string? TermEamal { get; set; }
+            public string? ReshtehName { get; set; }
+
+            public string? ShomareManba { get; set; }
+            public string? NoeManba { get; set; }
+            public string? OnvanManba { get; set; }
+            public string? Nevisandeh { get; set; }
+            public string? Motarjem { get; set; }
+            public string? SalEnteshar { get; set; }
+            public string? SalEntesharMiladi { get; set; }
+            public string? Shabak { get; set; }
+            public string? Nasher { get; set; }
+            public string? NobateChap { get; set; }
+            public string? Vazeeyat { get; set; }
+            public string? CodePeyvast { get; set; }
+            public string? SharhPeyvast { get; set; }
+        }
+
+        private class DarsWithManba
+        {
+            public int FirstRowNumber { get; set; }
+
+            // اطلاعات رشته
+            public string? CodeReshte { get; set; }
+            public string? CodeMaghta { get; set; }
+            public string? TermVorood { get; set; }
+            public string? TermEamal { get; set; }
+            public string? ReshtehName { get; set; }
+
+            // اطلاعات درس
+            public string CodeDars { get; set; } = string.Empty;
+            public string? NaamDars { get; set; }
+            public decimal? VahedTeori { get; set; }
+            public decimal? VahedAmali { get; set; }
+            public int? SaatTeori_File { get; set; }
+            public int? SaatAmali_File { get; set; }
+            public int? TermAkhz { get; set; }
+            public string? NoeDars { get; set; }
+            public string? NoeAzmoon { get; set; }
+            public int? Zarfiat { get; set; }
+
+            // منابع
             public List<ManbaImportRow> ManbaList { get; set; } = new();
         }
 
@@ -1399,31 +1552,33 @@ namespace PayamBack.Controllers.Edu
             public string? Vazeeyat { get; set; }
             public string? CodePeyvast { get; set; }
             public string? SharhPeyvast { get; set; }
-            public string? TermUpdate { get; set; }
         }
 
-        private class ReshtehGroup
+        /// <summary>
+        /// نتیجه‌ی عملیات BulkUpload.
+        /// </summary>
+        public class BulkUploadResultDto
         {
+            public int InsertedDars { get; set; }
+            public int UpdatedDars { get; set; }
+            public int InsertedManba { get; set; }
+            public int UpdatedManba { get; set; }
+            public int DeletedManba { get; set; }
+            public int ErrorCount { get; set; }
+            public List<BulkUploadErrorDto> Errors { get; set; } = new();
+        }
+
+        public class BulkUploadErrorDto
+        {
+            public int? RowNumber { get; set; }
             public string? CodeReshte { get; set; }
             public string? CodeMaghta { get; set; }
             public string? TermVorood { get; set; }
             public string? TermEamal { get; set; }
-            public string? ReshtehName { get; set; }
-            public List<DarsWithManba> DarsList { get; set; } = new();
+            public string? CodeDars { get; set; }
+            public string? ShomareManba { get; set; }
+            public string? Stage { get; set; }
+            public string? ErrorMessage { get; set; }
         }
-
-        public class RejectedReshtehDto
-        {
-            public string? ReshtehName { get; set; }
-            public string? CodeReshte { get; set; }
-            public string? CodeMaghta { get; set; }
-            public string? TermVorood { get; set; }
-            public string? TermEamal { get; set; }
-            public string? Reason { get; set; }
-        }
-
-
     }
-
-
 }

@@ -327,11 +327,24 @@ namespace PayamBack.Data
                 .OnDelete(DeleteBehavior.NoAction);
 
             // ======== Reshteh ========
-            builder.Entity<Reshteh>()
+            builder.Entity<Reshteh>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(g => g.GrooheAmoozeshi)
+                      .WithMany(e => e.Reshtehs)
+                      .HasForeignKey(e => e.GrooheAmoozeshiId)
+                      .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasIndex(e => new { e.CodeReshte,e.CodeMaghta,e.TermVorood,e.TermEamal })
+                    .IsUnique()
+                    .HasDatabaseName("IX_Reshteh_CodeReshteh_CodeMaghta_TermVorood_TermEamal");
+
+            });
+                /*builder.Entity<Reshteh>()
                 .HasOne(r => r.GrooheAmoozeshi)
                 .WithMany(g => g.Reshtehs)
                 .HasForeignKey(r => r.GrooheAmoozeshiId)
-                .OnDelete(DeleteBehavior.NoAction);
+                .OnDelete(DeleteBehavior.NoAction);*/
 
             // ======== Sabeghe ========
             builder.Entity<Sabeghe>()
