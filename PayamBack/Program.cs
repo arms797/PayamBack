@@ -1,16 +1,17 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using PayamBack;
 using PayamBack.Data;
 using PayamBack.Filters;
 using PayamBack.Models.Identity;
+using PayamBack.Services.Edu;
 using PayamBack.Services.Implementations;
 using PayamBack.Services.Interfaces;
 using System.Text;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -107,6 +108,9 @@ builder.Services.AddSingleton<CacheVersionManager>(); //  به صورت Singleto
 builder.Services.AddScoped<IPermissionCacheService, PermissionCacheService>();
 builder.Services.AddScoped<ILookupCacheService, LookupCacheService>();
 builder.Services.AddScoped<IPermittedMarkazCacheService, PermittedMarkazCacheService>();
+
+builder.Services.AddDarsCacheServices();
+
 
 
 builder.Services.AddHttpContextAccessor();
