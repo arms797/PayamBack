@@ -15,17 +15,17 @@ namespace PayamBack.Controllers.Edu
     public class DarsController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly IMemoryCache _cache;
-        private const string AllDarsCacheKey = "AllDarsList";
+        //private readonly IMemoryCache _cache;
+        //private const string AllDarsCacheKey = "AllDarsList";
         private const int BulkBatchSize = 300;
         private readonly IDarsCacheService _darsCache;
 
         public DarsController(AppDbContext context,
-            IMemoryCache cache,
+            //IMemoryCache cache,
             IDarsCacheService darsCache)
         {
             _context = context;
-            _cache = cache;
+            //_cache = cache;
             _darsCache = darsCache;
         }
 
@@ -142,6 +142,10 @@ namespace PayamBack.Controllers.Edu
             }
         }
 
+        // ============================================================
+        // 2️⃣ دریافت یک درس با شناسه
+        // ============================================================
+
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
@@ -225,22 +229,48 @@ namespace PayamBack.Controllers.Edu
         // ============================================================
         [HttpGet("noedars-list")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetNoeDarsList()
+        public async Task<IActionResult> GetNoeDarsList(
+            [FromQuery] string[]? maghtas = null,
+            [FromQuery] string[]? daneshkades = null,
+            [FromQuery] int[]? grooheAmoozeshiIds = null,
+            [FromQuery] int[]? reshtehIds = null)
         {
             try
             {
-                const string cacheKey = "NoeDarsList";
-                if (_cache.TryGetValue(cacheKey, out List<string>? cached) && cached != null)
-                    return Ok(new { success = true, data = cached });
+                // 🔥 از کش جدید می‌خونیم (نه DB، نه IMemoryCache قدیمی)
+                var allData = await _darsCache.GetAllAsync();
 
-                var list = await _context.Dars
-                    .Where(d => d.NoeDars != null && d.NoeDars != "")
-                    .Select(d => d.NoeDars!)
-                    .Distinct()
-                    .OrderBy(n => n)
-                    .ToListAsync();
+                // 🔥 فیلتر آبشاری در حافظه
+                IEnumerable<DarsCacheDto> filtered = allData;
 
-                _cache.Set(cacheKey, list, TimeSpan.FromHours(6));
+                if (maghtas != null && maghtas.Length > 0)
+                    filtered = filtered.Where(d => d.CodeMaghta != null && maghtas.Contains(d.CodeMaghta));
+
+                if (daneshkades != null && daneshkades.Length > 0)
+                    filtered = filtered.Where(d => d.CodeDaneshkadeh != null && daneshkades.Contains(d.CodeDaneshkadeh));
+
+                if (grooheAmoozeshiIds != null && grooheAmoozeshiIds.Length > 0)
+                    filtered = filtered.Where(d =>
+                        d.GrooheAmoozeshiId.HasValue &&
+                        grooheAmoozeshiIds.Contains(d.GrooheAmoozeshiId.Value));
+
+                if (reshtehIds != null && reshtehIds.Length > 0)
+                    filtered = filtered.Where(d =>
+                        d.ReshtehId.HasValue &&
+                        reshtehIds.Contains(d.ReshtehId.Value));
+
+                // 🔥 گروه‌بندی بر اساس نوع درس + Count
+                var list = filtered
+                    .Where(d => !string.IsNullOrEmpty(d.NoeDars))
+                    .GroupBy(d => d.NoeDars!)
+                    .Select(g => new
+                    {
+                        type = g.Key,
+                        count = g.Count()
+                    })
+                    .OrderBy(x => x.type)
+                    .ToList();
+
                 return Ok(new { success = true, data = list });
             }
             catch (Exception ex)
@@ -253,7 +283,38 @@ namespace PayamBack.Controllers.Edu
                 });
             }
         }
+        /*
+         [HttpGet("noedars-list")]
+         [AllowAnonymous]
+         public async Task<IActionResult> GetNoeDarsList()
+         {
+             try
+             {
+                 const string cacheKey = "NoeDarsList";
+                 if (_cache.TryGetValue(cacheKey, out List<string>? cached) && cached != null)
+                     return Ok(new { success = true, data = cached });
 
+                 var list = await _context.Dars
+                     .Where(d => d.NoeDars != null && d.NoeDars != "")
+                     .Select(d => d.NoeDars!)
+                     .Distinct()
+                     .OrderBy(n => n)
+                     .ToListAsync();
+
+                 _cache.Set(cacheKey, list, TimeSpan.FromHours(6));
+                 return Ok(new { success = true, data = list });
+             }
+             catch (Exception ex)
+             {
+                 return StatusCode(500, new
+                 {
+                     success = false,
+                     message = "خطا در دریافت لیست نوع درس‌ها",
+                     error = ex.Message
+                 });
+             }
+         }
+        */
         // ============================================================
         // منبع درس
         // ============================================================
@@ -297,86 +358,6 @@ namespace PayamBack.Controllers.Edu
                 });
             }
         }
-
-        // ============================================================
-        // 2️⃣ دریافت یک درس با شناسه
-        // ============================================================
-        /*[HttpGet("{id}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetById(int id)
-        {
-            try
-            {
-                var dars = await _context.Dars
-                    .Include(d => d.Reshteh)
-                        .ThenInclude(r => r.GrooheAmoozeshi)
-                    .Include(d => d.ManbaDarsList)
-                    .FirstOrDefaultAsync(d => d.Id == id);
-
-                if (dars == null)
-                    return NotFound(new { success = false, message = "درس یافت نشد" });
-
-                var result = new DarsDetailDto
-                {
-                    Id = dars.Id,
-                    CodeDars = dars.CodeDars,
-                    NaamDars = dars.NaamDars,
-                    VahedTeori = dars.VahedTeori,
-                    VahedAmali = dars.VahedAmali,
-                    SaatTeoriOrginal = dars.SaatTeoriOrginal,
-                    SaatAmaliOrginal = dars.SaatAmaliOrginal,
-                    SaatTeori = dars.SaatTeori,
-                    SaatAmali = dars.SaatAmali,
-                    TermAkhz = dars.TermAkhz,
-                    NoeDars = dars.NoeDars,
-                    NoeAzmoon = dars.NoeAzmoon,
-                    ReshtehId = dars.ReshtehId,
-                    ReshtehName = dars.Reshteh?.OnvanReshte,
-                    GrooheAmoozeshiId = dars.Reshteh?.GrooheAmoozeshiId,
-                    GrooheName = dars.Reshteh?.GrooheAmoozeshi?.OnvanGrooheAmoozeshi,
-                    Zarfiat = dars.Zarfiat,
-                    CreatedAt = dars.CreatedAt,
-                    UpdatedAt = dars.UpdatedAt,
-                    ManbaList = dars.ManbaDarsList?.Select(m => new ManbaDarsDetailDto
-                    {
-                        Id = m.Id,
-                        DarsId = m.DarsId,
-                        ShomareManba = m.ShomareManba,
-                        NoeManba = m.NoeManba,
-                        Onvan = m.Onvan,
-                        Nevisandeh = m.Nevisandeh,
-                        Motarjem = m.Motarjem,
-                        SalEnteshar = m.SalEnteshar,
-                        SalEntesharMiladi = m.SalEntesharMiladi,
-                        Shabak = m.Shabak,
-                        Nasher = m.Nasher,
-                        NobateChap = m.NobateChap,
-                        Vazeeyat = m.Vazeeyat,
-                        CodePeyvast = m.CodePeyvast,
-                        SharhPeyvast = m.SharhPeyvast,
-                        TermUpdate = m.TermUpdate,
-                        CreatedAt = m.CreatedAt,
-                        UpdatedAt = m.UpdatedAt
-                    }).ToList() ?? new List<ManbaDarsDetailDto>()
-                };
-
-                return Ok(new
-                {
-                    success = true,
-                    message = "اطلاعات درس دریافت شد",
-                    data = result
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    success = false,
-                    message = "خطا در دریافت اطلاعات درس",
-                    error = ex.Message
-                });
-            }
-        }*/
 
         // ============================================================
         // 3️⃣ ایجاد درس جدید (تکی)
