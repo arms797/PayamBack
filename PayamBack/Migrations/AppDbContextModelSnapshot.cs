@@ -801,6 +801,148 @@ namespace PayamBack.Migrations
                     b.ToTable("HaftegiExceptions");
                 });
 
+            modelBuilder.Entity("PayamBack.Models.Edu.HozoorElmi", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("Hozoor")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<bool>("IsLock")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Madrak")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("MarkazId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OstadId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("RecordAsli")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("RoleMarkazIn")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("RoleMarkazOut")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("TarikhElmi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("TarikhIn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("TarikhOut")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("TarikhSabtIn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("TarikhSabtOut")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TozihatElmi")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("TozihatLock")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("TozihatSabtKonandeh")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("UserIdIn")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("UserIdOut")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Hozoor")
+                        .HasDatabaseName("IX_HozoorElmi_Hozoor");
+
+                    b.HasIndex("IsLock")
+                        .HasDatabaseName("IX_HozoorElmi_IsLock");
+
+                    b.HasIndex("MarkazId");
+
+                    b.HasIndex("TarikhIn")
+                        .HasDatabaseName("IX_HozoorElmi_TarikhIn");
+
+                    b.HasIndex("UserIdIn");
+
+                    b.HasIndex("UserIdOut");
+
+                    b.HasIndex("OstadId", "MarkazId")
+                        .HasDatabaseName("IX_HozoorElmi_Ostad_Markaz");
+
+                    b.ToTable("HozoorElmi", (string)null);
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Edu.KarbarReshteh", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AppUserRoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Level")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(4);
+
+                    b.Property<int>("MarkazId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ReshtehId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ServiciId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AppUserRoleId")
+                        .HasDatabaseName("IX_KarbarReshteh_AppUserRoleId");
+
+                    b.HasIndex("MarkazId")
+                        .HasDatabaseName("IX_KarbarReshteh_MarkazId");
+
+                    b.HasIndex("ReshtehId")
+                        .HasDatabaseName("IX_KarbarReshteh_ReshtehId");
+
+                    b.HasIndex("ServiciId")
+                        .HasDatabaseName("IX_KarbarReshteh_ServiciId");
+
+                    b.HasIndex("AppUserRoleId", "MarkazId")
+                        .HasDatabaseName("IX_KarbarReshteh_User_Markaz");
+
+                    b.ToTable("KarbarReshteh", (string)null);
+                });
+
             modelBuilder.Entity("PayamBack.Models.Edu.ManbaDars", b =>
                 {
                     b.Property<int>("Id")
@@ -892,6 +1034,42 @@ namespace PayamBack.Migrations
                     b.ToTable("ManbaDars", (string)null);
                 });
 
+            modelBuilder.Entity("PayamBack.Models.Edu.MarkazReshteh", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MarkazId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReshtehId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TedadDaneshjoo")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Vazeeat")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReshtehId");
+
+                    b.HasIndex("Vazeeat")
+                        .HasDatabaseName("IX_MarkazReshteh_Vazeeat");
+
+                    b.HasIndex("MarkazId", "ReshtehId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_MarkazReshteh_Markaz_Reshteh");
+
+                    b.ToTable("MarkazReshteh", (string)null);
+                });
+
             modelBuilder.Entity("PayamBack.Models.Edu.Reshteh", b =>
                 {
                     b.Property<int>("Id")
@@ -937,6 +1115,11 @@ namespace PayamBack.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("GrooheAmoozeshiId");
+
+                    b.HasIndex("CodeReshte", "CodeMaghta", "TermVorood", "TermEamal")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Reshteh_CodeReshteh_CodeMaghta_TermVorood_TermEamal")
+                        .HasFilter("[CodeReshte] IS NOT NULL AND [CodeMaghta] IS NOT NULL AND [TermVorood] IS NOT NULL AND [TermEamal] IS NOT NULL");
 
                     b.ToTable("Reshtehs");
                 });
@@ -1026,10 +1209,6 @@ namespace PayamBack.Migrations
                     b.Property<int?>("TedadWhiteboard")
                         .HasColumnType("int");
 
-                    b.Property<string>("Telephon")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<string>("Tozihat")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -1062,6 +1241,66 @@ namespace PayamBack.Migrations
                         .HasDatabaseName("IX_SakhtemanKelass_Markaz_Sakhteman_Class_Unique");
 
                     b.ToTable("SakhtemanKelass", (string)null);
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Edu.Servici", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Level")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(4);
+
+                    b.Property<int>("MarkazId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Onvan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Level")
+                        .HasDatabaseName("IX_Servici_Level");
+
+                    b.HasIndex("MarkazId")
+                        .HasDatabaseName("IX_Servici_MarkazId");
+
+                    b.HasIndex("MarkazId", "Onvan")
+                        .HasDatabaseName("IX_Servici_Markaz_Onvan");
+
+                    b.ToTable("Servici", (string)null);
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Edu.ServiciDetailes", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DarsId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ServiciId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DarsId")
+                        .HasDatabaseName("IX_ServiciDetailes_DarsId");
+
+                    b.HasIndex("ServiciId", "DarsId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ServiciDetailes_Servici_Dars");
+
+                    b.ToTable("ServiciDetailes", (string)null);
                 });
 
             modelBuilder.Entity("PayamBack.Models.Edu.TaghvimTermi", b =>
@@ -2523,6 +2762,72 @@ namespace PayamBack.Migrations
                     b.Navigation("Reshteh");
                 });
 
+            modelBuilder.Entity("PayamBack.Models.Edu.HozoorElmi", b =>
+                {
+                    b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
+                        .WithMany()
+                        .HasForeignKey("MarkazId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PayamBack.Models.Core.Ostad", "Ostad")
+                        .WithMany()
+                        .HasForeignKey("OstadId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PayamBack.Models.Identity.AppUser", "UserIn")
+                        .WithMany()
+                        .HasForeignKey("UserIdIn")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PayamBack.Models.Identity.AppUser", "UserOut")
+                        .WithMany()
+                        .HasForeignKey("UserIdOut")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Markaz");
+
+                    b.Navigation("Ostad");
+
+                    b.Navigation("UserIn");
+
+                    b.Navigation("UserOut");
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Edu.KarbarReshteh", b =>
+                {
+                    b.HasOne("PayamBack.Models.Identity.AppUserRole", "AppUserRole")
+                        .WithMany()
+                        .HasForeignKey("AppUserRoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
+                        .WithMany()
+                        .HasForeignKey("MarkazId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PayamBack.Models.Edu.Reshteh", "Reshteh")
+                        .WithMany()
+                        .HasForeignKey("ReshtehId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("PayamBack.Models.Edu.Servici", "Servici")
+                        .WithMany()
+                        .HasForeignKey("ServiciId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AppUserRole");
+
+                    b.Navigation("Markaz");
+
+                    b.Navigation("Reshteh");
+
+                    b.Navigation("Servici");
+                });
+
             modelBuilder.Entity("PayamBack.Models.Edu.ManbaDars", b =>
                 {
                     b.HasOne("PayamBack.Models.Edu.Dars", "Dars")
@@ -2532,6 +2837,25 @@ namespace PayamBack.Migrations
                         .IsRequired();
 
                     b.Navigation("Dars");
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Edu.MarkazReshteh", b =>
+                {
+                    b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
+                        .WithMany()
+                        .HasForeignKey("MarkazId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PayamBack.Models.Edu.Reshteh", "Reshteh")
+                        .WithMany()
+                        .HasForeignKey("ReshtehId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Markaz");
+
+                    b.Navigation("Reshteh");
                 });
 
             modelBuilder.Entity("PayamBack.Models.Edu.Reshteh", b =>
@@ -2553,6 +2877,36 @@ namespace PayamBack.Migrations
                         .IsRequired();
 
                     b.Navigation("Markaz");
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Edu.Servici", b =>
+                {
+                    b.HasOne("PayamBack.Models.Core.Markaz", "Markaz")
+                        .WithMany()
+                        .HasForeignKey("MarkazId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Markaz");
+                });
+
+            modelBuilder.Entity("PayamBack.Models.Edu.ServiciDetailes", b =>
+                {
+                    b.HasOne("PayamBack.Models.Edu.Dars", "Dars")
+                        .WithMany()
+                        .HasForeignKey("DarsId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PayamBack.Models.Edu.Servici", "Servici")
+                        .WithMany()
+                        .HasForeignKey("ServiciId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Dars");
+
+                    b.Navigation("Servici");
                 });
 
             modelBuilder.Entity("PayamBack.Models.Identity.AppUser", b =>

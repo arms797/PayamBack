@@ -59,6 +59,11 @@ namespace PayamBack.Data
         public DbSet<ManbaDars> ManbaDars { get; set; }
         public DbSet<DarsEraeh> DarsEraehs { get; set; }
         public DbSet<DarsEraehOstad> DarsEraehOstads { get; set; }
+        public DbSet<HozoorElmi> HozoorElmis { get; set; }
+        public DbSet<MarkazReshteh> MarkazReshtehs { get; set; }
+        public DbSet<Servici> Servicis { get; set; }
+        public DbSet<ServiciDetailes> ServiciDetailes { get; set; }
+        public DbSet<KarbarReshteh> KarbarReshtehs { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -730,7 +735,198 @@ namespace PayamBack.Data
                     .HasDatabaseName("IX_OstadDars_Dars_Asli");
             });
 
-        }
+           
+
+            // ============================================================
+            //  HozoorElmi
+            // ============================================================
+            builder.Entity<HozoorElmi>(entity =>
+            {
+                entity.ToTable("HozoorElmi");
+
+                // ---- Relations ----
+                entity.HasOne(e => e.Ostad)
+                      .WithMany()
+                      .HasForeignKey(e => e.OstadId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Markaz)
+                      .WithMany()
+                      .HasForeignKey(e => e.MarkazId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.UserIn)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserIdIn)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.UserOut)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserIdOut)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // ---- Indexes ----
+                entity.HasIndex(e => new { e.OstadId, e.MarkazId })
+                      .HasDatabaseName("IX_HozoorElmi_Ostad_Markaz");
+
+                entity.HasIndex(e => e.TarikhIn)
+                      .HasDatabaseName("IX_HozoorElmi_TarikhIn");
+
+                entity.HasIndex(e => e.IsLock)
+                      .HasDatabaseName("IX_HozoorElmi_IsLock");
+
+                entity.HasIndex(e => e.Hozoor)
+                      .HasDatabaseName("IX_HozoorElmi_Hozoor");
+
+                // ---- Defaults ----
+                entity.Property(e => e.RecordAsli).HasDefaultValue(false);
+                entity.Property(e => e.IsLock).HasDefaultValue(false);
+                entity.Property(e => e.Hozoor).HasDefaultValue(1);
+            });
+
+
+            // ============================================================
+            //  MarkazReshteh (many-to-many بین Markaz و Reshteh)
+            // ============================================================
+            builder.Entity<MarkazReshteh>(entity =>
+            {
+                entity.ToTable("MarkazReshteh");
+
+                // ---- Relations ----
+                entity.HasOne(e => e.Markaz)
+                      .WithMany()
+                      .HasForeignKey(e => e.MarkazId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Reshteh)
+                      .WithMany()
+                      .HasForeignKey(e => e.ReshtehId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // ---- Unique Index: هر جفت (Markaz, Reshteh) فقط یک بار ----
+                entity.HasIndex(e => new { e.MarkazId, e.ReshtehId })
+                      .IsUnique()
+                      .HasDatabaseName("UX_MarkazReshteh_Markaz_Reshteh");
+
+                entity.HasIndex(e => e.Vazeeat)
+                      .HasDatabaseName("IX_MarkazReshteh_Vazeeat");
+
+                // ---- Defaults ----
+                entity.Property(e => e.Vazeeat).HasDefaultValue(true);
+            });
+
+
+            // ============================================================
+            //  Servici
+            // ============================================================
+            builder.Entity<Servici>(entity =>
+            {
+                entity.ToTable("Servici");
+
+                // ---- Relations ----
+                entity.HasOne(e => e.Markaz)
+                      .WithMany()
+                      .HasForeignKey(e => e.MarkazId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // ---- Indexes ----
+                entity.HasIndex(e => e.MarkazId)
+                      .HasDatabaseName("IX_Servici_MarkazId");
+
+                entity.HasIndex(e => new { e.MarkazId, e.Onvan })
+                      .HasDatabaseName("IX_Servici_Markaz_Onvan");
+
+                entity.HasIndex(e => e.Level)
+                      .HasDatabaseName("IX_Servici_Level");
+
+                // ---- Defaults ----
+                entity.Property(e => e.Level).HasDefaultValue(4);
+            });
+
+
+            // ============================================================
+            //  ServiciDetailes
+            // ============================================================
+            builder.Entity<ServiciDetailes>(entity =>
+            {
+                entity.ToTable("ServiciDetailes");
+
+                // ---- Relations ----
+                entity.HasOne(e => e.Servici)
+                      .WithMany()
+                      .HasForeignKey(e => e.ServiciId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Dars)
+                      .WithMany()
+                      .HasForeignKey(e => e.DarsId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // ---- Unique Index: هر جفت (Servici, Dars) فقط یک بار ----
+                entity.HasIndex(e => new { e.ServiciId, e.DarsId })
+                      .IsUnique()
+                      .HasDatabaseName("UX_ServiciDetailes_Servici_Dars");
+
+                // ---- Index برای جستجو بر اساس Dars ----
+                entity.HasIndex(e => e.DarsId)
+                      .HasDatabaseName("IX_ServiciDetailes_DarsId");
+            });
+
+
+            // ============================================================
+            //  KarbarReshteh
+            // ============================================================
+            builder.Entity<KarbarReshteh>(entity =>
+            {
+                entity.ToTable("KarbarReshteh");
+
+                // ---- Relations ----
+                entity.HasOne(e => e.AppUserRole)
+                      .WithMany()
+                      .HasForeignKey(e => e.AppUserRoleId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Reshteh)
+                      .WithMany()
+                      .HasForeignKey(e => e.ReshtehId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Servici)
+                      .WithMany()
+                      .HasForeignKey(e => e.ServiciId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Markaz)
+                      .WithMany()
+                      .HasForeignKey(e => e.MarkazId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // ---- Indexes ----
+                // جستجوی سریع بر اساس کاربر
+                entity.HasIndex(e => e.AppUserRoleId)
+                      .HasDatabaseName("IX_KarbarReshteh_AppUserRoleId");
+
+                // جستجوی سریع بر اساس مرکز
+                entity.HasIndex(e => e.MarkazId)
+                      .HasDatabaseName("IX_KarbarReshteh_MarkazId");
+
+                // ترکیب کاربر + مرکز (پرکاربردترین فیلتر)
+                entity.HasIndex(e => new { e.AppUserRoleId, e.MarkazId })
+                      .HasDatabaseName("IX_KarbarReshteh_User_Markaz");
+
+                // فیلتر بر اساس رشته
+                entity.HasIndex(e => e.ReshtehId)
+                      .HasDatabaseName("IX_KarbarReshteh_ReshtehId");
+
+                // فیلتر بر اساس سرویس
+                entity.HasIndex(e => e.ServiciId)
+                      .HasDatabaseName("IX_KarbarReshteh_ServiciId");
+
+                // ---- Defaults ----
+                entity.Property(e => e.Level).HasDefaultValue(4);
+            });        
+
+    }
 
         /*
         public override int SaveChanges()
