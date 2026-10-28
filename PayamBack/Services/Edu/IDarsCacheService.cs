@@ -8,5 +8,9 @@ namespace PayamBack.Services.Edu
         DarsCacheDto? GetById(int id);
         Task RebuildAsync(CancellationToken cancellationToken = default);
         DateTime? LastRebuiltAt { get; }
+
+        // 🔥 جدید — بدون Rebuild کامل
+        Task UpsertOneAsync(int darsId, CancellationToken cancellationToken = default);
+        void RemoveOne(int darsId);
     }
 }

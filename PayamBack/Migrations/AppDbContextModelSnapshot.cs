@@ -999,8 +999,7 @@ namespace PayamBack.Migrations
                         .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("SharhPeyvast")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ShomareManba")
                         .HasMaxLength(20)

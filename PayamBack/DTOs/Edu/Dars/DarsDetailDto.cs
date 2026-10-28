@@ -16,6 +16,8 @@
         public string? NoeAzmoon { get; set; }
         public int? ReshtehId { get; set; }
         public string? ReshtehName { get; set; }
+        public string? CodeMaghta { get; set; }
+        public string? Maghta { get; set; }
         public int? GrooheAmoozeshiId { get; set; }
         public string? GrooheName { get; set; }
         public int? Zarfiat { get; set; }

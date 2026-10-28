@@ -610,6 +610,8 @@ namespace PayamBack.Data
                     .HasForeignKey(e => e.DarsId)
                     .OnDelete(DeleteBehavior.Cascade);
                 // ⚠️ Cascade چون اگه درس حذف بشه، منابعش هم حذف می‌شن
+                entity.Property(m => m.SharhPeyvast)
+                    .HasColumnType("nvarchar(max)");
 
                 // ایندکس‌ها
                 entity.HasIndex(e => e.DarsId)

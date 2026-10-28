@@ -40,7 +40,10 @@ namespace PayamBack.Controllers.Edu
                 }
 
                 var reshtehs = await _context.Reshtehs
-                    .OrderBy(r => r.OnvanReshte)
+                    .OrderBy(r => r.CodeReshte)
+                    .ThenByDescending(r=>r.TermVorood)
+                    .ThenByDescending(r=>r.TermEamal)
+                    .ThenByDescending(r=>r.CodeMaghta)
                     .Select(r => new ReshtehListDto
                     {
                         Id = r.Id,
@@ -370,6 +373,235 @@ namespace PayamBack.Controllers.Edu
         // ============================================================
         // 8️⃣ آپلود گروهی رشته‌ها از فایل اکسل
         // ============================================================
+
+        [HttpPost("bulk-upload")]
+        [Authorize]
+        [RequestSizeLimit(50_000_000)]
+        public async Task<IActionResult> BulkUpload(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { success = false, message = "فایلی انتخاب نشده است" });
+
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            if (extension != ".xlsx" && extension != ".xls")
+                return BadRequest(new { success = false, message = "فقط فایل‌های Excel مجاز هستند" });
+
+            try
+            {
+                // ============================================================
+                // ۱. خواندن فایل اکسل
+                // ============================================================
+                List<ReshtehImportRow> rows;
+                try
+                {
+                    using var stream = file.OpenReadStream();
+                    rows = ParseReshtehExcel(stream);
+                }
+                catch (Exception ex)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "خطا در خواندن فایل اکسل. لطفاً فرمت فایل را بررسی کنید",
+                        error = ex.Message
+                    });
+                }
+
+                if (rows.Count == 0)
+                    return BadRequest(new { success = false, message = "فایل خالی است" });
+
+                // ============================================================
+                // ۲. پیدا کردن همه گروه‌های آموزشی (یک بار)
+                // ============================================================
+                var allGroohes = await _context.GrooheAmoozeshis
+                    .Select(g => new { g.Id, g.CodeDaneshkade, g.CodeGrooheAmoozeshi })
+                    .ToListAsync();
+
+                // ============================================================
+                // ۳. بارگذاری همه‌ی رشته‌های موجود (یک بار — برای Upsert سریع)
+                // ============================================================
+                var existingReshtehs = await _context.Reshtehs
+                    .ToListAsync();
+
+                // کلید یکتا برای lookup سریع
+                var existingLookup = existingReshtehs
+                    .GroupBy(r => (r.CodeReshte, r.CodeMaghta, r.TermVorood, r.TermEamal))
+                    .ToDictionary(g => g.Key, g => g.First());
+
+                // ============================================================
+                // ۴. پردازش هر ردیف — Upsert (فقط OnvanReshte آپدیت)
+                // ============================================================
+                var rejectedReshtehs = new List<RejectedReshtehImportDto>();
+                var toInsert = new List<Reshteh>();
+                var toUpdate = new List<Reshteh>();
+                int skippedCount = 0;
+
+                // جلوگیری از پردازش تکراری توی خود فایل
+                var processedKeys = new HashSet<(string?, string?, string?, string?)>();
+
+                foreach (var row in rows)
+                {
+                    // 🔍 چک فیلدهای اجباری
+                    if (string.IsNullOrEmpty(row.CodeReshte) ||
+                        string.IsNullOrEmpty(row.CodeMaghta))
+                    {
+                        rejectedReshtehs.Add(new RejectedReshtehImportDto
+                        {
+                            RowNumber = row.RowNumber,
+                            OnvanReshte = row.OnvanReshte,
+                            CodeReshte = row.CodeReshte,
+                            CodeMaghta = row.CodeMaghta,
+                            TermVorood = row.TermVorood,
+                            TermEamal = row.TermEamal,
+                            Reason = "کد رشته یا کد مقطع خالی است"
+                        });
+                        continue;
+                    }
+
+                    var uniqueKey = (row.CodeReshte, row.CodeMaghta, row.TermVorood, row.TermEamal);
+
+                    // اگه توی همین فایل تکراری بود، Skip
+                    if (!processedKeys.Add(uniqueKey))
+                    {
+                        skippedCount++;
+                        continue;
+                    }
+
+                    // 🔍 استخراج کد دانشکده و گروه از کد رشته (۶ رقمی: DDGGRR) — فقط برای Insert
+                    string? codeDaneshkade = null;
+                    string? codeGrooheAmoozeshi = null;
+
+                    if (row.CodeReshte.Length == 6)
+                    {
+                        codeDaneshkade = row.CodeReshte.Substring(0, 2);
+                        codeGrooheAmoozeshi = row.CodeReshte.Substring(2, 2);
+                    }
+
+                    int? grooheAmoozeshiId = null;
+                    if (!string.IsNullOrEmpty(codeDaneshkade) && !string.IsNullOrEmpty(codeGrooheAmoozeshi))
+                    {
+                        var groohe = allGroohes.FirstOrDefault(g =>
+                            g.CodeDaneshkade != null &&
+                            g.CodeDaneshkade.StartsWith(codeDaneshkade) &&
+                            g.CodeGrooheAmoozeshi != null &&
+                            g.CodeGrooheAmoozeshi.StartsWith(codeGrooheAmoozeshi));
+
+                        if (groohe != null)
+                            grooheAmoozeshiId = groohe.Id;
+                    }
+
+                    // ============================================================
+                    // 🔥 UPSERT
+                    // ============================================================
+                    if (existingLookup.TryGetValue(uniqueKey, out var existing))
+                    {
+                        // 🔥 رکورد موجود → فقط OnvanReshte رو آپدیت کن
+                        // (اگه توی فایل OnvanReshte مقدار داشت و با DB فرق داشت)
+                        if (!string.IsNullOrEmpty(row.OnvanReshte) &&
+                            existing.OnvanReshte != row.OnvanReshte)
+                        {
+                            existing.OnvanReshte = row.OnvanReshte;
+                            toUpdate.Add(existing);
+                        }
+                        else
+                        {
+                            skippedCount++;
+                        }
+                    }
+                    else
+                    {
+                        // 🔥 رکورد جدید → Insert
+                        var newReshteh = new Reshteh
+                        {
+                            GrooheAmoozeshiId = grooheAmoozeshiId,
+                            CodeMaghta = row.CodeMaghta,
+                            Maghta = row.Maghta,
+                            CodeReshte = row.CodeReshte,
+                            OnvanReshte = row.OnvanReshte,
+                            TermVorood = row.TermVorood,
+                            TermEamal = row.TermEamal
+                        };
+
+                        toInsert.Add(newReshteh);
+                    }
+                }
+
+                // ============================================================
+                // ۵. ذخیره در DB (تراکنشی)
+                // ============================================================
+                int insertedCount = 0;
+                int updatedCount = 0;
+
+                if (toInsert.Any() || toUpdate.Any())
+                {
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+
+                    try
+                    {
+                        if (toInsert.Any())
+                        {
+                            await _context.Reshtehs.AddRangeAsync(toInsert);
+                            insertedCount = toInsert.Count;
+                        }
+
+                        // Update ها از قبل tracked هستن (از _context.Reshtehs.ToListAsync)
+                        updatedCount = toUpdate.Count;
+
+                        await _context.SaveChangesAsync();
+                        await transaction.CommitAsync();
+
+                        // 🔥 پاک کردن کش
+                        _cache.Remove(AllReshtehCacheKey);
+                    }
+                    catch (Exception ex)
+                    {
+                        await transaction.RollbackAsync();
+
+                        return StatusCode(500, new
+                        {
+                            success = false,
+                            message = "خطا در ذخیره رشته‌ها",
+                            error = ex.Message
+                        });
+                    }
+                }
+
+                // ============================================================
+                // ۶. ساخت فایل اکسل خطاها
+                // ============================================================
+                string? errorFileBase64 = null;
+                if (rejectedReshtehs.Any())
+                {
+                    errorFileBase64 = GenerateReshtehErrorExcel(rejectedReshtehs);
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = $"{insertedCount} رشته جدید ثبت شد، {updatedCount} رشته آپدیت شد، {skippedCount} رشته بدون تغییر، {rejectedReshtehs.Count} رشته رد شد.",
+                    data = new
+                    {
+                        inserted = insertedCount,
+                        updated = updatedCount,
+                        skipped = skippedCount,
+                        rejected = rejectedReshtehs.Count,
+                        total = rows.Count
+                    },
+                    errorFile = errorFileBase64,
+                    errorFileName = rejectedReshtehs.Any() ? "rejected-reshtehs.xlsx" : null
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در پردازش فایل",
+                    error = ex.Message
+                });
+            }
+        }
+        /*
         [HttpPost("bulk-upload")]
         [Authorize]
         [RequestSizeLimit(50_000_000)]
@@ -573,7 +805,7 @@ namespace PayamBack.Controllers.Edu
                 });
             }
         }
-
+        */
         private string GenerateReshtehErrorExcel(List<RejectedReshtehImportDto> rejected)
         {
             using var workbook = new XLWorkbook();
@@ -636,12 +868,12 @@ namespace PayamBack.Controllers.Edu
                 var importRow = new ReshtehImportRow
                 {
                     RowNumber = row,
-                    CodeMaghta = GetCellString(worksheet, row, 2),
-                    Maghta = GetCellString(worksheet, row, 3),
-                    CodeReshte = GetCellString(worksheet, row, 6),
-                    OnvanReshte = GetCellString(worksheet, row, 7),
-                    TermVorood = GetCellString(worksheet, row, 8),
-                    TermEamal = GetCellString(worksheet, row, 9)
+                    CodeMaghta = GetCellString(worksheet, row, 1),
+                    Maghta = GetCellString(worksheet, row, 2),
+                    CodeReshte = GetCellString(worksheet, row, 5),
+                    OnvanReshte = GetCellString(worksheet, row, 6),
+                    TermVorood = GetCellString(worksheet, row, 7),
+                    TermEamal = GetCellString(worksheet, row, 8)
                 };
 
                 // فقط ردیف‌هایی که کد رشته دارن

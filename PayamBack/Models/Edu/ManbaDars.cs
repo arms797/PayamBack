@@ -57,7 +57,7 @@ namespace PayamBack.Models.Edu
         [StringLength(50)]
         public string? CodePeyvast { get; set; }
 
-        [StringLength(1000)]
+        //[StringLength]
         public string? SharhPeyvast { get; set; }
         [StringLength(20)]
         public string? TermUpdate {  get; set; }

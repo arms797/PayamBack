@@ -111,6 +111,13 @@ namespace PayamBack.Controllers.Edu
                 }
 
                 var list = filtered.ToList();
+                //var list = filtered
+                    //.OrderBy(d => d.ReshtehId)              // ۱. کد رشته (صعودی)
+                    //.ThenByDescending(d => d.TermVorood)     // ۳. ترم ورود (نزولی)
+                    //.ThenByDescending(d => d.TermEamal)      // ۴. ترم اعمال (نزولی)
+                    //.ThenBy(d => d.CodeMaghta)               // ۵. کد مقطع (صعودی)
+                    //.ThenBy(d => d.CodeDars)                 // ۲. کد درس (صعودی)
+                    //.ToList();
                 var totalCount = list.Count;
                 var pagedData = list
                     .Skip((page - 1) * pageSize)
@@ -178,6 +185,8 @@ namespace PayamBack.Controllers.Edu
                     NoeAzmoon = dars.NoeAzmoon,
                     ReshtehId = dars.ReshtehId,
                     ReshtehName = dars.Reshteh?.OnvanReshte,
+                    CodeMaghta=dars.Reshteh?.CodeMaghta,
+                    Maghta=dars.Reshteh?.Maghta,
                     GrooheAmoozeshiId = dars.Reshteh?.GrooheAmoozeshiId,
                     GrooheName = dars.Reshteh?.GrooheAmoozeshi?.OnvanGrooheAmoozeshi,
                     Zarfiat = dars.Zarfiat,
@@ -283,6 +292,7 @@ namespace PayamBack.Controllers.Edu
                 });
             }
         }
+
         /*
          [HttpGet("noedars-list")]
          [AllowAnonymous]
@@ -446,7 +456,9 @@ namespace PayamBack.Controllers.Edu
                 await _context.Dars.AddAsync(dars);
                 await _context.SaveChangesAsync();
 
-                await _darsCache.RebuildAsync();
+                //await _darsCache.RebuildAsync();
+                await _darsCache.UpsertOneAsync(dars.Id);   // 🔥 فقط یه رکورد
+
 
                 return Ok(new
                 {
@@ -628,7 +640,8 @@ namespace PayamBack.Controllers.Edu
                 }
 
                 await _context.SaveChangesAsync();
-                await _darsCache.RebuildAsync();
+                //await _darsCache.RebuildAsync();
+                await _darsCache.UpsertOneAsync(dars.Id);
 
                 return Ok(new
                 {
@@ -671,7 +684,9 @@ namespace PayamBack.Controllers.Edu
 
                 _context.Dars.Remove(dars);
                 await _context.SaveChangesAsync();
-                await _darsCache.RebuildAsync();
+                //await _darsCache.RebuildAsync();
+                _darsCache.RemoveOne(id);   // 🔥 فقط از کش حذف
+
 
                 return Ok(new { success = true, message = "درس با موفقیت حذف شد" });
             }

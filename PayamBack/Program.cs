@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.ResponseCompression;   // ← جدید
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
@@ -10,6 +11,7 @@ using PayamBack.Models.Identity;
 using PayamBack.Services.Edu;
 using PayamBack.Services.Implementations;
 using PayamBack.Services.Interfaces;
+using System.IO.Compression;                       // ← جدید
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -36,6 +38,37 @@ builder.Services.AddIdentity<AppUser, AppRole>(opt =>
 // 3️⃣ In-Memory Cache
 // ============================================================
 builder.Services.AddMemoryCache();
+
+// ============================================================
+// 🔥 3.5 Response Compression (Gzip + Brotli)
+// ============================================================
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] {
+            "application/json",
+            "application/javascript",
+            "text/css",
+            "text/html",
+            "text/plain",
+            "text/xml",
+            "application/xml",
+            "image/svg+xml"
+        });
+});
+
+builder.Services.Configure<BrotliCompressionProviderOptions>(opt =>
+{
+    opt.Level = CompressionLevel.Fastest;
+});
+
+builder.Services.Configure<GzipCompressionProviderOptions>(opt =>
+{
+    opt.Level = CompressionLevel.Fastest;
+});
 
 // ============================================================
 // 4️⃣ JWT Authentication
@@ -66,21 +99,25 @@ builder.Services.AddAuthorization();
 // ============================================================
 // 5️⃣ تنظیم Json
 // ============================================================
-builder.Services.AddControllers()
+/*builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-        options.JsonSerializerOptions.WriteIndented = true;
-    });
+        options.JsonSerializerOptions.WriteIndented = builder.Environment.IsDevelopment();//true;
+    });*/
 
 builder.Services.AddOpenApi();
 
-// اضافه کردن فیلتر به همه کنترلرها
 builder.Services.AddScoped<PermissionFilter>();
 
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<PermissionFilter>();
+})
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.WriteIndented = builder.Environment.IsDevelopment();
 });
 
 // ============================================================
@@ -104,14 +141,12 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IMarkazCacheService, MarkazCacheService>();
 builder.Services.AddScoped<IAccessService, AccessService>();
 builder.Services.AddScoped<ICacheManager, CacheManager>();
-builder.Services.AddSingleton<CacheVersionManager>(); //  به صورت Singleton
+builder.Services.AddSingleton<CacheVersionManager>();
 builder.Services.AddScoped<IPermissionCacheService, PermissionCacheService>();
 builder.Services.AddScoped<ILookupCacheService, LookupCacheService>();
 builder.Services.AddScoped<IPermittedMarkazCacheService, PermittedMarkazCacheService>();
 
 builder.Services.AddDarsCacheServices();
-
-
 
 builder.Services.AddHttpContextAccessor();
 
@@ -122,7 +157,7 @@ builder.Services.AddCors(opt => opt.AddPolicy("React", p =>
     p.WithOrigins(
         "http://localhost:5173",
         "http://localhost:3000",
-        "http://94.74.170.19"   // ← آدرس سرور خودتان را اضافه کنید
+        "http://94.74.170.19"
     )
      .AllowAnyMethod()
      .AllowAnyHeader()
@@ -135,13 +170,17 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// ============================================================
+// 🔥 Response Compression — باید اول باشه
+// ============================================================
+app.UseResponseCompression();   // ← این خط اضافه شد
+
 app.UseCors("React");
 
 // ============================================================
-// 🔥 مهم: این سه خط را اضافه کنید
+// 🔥 سرو فایل‌های استاتیک
 // ============================================================
-app.UseDefaultFiles();           // ← ایندکس پیش‌فرض (index.html)
-// ← سرو فایل‌های استاتیک از wwwroot
+app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>
@@ -149,14 +188,12 @@ app.UseStaticFiles(new StaticFileOptions
         var path = ctx.File.Name.ToLower();
         var requestPath = ctx.Context.Request.Path.Value?.ToLower() ?? "";
 
-        // 🔥 index.html هرگز کش نشود
         if (path == "index.html" || !requestPath.Contains("."))
         {
             ctx.Context.Response.Headers.Append("Cache-Control", "no-cache, no-store, must-revalidate");
             ctx.Context.Response.Headers.Append("Pragma", "no-cache");
             ctx.Context.Response.Headers.Append("Expires", "0");
         }
-        // 🔥 فایل‌های هش‌دار در assets کش طولانی‌مدت
         else if (requestPath.Contains("/assets/"))
         {
             ctx.Context.Response.Headers.Append("Cache-Control", "public, max-age=31536000, immutable");
@@ -167,9 +204,6 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ============================================================
-// 🔥 Fallback برای React Router
-// ============================================================
 app.MapFallbackToFile("index.html");
 
 app.MapControllers();
