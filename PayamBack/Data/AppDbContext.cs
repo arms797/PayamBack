@@ -806,9 +806,9 @@ namespace PayamBack.Data
                       .OnDelete(DeleteBehavior.Restrict);
 
                 // ---- Unique Index: هر جفت (Markaz, Reshteh) فقط یک بار ----
-                entity.HasIndex(e => new { e.MarkazId, e.ReshtehId })
+                entity.HasIndex(e => new { e.MarkazId, e.ReshtehId, e.Level })
                       .IsUnique()
-                      .HasDatabaseName("UX_MarkazReshteh_Markaz_Reshteh");
+                      .HasDatabaseName("UX_MarkazReshteh_Markaz_Reshteh_Level");
 
                 entity.HasIndex(e => e.Vazeeat)
                       .HasDatabaseName("IX_MarkazReshteh_Vazeeat");

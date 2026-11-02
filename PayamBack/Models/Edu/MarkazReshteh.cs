@@ -12,6 +12,7 @@ namespace PayamBack.Models.Edu
         public int ReshtehId { get; set; }
         public int? TedadDaneshjoo { get; set; }
         public bool Vazeeat { get; set; } = true;
+        public int? Level { get; set; } = 4;
 
         [ForeignKey(nameof(MarkazId))]
         public Markaz Markaz { get; set; }

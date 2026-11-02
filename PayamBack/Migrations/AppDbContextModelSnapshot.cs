@@ -17,7 +17,7 @@ namespace PayamBack.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -1041,6 +1041,9 @@ namespace PayamBack.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("Level")
+                        .HasColumnType("int");
+
                     b.Property<int>("MarkazId")
                         .HasColumnType("int");
 
@@ -1062,9 +1065,10 @@ namespace PayamBack.Migrations
                     b.HasIndex("Vazeeat")
                         .HasDatabaseName("IX_MarkazReshteh_Vazeeat");
 
-                    b.HasIndex("MarkazId", "ReshtehId")
+                    b.HasIndex("MarkazId", "ReshtehId", "Level")
                         .IsUnique()
-                        .HasDatabaseName("UX_MarkazReshteh_Markaz_Reshteh");
+                        .HasDatabaseName("UX_MarkazReshteh_Markaz_Reshteh_Level")
+                        .HasFilter("[Level] IS NOT NULL");
 
                     b.ToTable("MarkazReshteh", (string)null);
                 });
@@ -2145,6 +2149,9 @@ namespace PayamBack.Migrations
                         .HasColumnType("int");
 
                     b.Property<int?>("Jensiat")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Level")
                         .HasColumnType("int");
 
                     b.Property<int>("MarkazId")

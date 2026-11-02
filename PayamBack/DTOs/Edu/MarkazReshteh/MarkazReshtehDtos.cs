@@ -27,6 +27,7 @@ namespace PayamBack.DTOs.Edu.MarkazReshteh
         // داده‌ی خود رکورد
         public int? TedadDaneshjoo { get; set; }
         public bool Vazeeat { get; set; }
+        public int? Level { get; set; }
     }
 
     // ============================================================
@@ -61,6 +62,7 @@ namespace PayamBack.DTOs.Edu.MarkazReshteh
         // داده‌ی خود رکورد
         public int? TedadDaneshjoo { get; set; }
         public bool Vazeeat { get; set; }
+        public int? Level { get; set; }
     }
 
     // ============================================================
@@ -78,6 +80,7 @@ namespace PayamBack.DTOs.Edu.MarkazReshteh
         public int? TedadDaneshjoo { get; set; }
 
         public bool Vazeeat { get; set; } = true;
+        public int? Level { get; set; } = 4;
     }
 
     // ============================================================
@@ -87,7 +90,6 @@ namespace PayamBack.DTOs.Edu.MarkazReshteh
     {
         [Range(0, int.MaxValue, ErrorMessage = "تعداد دانشجو نمی‌تواند منفی باشد")]
         public int? TedadDaneshjoo { get; set; }
-
         public bool? Vazeeat { get; set; }
     }
 }
