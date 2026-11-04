@@ -1514,6 +1514,170 @@ namespace PayamBack.Controllers.Edu
                 return StatusCode(500, new { success = false, message = "خطا در پردازش", error = ex.Message });
             }
         }
+
+        // ============================================================
+        // 9️⃣ محاسبه مجدد TedadDaneshjoo برای Level 3 یا 2
+        //    - سطح 3: فقط رکوردهای Level=3 در استان مرکز ورودی
+        //    - سطح 2: همه‌ی رکوردهای Level=2 کل کشور
+        // ============================================================
+        [HttpPost("recalculate-tedad")]
+        [Authorize]
+        public async Task<IActionResult> RecalculateTedad(
+            [FromQuery] int markazId,
+            [FromQuery] int level)
+        {
+            try
+            {
+                // ============================================================
+                // ۱. اعتبارسنجی ورودی
+                // ============================================================
+                if (level != 2 && level != 3)
+                    return BadRequest(new { success = false, message = "سطح باید 2 یا 3 باشد" });
+
+                var (user, role, userMarkaz, codeRole) = await _currentUser.GetCurrentUserInfoAsync();
+                if (user == null || !codeRole.HasValue)
+                    return Unauthorized(new { success = false, message = "اطلاعات کاربری نامعتبر است" });
+
+                // بررسی مجوز نقش
+                if (codeRole.Value == 4)
+                    return Forbid();
+
+                if (codeRole.Value == 3 && level != 3)
+                    return Forbid();
+
+                if (codeRole.Value == 2 && level != 2)
+                    return Forbid();
+
+                // بررسی مرکز
+                var markaz = await _context.Markazes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.Id == markazId);
+
+                if (markaz == null)
+                    return BadRequest(new { success = false, message = "مرکز یافت نشد" });
+
+                // برای نقش ۳: استان مرکز باید با استان کاربر یکی باشه
+                if (codeRole.Value == 3 && markaz.CodeOstan != userMarkaz?.CodeOstan)
+                    return Forbid();
+
+                var targetOstan = markaz.CodeOstan;
+
+                // ============================================================
+                // ۲. پیدا کردن رکوردهای هدف
+                // ============================================================
+                var targetQuery = _context.MarkazReshtehs
+                    .Where(mr => mr.Level == level);
+
+                if (level == 3)
+                {
+                    // سطح ۳: فقط استان مرکز ورودی
+                    if (string.IsNullOrEmpty(targetOstan))
+                        return BadRequest(new { success = false, message = "کد استان مرکز مشخص نیست" });
+
+                    targetQuery = targetQuery.Where(mr =>
+                        mr.Markaz != null &&
+                        mr.Markaz.CodeOstan == targetOstan);
+                }
+
+                var targets = await targetQuery.ToListAsync();
+
+                if (targets.Count == 0)
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "رکوردی برای محاسبه یافت نشد",
+                        data = new { updated = 0, unchanged = 0, total = 0 }
+                    });
+                }
+
+                // ============================================================
+                // ۳. محاسبه‌ی جمع برای هر ReshtehId
+                // ============================================================
+                var reshtehIds = targets.Select(t => t.ReshtehId).Distinct().ToList();
+
+                var sumQuery = _context.MarkazReshtehs
+                    .Where(mr =>
+                        mr.Level == 4 &&
+                        mr.TedadDaneshjoo > 0 &&
+                        reshtehIds.Contains(mr.ReshtehId));
+
+                if (level == 3)
+                {
+                    sumQuery = sumQuery.Where(mr =>
+                        mr.Markaz != null &&
+                        mr.Markaz.CodeOstan == targetOstan);
+                }
+
+                var sums = await sumQuery
+                    .GroupBy(mr => mr.ReshtehId)
+                    .Select(g => new
+                    {
+                        ReshtehId = g.Key,
+                        Sum = g.Sum(mr => mr.TedadDaneshjoo ?? 0)
+                    })
+                    .ToDictionaryAsync(x => x.ReshtehId, x => x.Sum);
+
+                // ============================================================
+                // ۴. به‌روزرسانی (Batch Processing)
+                // ============================================================
+                int updated = 0;
+                int unchanged = 0;
+                const int batchSize = 500;
+
+                for (int i = 0; i < targets.Count; i += batchSize)
+                {
+                    var batch = targets.Skip(i).Take(batchSize).ToList();
+
+                    foreach (var target in batch)
+                    {
+                        var newTedad = sums.GetValueOrDefault(target.ReshtehId, 0);
+
+                        if (target.TedadDaneshjoo != newTedad)
+                        {
+                            target.TedadDaneshjoo = newTedad;
+                            updated++;
+                        }
+                        else
+                        {
+                            unchanged++;
+                        }
+                    }
+
+                    // ذخیره بعد از هر Batch
+                    await _context.SaveChangesAsync();
+                    _context.ChangeTracker.Clear();
+                }
+
+                // ============================================================
+                // ۵. خروجی
+                // ============================================================
+                return Ok(new
+                {
+                    success = true,
+                    message = $"{updated} رکورد به‌روزرسانی شد، {unchanged} رکورد بدون تغییر.",
+                    data = new
+                    {
+                        level,
+                        targetOstan,
+                        updated,
+                        unchanged,
+                        total = targets.Count,
+                        reshtehCount = reshtehIds.Count
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "خطا در محاسبه مجدد",
+                    error = ex.InnerException?.Message ?? ex.Message
+                });
+            }
+        }
     }
+
 
 }
